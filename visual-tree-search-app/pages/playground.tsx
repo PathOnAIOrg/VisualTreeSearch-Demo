@@ -109,11 +109,6 @@ const WebSocketTest = () => {
     <div className="flex flex-col space-y-4 p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-center">WebSocket Test Client</h1>
       
-      <div className="mb-4">
-        <span className="font-semibold mr-2">Backend URL:</span>
-        <span>{backendUrl}</span>
-      </div>
-      
       <Card>
         <CardHeader>
           <CardTitle className={connected ? "text-green-600" : "text-red-600"}>
