@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Home} from 'lucide-react';
+import { Home, LayoutDashboard} from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -12,7 +12,12 @@ const Sidebar = () => {
       name: 'Home',
       href: '/',
       icon: Home
-    }
+    },
+    {
+      name: 'Playground',
+      href: '/playground',
+      icon: LayoutDashboard
+    },
   ];
 
   const isActive = (path: string) => {
