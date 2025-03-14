@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .incoming {
+            background-color: #e9ecef;
+        }
+        .outgoing {
+            background-color: #d1ecf1;
+            text-align: right;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .controls {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #messageInput {
+            flex-grow: 1;
+            padding: 8px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test Client</h1>
+    
+    <div id="status" class="disconnected">Disconnected</div>
+    
+    <div class="controls">
+        <button id="connectBtn">Connect</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+    
+    <div id="messages"></div>
+    
+    <div class="controls">
+        <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+        <button id="sendBtn" disabled>Send</button>
+    </div>
+    
+    <script>
+        let ws = null;
+        const statusEl = document.getElementById('status');
+        const messagesEl = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // Format time
+        function formatTime(date) {
+            return date.toLocaleTimeString();
+        }
+        
+        // Log messages to the UI
+        function logMessage(message, type = 'incoming') {
+            const msgEl = document.createElement('div');
+            msgEl.classList.add('message', type);
+            
+            const time = document.createElement('div');
+            time.classList.add('timestamp');
+            time.textContent = formatTime(new Date());
+            
+            const content = document.createElement('div');
+            content.textContent = typeof message === 'object' ? JSON.stringify(message) : message;
+            
+            msgEl.appendChild(content);
+            msgEl.appendChild(time);
+            messagesEl.appendChild(msgEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        
+        // Update UI based on connection state
+        function updateUI(connected) {
+            if (connected) {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }
+        
+        // Connect to websocket
+        function connect() {
+            // Updated WebSocket URL with the correct path
+            const wsUrl = 'ws://localhost:3000/ws';
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    logMessage('Connected to WebSocket server');
+                    updateUI(true);
+                };
+                
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        logMessage(data);
+                    } catch (e) {
+                        logMessage(event.data);
+                    }
+                };
+                
+                ws.onclose = () => {
+                    logMessage('Disconnected from WebSocket server');
+                    updateUI(false);
+                    ws = null;
+                };
+                
+                ws.onerror = (error) => {
+                    logMessage(`WebSocket error: ${error}`);
+                    updateUI(false);
+                };
+            } catch (error) {
+                logMessage(`Failed to connect: ${error.message}`);
+                updateUI(false);
+            }
+        }
+        
+        // Disconnect from websocket
+        function disconnect() {
+            if (ws) {
+                ws.close();
+            }
+        }
+        
+        // Send a message
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && ws) {
+                const data = {
+                    type: 'message',
+                    content: message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                ws.send(JSON.stringify(data));
+                logMessage(data, 'outgoing');
+                messageInput.value = '';
+            }
+        }
+        
+        // Event listeners
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+        
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Initial UI state
+        updateUI(false);
+    </script>
+</body>
+</html>
