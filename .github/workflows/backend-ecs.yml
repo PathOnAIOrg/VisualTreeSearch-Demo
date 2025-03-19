@@ -3,6 +3,8 @@ name: meritpath-backend-service Deploy to Amazon ECS
 on:
   push:
     branches: [ "main" ] 
+    paths:
+      - 'visual-tree-search-backend/**' 
   workflow_dispatch:
 
 env:
