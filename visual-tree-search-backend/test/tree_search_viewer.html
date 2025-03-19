@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Search Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .control-panel {
+            background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        #status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.8em;
+        }
+        #tree-container {
+            height: 600px;
+            overflow: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .node {
+            margin: 5px 0;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .node.current {
+            border: 2px solid #4CAF50;
+            background-color: #e8f5e9;
+        }
+        .node-children {
+            margin-left: 20px;
+            border-left: 1px dashed #ccc;
+            padding-left: 10px;
+        }
+        .trajectory {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196F3;
+        }
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tree Search Viewer</h1>
+    
+    <div class="container">
+        <div class="left-column">
+            <div class="panel control-panel">
+                <h2>Connection</h2>
+                <div>
+                    <label for="search-id">Search ID:</label>
+                    <input type="text" id="search-id" value="search_20250319_202420_160008">
+                </div>
+                <div>
+                    <label for="server-url">Server URL:</label>
+                    <input type="text" id="server-url" value="ws://localhost:3000/tree-search-ws/">
+                </div>
+                <button id="connect-btn">Connect</button>
+                <button id="disconnect-btn" disabled>Disconnect</button>
+                
+                <div id="status">Disconnected</div>
+            </div>
+            
+            <div class="panel">
+                <h2>Search Configuration</h2>
+                <div>
+                    <label for="starting-url">Starting URL:</label>
+                    <input type="text" id="starting-url" value="http://128.105.145.205:7770/">
+                </div>
+                <div>
+                    <label for="goal">Goal:</label>
+                    <input type="text" id="goal" value="search running shoes, click on the first result">
+                </div>
+                <div>
+                    <label for="algorithm">Algorithm:</label>
+                    <select id="algorithm">
+                        <option value="bfs">BFS</option>
+                        <option value="dfs">DFS</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="max-depth">Max Depth:</label>
+                    <input type="number" id="max-depth" value="3" min="1" max="10">
+                </div>
+                <div>
+                    <label for="headless">Headless:</label>
+                    <input type="checkbox" id="headless" checked>
+                </div>
+                <button id="start-search-btn" disabled>Start Search</button>
+            </div>
+            
+            <div class="panel">
+                <h2>Log</h2>
+                <div id="log"></div>
+            </div>
+        </div>
+        
+        <div class="right-column">
+            <div class="panel">
+                <h2>Search Tree</h2>
+                <div id="tree-container"></div>
+            </div>
+            
+            <div class="panel">
+                <h2>Current Trajectory</h2>
+                <div id="trajectory-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let treeData = null;
+        
+        // DOM elements
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const startSearchBtn = document.getElementById('start-search-btn');
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const treeContainerEl = document.getElementById('tree-container');
+        const trajectoryContainerEl = document.getElementById('trajectory-container');
+        
+        // Connect to WebSocket
+        connectBtn.addEventListener('click', () => {
+            const searchId = document.getElementById('search-id').value;
+            const serverUrl = document.getElementById('server-url').value;
+            
+            if (!searchId) {
+                addLogEntry('Error: Search ID is required');
+                return;
+            }
+            
+            const url = `${serverUrl}${searchId}`;
+            
+            try {
+                socket = new WebSocket(url);
+                
+                socket.onopen = () => {
+                    statusEl.textContent = 'Connected';
+                    statusEl.style.color = 'green';
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    startSearchBtn.disabled = false;
+                    
+                    addLogEntry('Connected to WebSocket server');
+                    
+                    // Send ping to test connection
+                    socket.send(JSON.stringify({ type: 'ping' }));
+                };
+                
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                };
+                
+                socket.onclose = () => {
+                    statusEl.textContent = 'Disconnected';
+                    statusEl.style.color = 'red';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    startSearchBtn.disabled = true;
+                    
+                    addLogEntry('Disconnected from WebSocket server');
+                };
+                
+                socket.onerror = (error) => {
+                    addLogEntry(`WebSocket error: ${error}`);
+                    statusEl.textContent = 'Error';
+                    statusEl.style.color = 'red';
+                };
+                
+            } catch (error) {
+                addLogEntry(`Error connecting to WebSocket: ${error.message}`);
+            }
+        });
+        
+        // Disconnect from WebSocket
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+        });
+        
+        // Start search
+        startSearchBtn.addEventListener('click', () => {
+            if (!socket) {
+                addLogEntry('Error: Not connected to WebSocket');
+                return;
+            }
+            
+            const startingUrl = document.getElementById('starting-url').value;
+            const goal = document.getElementById('goal').value;
+            const algorithm = document.getElementById('algorithm').value;
+            const maxDepth = parseInt(document.getElementById('max-depth').value);
+            const headless = document.getElementById('headless').checked;
+            
+            const request = {
+                type: 'search_agent_request',
+                agent_type: 'SimpleSearchAgent',
+                starting_url: startingUrl,
+                goal: goal,
+                search_algorithm: algorithm,
+                headless: headless,
+                max_depth: maxDepth
+            };
+            
+            socket.send(JSON.stringify(request));
+            addLogEntry('Search request sent');
+            
+            // Clear previous tree and trajectory
+            treeContainerEl.innerHTML = '';
+            trajectoryContainerEl.innerHTML = '';
+            treeData = null;
+        });
+        
+        // Handle incoming messages
+        function handleMessage(data) {
+            const type = data.type;
+            
+            // Add to log
+            addLogEntry(`Received: ${type}`);
+            
+            // Handle different message types
+            switch (type) {
+                case 'pong':
+                    addLogEntry('Server responded with pong');
+                    break;
+                    
+                case 'tree_structure':
+                    treeData = data.tree;
+                    renderTree();
+                    break;
+                    
+                case 'node_update':
+                    updateNode(data.node, data.is_root, data.is_current);
+                    break;
+                    
+                case 'trajectory_update':
+                    renderTrajectory(data.trajectory);
+                    break;
+                    
+                case 'status_update':
+                    addLogEntry(`Status: ${data.message}`);
+                    break;
+                    
+                default:
+                    console.log('Unknown message type:', type, data);
+            }
+        }
+        
+        // Add entry to log
+        function addLogEntry(message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const timestamp = document.createElement('span');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString() + ' - ';
+            
+            entry.appendChild(timestamp);
+            entry.appendChild(document.createTextNode(message));
+            
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        // Render tree
+        function renderTree() {
+            if (!treeData) return;
+            
+            treeContainerEl.innerHTML = '';
+            renderNode(treeData, treeContainerEl);
+        }
+        
+        // Render a node and its children
+        function renderNode(node, container) {
+            const nodeEl = document.createElement('div');
+            nodeEl.className = 'node';
+            nodeEl.id = `node-${node.id}`;
+            
+            const description = node.natural_language_description || 'Root';
+            const action = node.action ? `<br><strong>Action:</strong> ${node.action}` : '';
+            const prob = node.prob ? `<br><strong>Probability:</strong> ${node.prob.toFixed(2)}` : '';
+            
+            nodeEl.innerHTML = `<div>${description}${action}${prob}</div>`;
+            container.appendChild(nodeEl);
+            
+            if (node.children && node.children.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'node-children';
+                container.appendChild(childrenContainer);
+                
+                for (const child of node.children) {
+                    renderNode(child, childrenContainer);
+                }
+            }
+        }
+        
+        // Update a specific node
+        function updateNode(node, isRoot, isCurrent) {
+            const nodeEl = document.getElementById(`node-${node.id}`);
+            
+            if (nodeEl) {
+                if (isCurrent) {
+                    nodeEl.classList.add('current');
+                } else {
+                    nodeEl.classList.remove('current');
+                }
+            } else {
+                // If node doesn't exist yet, refresh the entire tree
+                renderTree();
+            }
+        }
+        
+        // Render trajectory
+        function renderTrajectory(trajectory) {
+            trajectoryContainerEl.innerHTML = '';
+            
+            if (!trajectory || trajectory.length === 0) {
+                trajectoryContainerEl.textContent = 'No trajectory available';
+                return;
+            }
+            
+            for (let i = 0; i < trajectory.length; i++) {
+                const node = trajectory[i];
+                const nodeEl = document.createElement('div');
+                nodeEl.className = 'node trajectory';
+                
+                const stepNum = i + 1;
+                const description = node.natural_language_description || 'Root';
+                const action = node.action ? `<br><strong>Action:</strong> ${node.action}` : '';
+                const feedback = node.feedback ? `<br><strong>Feedback:</strong> ${node.feedback}` : '';
+                
+                nodeEl.innerHTML = `<div><strong>Step ${stepNum}:</strong> ${description}${action}${feedback}</div>`;
+                trajectoryContainerEl.appendChild(nodeEl);
+            }
+        }
+    </script>
+</body>
+</html> 

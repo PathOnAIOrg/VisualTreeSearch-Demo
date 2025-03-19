@@ -1,3 +1,4 @@
+visual-tree-search-backend/log/
 visual-tree-search-backend/app/api/log/
 __pycache__/
 .DS_Store
