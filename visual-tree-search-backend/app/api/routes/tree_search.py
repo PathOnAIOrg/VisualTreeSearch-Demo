@@ -8,7 +8,43 @@ import multiprocessing
 from datetime import datetime
 import logging
 
-from ..run_demo_treesearch import main as run_tree_search
+import argparse
+from dotenv import load_dotenv
+import json
+import logging
+
+from ..lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
+load_dotenv()
+from ..lwats.core.agent_factory import setup_search_agent
+
+def run_tree_search(args):
+    # Log the arguments to help debug
+    logging.info(f"Running tree search with args: {args.__dict__}")
+    
+    # Ensure starting_url is set correctly
+    if not hasattr(args, 'starting_url') or not args.starting_url:
+        logging.error("starting_url is not set or is empty")
+        return {"error": "starting_url is required"}
+    
+    logging.info(f"Using starting URL: {args.starting_url}")
+    
+    agent_config = AgentConfig(**filter_valid_config_args(args.__dict__))
+    agent, playwright_manager = setup_search_agent(
+        agent_type=args.agent_type,
+        starting_url=args.starting_url,
+        goal=args.goal,
+        images=args.images,
+        agent_config=agent_config
+    )
+    print(agent_config)
+    
+    # Run the search
+    results = agent.run()
+    
+    # Close the playwright_manager when done
+    playwright_manager.close()
+    
+    return results
 from ..lwats.core.config import AgentConfig, filter_valid_config_args
 
 router = APIRouter()

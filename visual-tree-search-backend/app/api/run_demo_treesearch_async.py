@@ -2,12 +2,13 @@ import argparse
 from dotenv import load_dotenv
 import json
 import logging
+import asyncio
 
-from lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
+from lwats.core_async.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
 load_dotenv()
-from lwats.core.agent_factory import setup_search_agent
+from lwats.core_async.agent_factory import setup_search_agent
 
-def main(args):
+async def main(args):
     # Log the arguments to help debug
     logging.info(f"Running tree search with args: {args.__dict__}")
     
@@ -19,7 +20,7 @@ def main(args):
     logging.info(f"Using starting URL: {args.starting_url}")
     
     agent_config = AgentConfig(**filter_valid_config_args(args.__dict__))
-    agent, playwright_manager = setup_search_agent(
+    agent, playwright_manager = await setup_search_agent(
         agent_type=args.agent_type,
         starting_url=args.starting_url,
         goal=args.goal,
@@ -29,10 +30,10 @@ def main(args):
     print(agent_config)
     
     # Run the search
-    results = agent.run()
+    results = await agent.run()
     
     # Close the playwright_manager when done
-    playwright_manager.close()
+    await playwright_manager.close()
     
     return results
 
@@ -41,8 +42,6 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
-    from lwats.core.agent_factory import setup_search_agent
     
     parser = argparse.ArgumentParser(description="Run web agent with specified configuration")
     parser.add_argument("--agent-type", type=str, default="LATSAgent",
@@ -58,5 +57,7 @@ if __name__ == "__main__":
     add_agent_config_arguments(parser)
     args = parser.parse_args()
     args.images = [img.strip() for img in args.images.split(',')] if args.images else []
-    results = main(args)
+    
+    # Run the async main function with asyncio
+    results = asyncio.run(main(args))
     print(results)
