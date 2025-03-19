@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from .config import AgentConfig
-from ..agents.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
-from ..webagent_utils_sync.utils.utils import setup_logger
-from ..webagent_utils_sync.utils.playwright_manager import setup_playwright
+from ..agents_async.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
+from ..webagent_utils_async.utils.utils import setup_logger
+from ..webagent_utils_async.utils.playwright_manager import setup_playwright
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -38,7 +38,7 @@ Critical guidelines:
 
 Remember: Your role is to execute the given task precisely as instructed, using only the provided functions and within the confines of the current web page. Do not exceed these boundaries under any circumstances."""
 
-def setup_search_agent(
+async def setup_search_agent(
     agent_type,
     starting_url,
     goal,
@@ -53,17 +53,17 @@ def setup_search_agent(
         file.write(goal + '\n')
         file.write(starting_url + '\n')
 
-    playwright_manager = setup_playwright(
+    playwright_manager = await setup_playwright(
         headless=agent_config.headless, 
         mode=agent_config.browser_mode,
-        storage_state=agent_config.storage_state, 
-        log_folder=agent_config.log_folder, 
+        storage_state=agent_config.storage_state
     )
+    # storage_state='state.json', headless=False, mode="chromium"
 
-    page = playwright_manager.get_page()
-    page.goto(starting_url)
+    page = await playwright_manager.get_page()
+    await page.goto(starting_url)
     # Maximize the window on macOS
-    # page.set_viewport_size({"width": 1440, "height": 900})
+    # await page.set_viewport_size({"width": 1440, "height": 900})
 
     messages = [{
         "role": "system",

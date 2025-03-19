@@ -94,15 +94,33 @@ def read_steps_json(file_path):
 #     return re.sub(r'\d+', str(new_number), text)
 
 
+# Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=) search running shoes, click on the first result <lwats.webagent_utils_sync.utils.playwright_manager.PlaywrightManager object at 0x13593c0d0> False log
+# page: <Page url='http://128.105.145.205:7770/'>
+# node: Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=)
+# node.element: {'text': '', 'type': 'text', 'tag': 'input', 'id': 'search', 'name': 'q', 'value': '', 'placeholder': 'Search entire store here...', 'class': 'input-text', 'role': 'combobox', 'unique_selector': '#search', 'selector_uniqueness_validated': True}
+# selector: #search
+# element: <Locator frame=<Frame name= url='http://128.105.145.205:7770/'> selector='#search'>
+# {'text': '', 'type': 'text', 'tag': 'input', 'id': 'search', 'name': 'q', 'value': '', 'placeholder': 'Search entire store here...', 'class': 'input-text', 'role': 'combobox', 'unique_selector': '#search', 'selector_uniqueness_validated': True}
+# element count before: 1
+# element count after: 1
+
+
 def playwright_step_execution(node, goal, playwright_manager, is_replay, log_folder):
     logger = logging.getLogger(__name__)
     context = playwright_manager.get_context()
     page = playwright_manager.get_page()
     url = page.url
 
+    print(node, goal, playwright_manager, is_replay, log_folder)
+    print(f"page: {page}")
+    print(f"node: {node}")
+    print(f"node.element: {node.element}")
     step_data = node.element
     selector = step_data.get("unique_selector", "body")
     element = page.locator(selector)
+    print(f"selector: {selector}")
+    print(f"element: {element}")
+    print(step_data)
 
     logger.info(f"==> Attempting action with selector: {selector}")
     logger.info(f"Node data: {node}")

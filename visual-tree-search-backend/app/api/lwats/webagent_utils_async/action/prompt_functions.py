@@ -12,7 +12,7 @@ import base64
 from io import BytesIO
 import requests
 
-def is_goal_finished(messages, openai_client: OpenAI):
+async def is_goal_finished(messages, openai_client: OpenAI):
     from pydantic import BaseModel
     class Plan(BaseModel):
         goal_finished: bool
@@ -28,7 +28,7 @@ def is_goal_finished(messages, openai_client: OpenAI):
     return goal_finished
 
 # TODO: make this consistent with https://github.com/PathOnAI/LiteWebAgent/blob/main/litewebagent/agents/PromptAgents/PromptAgent.py
-def extract_top_actions(trajectory, goal, images, page_info, action_set, openai_client: OpenAI,
+async def extract_top_actions(trajectory, goal, images, page_info, action_set, openai_client: OpenAI,
                         features, elements_filter, branching_factor, log_folder, fullpage=True, action_generation_model="gpt-4o", action_grounding_model="gpt-4o"):
     if len(images) == 0:
         print("the input is just text")
@@ -332,7 +332,7 @@ Please analyze the screenshot and the Accessibility Tree to determine the next a
 Provide ONLY ONE action. Do not suggest multiple actions or a sequence of actions.
 """
 
-def generate_actions_with_observation(trajectory, goal, goal_images, openai_client: OpenAI, action_set, feature_text, screenshot,
+async def generate_actions_with_observation(trajectory, goal, goal_images, openai_client: OpenAI, action_set, feature_text, screenshot,
                         branching_factor, log_folder, action_generation_model):
     
     if len(goal_images) == 0:
@@ -384,10 +384,10 @@ def generate_actions_with_observation(trajectory, goal, goal_images, openai_clie
     with open(file_path, 'w', encoding='utf8') as file:
         file.write(response.model_dump_json())
 
-    actions = parse_actions_from_response(response, action_set, branching_factor)
+    actions = await parse_actions_from_response(response, action_set, branching_factor)
     return actions
 
-def parse_actions_from_response(response, action_set, branching_factor):
+async def parse_actions_from_response(response, action_set, branching_factor):
     # check whether the task is finished, based on is finished
     # action, description, is_finished
 

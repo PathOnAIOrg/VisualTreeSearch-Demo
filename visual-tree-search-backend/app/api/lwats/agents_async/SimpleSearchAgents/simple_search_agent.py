@@ -7,13 +7,13 @@ from openai import OpenAI
 
 from ...core.config import AgentConfig
 
-from ...webagent_utils_sync.action.highlevel import HighLevelActionSet
-from ...webagent_utils_sync.utils.playwright_manager import PlaywrightManager, setup_playwright
-from ...webagent_utils_sync.utils.utils import parse_function_args, locate_element
+from ...webagent_utils_async.action.highlevel import HighLevelActionSet
+from ...webagent_utils_async.utils.playwright_manager import AsyncPlaywrightManager, setup_playwright
+from ...webagent_utils_async.utils.utils import parse_function_args, locate_element
 from ...evaluation.evaluators import goal_finished_evaluator
-from ...replay import generate_feedback, playwright_step_execution
-from ...webagent_utils_sync.action.prompt_functions import extract_top_actions
-from ...webagent_utils_sync.browser_env.observation import extract_page_info
+from ...replay_async import generate_feedback, playwright_step_execution
+from ...webagent_utils_async.action.prompt_functions import extract_top_actions
+from ...webagent_utils_async.browser_env.observation import extract_page_info
 from .lats_node import LATSNode
 from .tree_vis import better_print, print_trajectory, collect_all_nodes, GREEN, RESET, print_entire_tree
 from .trajectory_score import create_llm_prompt, score_trajectory_with_openai
@@ -29,7 +29,7 @@ class SimpleSearchAgent:
         messages: list[dict[str, Any]],
         goal: str,
         images: list,
-        playwright_manager: PlaywrightManager,
+        playwright_manager: AsyncPlaywrightManager,
         config: AgentConfig,
     ):
         self.starting_url = starting_url
@@ -56,29 +56,28 @@ class SimpleSearchAgent:
             parent=None
         )
 
-    def run(self) -> List[Dict[str, Any]]:
+    async def run(self) -> List[Dict[str, Any]]:
         if self.config.search_algorithm == "bfs":
             logger.info("Starting BFS algorithm")
-            return self.bfs()
+            return await self.bfs()
         else:
             logger.info("Starting DFS algorithm")
-            return self.dfs()
+            return await self.dfs()
 
-    def _reset_browser(self) -> None:
+    async def _reset_browser(self) -> None:
         """Reset the browser to initial state."""
-        self.playwright_manager.close()
-        self.playwright_manager = setup_playwright(
-            log_folder=self.config.log_folder,
+        await self.playwright_manager.close()
+        self.playwright_manager = await setup_playwright(
             storage_state=self.config.storage_state,
             headless=self.config.headless,
             mode=self.config.browser_mode
         )
-        page = self.playwright_manager.get_page()
-        page.goto(self.starting_url, wait_until="networkidle")
+        page = await self.playwright_manager.get_page()
+        await page.goto(self.starting_url, wait_until="networkidle")
     
     # def expand(self, node: LATSNode, finished_score_threshold: float = 0.9) -> bool:
     
-    def expand(self, node: LATSNode) -> None:
+    async def expand(self, node: LATSNode) -> None:
         """
         Expand a node by generating its children.
         
@@ -90,7 +89,7 @@ class SimpleSearchAgent:
             node.is_terminal = True
             return
             
-        children_state = self.generate_children(node)
+        children_state = await self.generate_children(node)
         for child_state in children_state:
             child = LATSNode(
                 natural_language_description=child_state["natural_language_description"],
@@ -102,7 +101,7 @@ class SimpleSearchAgent:
             )
             node.children.append(child)
 
-    def generate_children(self, node: LATSNode) -> list[dict]:
+    async def generate_children(self, node: LATSNode) -> list[dict]:
         """
         Generate child nodes for a given node.
         
@@ -112,12 +111,12 @@ class SimpleSearchAgent:
         Returns:
             list[dict]: List of child state dictionaries
         """
-        self._reset_browser()
+        await self._reset_browser()
         path = self.get_path_to_root(node)
         
         # Execute path
         for n in path[1:]:  # Skip root node
-            success = playwright_step_execution(
+            success = await playwright_step_execution(
                 n,
                 self.goal,
                 self.playwright_manager,
@@ -129,20 +128,20 @@ class SimpleSearchAgent:
                 return []
             
             if not n.feedback:
-                n.feedback = generate_feedback(
+                n.feedback = await generate_feedback(
                     self.goal,
                     n.natural_language_description,
                     self.playwright_manager,
                 )
 
         time.sleep(3)
-        page = self.playwright_manager.get_page()
-        page_info = extract_page_info(page, self.config.fullpage, self.config.log_folder)
+        page = await self.playwright_manager.get_page()
+        page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
         
         ## TODO: add feedback as well?
-        next_actions = extract_top_actions(
+        next_actions = await extract_top_actions(
             [{"natural_language_description": n.natural_language_description, "action": n.action, "feedback": n.feedback} for n in path[1:]],
             self.goal,
             self.images, 
@@ -166,7 +165,7 @@ class SimpleSearchAgent:
                     return []
                 continue
                 
-            page = self.playwright_manager.get_page()
+            page = await self.playwright_manager.get_page()
             # page_info = extract_page_info(page, self.fullpage, self.log_folder)
             code, function_calls = self.action_set.to_python_code(action["action"])
 
@@ -174,7 +173,7 @@ class SimpleSearchAgent:
                 try:
                     for function_name, function_args in function_calls:
                         extracted_number = parse_function_args(function_args)
-                        element = locate_element(page, extracted_number)
+                        element = await locate_element(page, extracted_number)
                         action["element"] = element
                 except Exception:
                     action["element"] = None
@@ -193,7 +192,7 @@ class SimpleSearchAgent:
             current = current.parent
         return list(reversed(path))
 
-    def bfs(self) -> List[Dict[str, Any]]:
+    async def bfs(self) -> List[Dict[str, Any]]:
         """
         Performs breadth-first search starting from the root node.
         Skips nodes that are marked as terminal.
@@ -218,7 +217,7 @@ class SimpleSearchAgent:
                 
             # Expand current node if it hasn't been expanded yet
             if not current_node.children:
-                self.expand(current_node)
+                await self.expand(current_node)
                 
             # Get the path from root to this node
             path = self.get_path_to_root(current_node)
@@ -265,7 +264,7 @@ class SimpleSearchAgent:
         logger.warning("No valid path found")
         return []
 
-    def dfs(self) -> List[Dict[str, Any]]:
+    async def dfs(self) -> List[Dict[str, Any]]:
         """
         Performs depth-first search starting from the root node.
         Skips nodes that are marked as terminal.
@@ -318,7 +317,7 @@ class SimpleSearchAgent:
             
             # Expand current node if it hasn't been expanded yet
             if not current_node.children:
-                self.expand(current_node)
+                await self.expand(current_node)
                 
             score, should_terminate = evaluate_node(current_node)
             

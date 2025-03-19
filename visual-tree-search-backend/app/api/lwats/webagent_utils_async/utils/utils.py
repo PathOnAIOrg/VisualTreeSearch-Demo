@@ -4,6 +4,9 @@ import json
 import logging
 from openai import OpenAI
 from dotenv import load_dotenv
+from PIL import Image
+from io import BytesIO
+import requests
 _ = load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -70,9 +73,9 @@ def search_interactive_elements(interactive_elements, extracted_number):
 from typing import Dict
 from playwright.async_api import Page
 
-async def locate_element(page: Page, extracted_number: str) -> Dict:
+async def locate_element(page, extracted_number: str):
     """
-    Safely locate and extract information about an element using data-unique-test-id or id for initial location,
+    Async version: Safely locate and extract information about an element using data-unique-test-id or id for initial location,
     but generates a robust unique selector using standard attributes and structure.
     
     Args:
@@ -94,7 +97,7 @@ async def locate_element(page: Page, extracted_number: str) -> Dict:
         ]
         
         # Verify page is valid
-        if not page or not await page.evaluate('() => document.readyState') == 'complete':
+        if not page or not (await page.evaluate('() => document.readyState')) == 'complete':
             print("Page is not ready or invalid")
             return {}
             
@@ -143,9 +146,146 @@ async def locate_element(page: Page, extracted_number: str) -> Dict:
                 'role': await element.get_attribute('role')
             }
             
+            # Generate a unique selector for the element
+            unique_selector = await element.evaluate("""
+                el => {
+                    // Escape special characters in class names
+                    const escapeClassName = (className) => {
+                        return className.replace(/[:()[\]]/g, '\\\\$&')
+                                      .replace(/\\n/g, '\\\\n')
+                                      .replace(/\"/g, '\\\\"');
+                    };
+                    
+                    const getPath = (el) => {
+                        if (!el) return '';
+                        
+                        // Try ID, but skip framework-generated IDs
+                        if (el.id) {
+                            // List of framework-specific patterns to avoid
+                            const frameworkPatterns = [
+                                'mantine',    // Mantine framework
+                                'tailwind',   // Tailwind framework
+                                'mui',       // Material UI
+                                'ant',       // Ant Design
+                                'chakra',    // Chakra UI
+                                'radix',     // Radix UI
+                                'nextui',    // NextUI
+                                'headless',  // Headless UI
+                                'vue',       // Vue.js generated IDs
+                                'react',     // React generated IDs
+                                'angular'    // Angular generated IDs
+                            ];
+                            
+                            // Check if the ID contains any framework patterns
+                            const containsFrameworkPattern = frameworkPatterns.some(pattern => 
+                                el.id.toLowerCase().includes(pattern.toLowerCase())
+                            );
+                            
+                            // Only use the ID if it doesn't contain framework patterns
+                            if (!containsFrameworkPattern) {
+                                return `#${escapeClassName(el.id)}`;
+                            }
+                        }
+                         
+                        // Try name attribute
+                        if (el.getAttribute('name')) {
+                            const nameSelector = `[name="${el.getAttribute('name')}"]`;
+                            if (document.querySelectorAll(nameSelector).length === 1) {
+                                return nameSelector;
+                            }
+                        }
+                        
+                        // Try role
+                        if (el.getAttribute('role')) {
+                            const roleSelector = `[role="${el.getAttribute('role')}"]`;
+                            if (document.querySelectorAll(roleSelector).length === 1) {
+                                return roleSelector;
+                            }
+                        }
+                        
+                        // Try building selector with tag and attributes
+                        const tagName = el.tagName.toLowerCase();
+                        let selector = tagName;
+                        
+                        // Add available attributes
+                        const attrs = {
+                            'type': el.getAttribute('type'),
+                            'placeholder': el.getAttribute('placeholder'),
+                            'title': el.getAttribute('title'),
+                            'aria-label': el.getAttribute('aria-label')
+                        };
+                        
+                        Object.entries(attrs).forEach(([key, value]) => {
+                            if (value) selector += `[${key}="${value}"]`;
+                        });
+                        
+                        // Get position among siblings
+                        const parent = el.parentElement;
+                        if (!parent) return selector;
+                        
+                        const siblings = Array.from(parent.children);
+                        const sameTagSiblings = siblings.filter(e => e.tagName === el.tagName);
+                        const index = sameTagSiblings.indexOf(el) + 1;
+                        const nthSelector = sameTagSiblings.length > 1 ? `:nth-of-type(${index})` : '';
+                        
+                        // Build path
+                        const parentPath = getPath(parent);
+                        return `${parentPath} > ${selector}${nthSelector}`;
+                    };
+                    
+                    try {
+                        // First attempt: get path without classes
+                        let selector = getPath(el);
+                        if (document.querySelectorAll(selector).length === 1) {
+                            return selector;
+                        }
+                        
+                        // If not unique, try adding individual non-complex classes
+                        if (el.className) {
+                            const classes = Array.from(el.classList)
+                                .filter(cls => !cls.includes('(') && !cls.includes(':'));  // Filter out complex classes
+                            
+                            if (classes.length > 0) {
+                                const baseSelector = selector.split(':nth-of-type')[0];  // Remove nth-of-type if present
+                                selector = `${baseSelector}.${classes.join('.')}`;
+                                
+                                // Verify it's valid and unique
+                                document.querySelectorAll(selector);  // This will throw if invalid
+                                if (document.querySelectorAll(selector).length === 1) {
+                                    return selector;
+                                }
+                            }
+                        }
+                        
+                        // If still not unique, return the structural selector
+                        return getPath(el);
+                    } catch (e) {
+                        // If any error occurs, fall back to structural selector
+                        return getPath(el);
+                    }
+                }
+            """)
+            result['unique_selector'] = unique_selector
+            
+            # Validate the selector returns exactly one element
+            try:
+                validation_count = await page.evaluate(f"""
+                    () => document.querySelectorAll(`{unique_selector}`).length
+                """)
+                
+                if validation_count != 1:
+                    print(f"Warning: Generated selector matches {validation_count} elements")
+                    result['selector_uniqueness_validated'] = False
+                else:
+                    result['selector_uniqueness_validated'] = True
+            except Exception as e:
+                print(f"Error validating selector: {str(e)}")
+                result['selector_uniqueness_validated'] = False
+            
             # Clean up None values
             result = {k: v for k, v in result.items() if v is not None}
                     
+            print(f"locate_element_async result: {result}")
             return result
             
         except Exception as e:
@@ -153,8 +293,9 @@ async def locate_element(page: Page, extracted_number: str) -> Dict:
             return {}
                 
     except Exception as e:
-        print(f"Error in locate_element: {str(e)}")
+        print(f"Error in locate_element_async: {str(e)}")
         return {}
+
 
 def parse_function_args(function_args):
     if not function_args or not isinstance(function_args, list):
@@ -168,3 +309,37 @@ def append_to_steps_json(result, file_path):
     with open(file_path, 'a') as file:
         file.write(json_line + '\n')
     print(f"Appended result to {file_path}")
+
+
+def url_to_b64(image_url: str) -> str:
+    # Download the image from URL
+    response = requests.get(image_url)
+    response.raise_for_status()  # Raise an exception for bad status codes
+    
+    # Open image using PIL
+    img = Image.open(BytesIO(response.content))
+    
+    # Convert to base64
+    with BytesIO() as image_buffer:
+        img.save(image_buffer, format="PNG")
+        byte_data = image_buffer.getvalue()
+        img_b64 = base64.b64encode(byte_data).decode("utf-8")
+        img_b64 = "data:image/png;base64," + img_b64
+    
+    return img_b64
+
+def urls_to_images(urls: list[str]) -> list[str]:
+    images = []
+    for url in urls:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        # Open image using PIL
+        img = Image.open(BytesIO(response.content))
+        
+        # Convert to base64
+        with BytesIO() as image_buffer:
+            img.save(image_buffer, format="PNG")
+            byte_data = image_buffer.getvalue()
+            images.append(byte_data)
+    return images

@@ -101,12 +101,85 @@ def build_highlevel_action_parser() -> pp.ParserElement:
     return parser
 
 
-def prepare_prompt(page_info, action_set, features, log_folder, elements_filter):
+# def prepare_prompt(page_info, action_set, features, log_folder, elements_filter):
+#     logger.info("features used: {}".format(features))
+#     logger.info(f"elements_filter: {elements_filter}")
+
+#     filter_som_only = elements_filter == 'som'
+#     filter_visible_only = elements_filter == 'visibility'
+
+#     prompt = f"""
+#     """
+#     if "axtree" in features:
+#         axtree_str = flatten_axtree_to_str(page_info.get('axtree', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
+#         prompt += f"""
+#         # Current Accessibility Tree:
+#         {axtree_str}
+#         """
+#         # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+#         # filename = f"axtree_{timestamp}.txt"
+#         # file_path = os.path.join(log_folder, 'prompt', filename)
+#         # os.makedirs(os.path.dirname(file_path), exist_ok=True)
+#         # with open(file_path, 'w', encoding='utf8') as file:
+#         #     file.write(axtree_str)
+
+#     # TODO: flatten interactive elements
+#     if "interactive_elements" in features:
+#         interactive_elements_str = flatten_interactive_elements_to_str(page_info.get('interactive_elements', ''))
+#         prompt += f"""
+#         # Interactive elements:
+#         {interactive_elements_str}
+#         """
+#         # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+#         # filename = f"interactive_elements_{timestamp}.txt"
+#         # file_path = os.path.join(log_folder, 'prompt', filename)
+#         # os.makedirs(os.path.dirname(file_path), exist_ok=True)
+#         # with open(file_path, 'w', encoding='utf8') as file:
+#         #     file.write(interactive_elements_str)
+
+#     # TODO: clean dom elements
+#     if "dom" in features:
+#         dom_str = flatten_dom_to_str(page_info.get('dom', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
+#         prompt += f"""
+#         # Current DOM:
+#         {dom_str}
+#         """
+#         # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+#         # filename = f"dom_{timestamp}.txt"
+#         # file_path = os.path.join(log_folder, 'prompt', filename)
+#         # os.makedirs(os.path.dirname(file_path), exist_ok=True)
+#         # with open(file_path, 'w', encoding='utf8') as file:
+#         #     file.write(dom_str)
+
+#     prompt += f"""
+#         # Action Space
+#         {action_set.describe(with_long_description=False, with_examples=True)}
+
+#         # Screenshot
+#         The image provided is a screenshot of the current application state, corresponding to the Accessibility Tree above.
+
+#         Here is an example with chain of thought of a valid action when clicking on a button:
+#         "
+#         In order to accomplish my goal I need to click on the button with bid 12
+#         ```click('12')```
+#         "
+
+#         Please analyze the screenshot and the Accessibility Tree to determine the next appropriate action. Refer to visual elements from the screenshot if relevant to your decision.
+#         Provide ONLY ONE action. Do not suggest multiple actions or a sequence of actions.
+#         """
+#     return prompt
+
+
+def prepare_prompt(page_info, action_set, features, elements_filter, log_folder, fullpage=True):
     logger.info("features used: {}".format(features))
     logger.info(f"elements_filter: {elements_filter}")
 
-    filter_som_only = elements_filter == 'som'
-    filter_visible_only = elements_filter == 'visibility'
+    if not fullpage:
+        filter_som_only = elements_filter == "som"
+    else:
+        filter_som_only = False
+
+    filter_visible_only = elements_filter == "visibility"
 
     prompt = f"""
     """
@@ -116,12 +189,12 @@ def prepare_prompt(page_info, action_set, features, log_folder, elements_filter)
         # Current Accessibility Tree:
         {axtree_str}
         """
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        # filename = f"axtree_{timestamp}.txt"
-        # file_path = os.path.join(log_folder, 'prompt', filename)
-        # os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        # with open(file_path, 'w', encoding='utf8') as file:
-        #     file.write(axtree_str)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"axtree_{timestamp}.txt"
+        file_path = os.path.join(log_folder, 'prompt', filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf8') as file:
+            file.write(axtree_str)
 
     # TODO: flatten interactive elements
     if "interactive_elements" in features:
@@ -130,12 +203,12 @@ def prepare_prompt(page_info, action_set, features, log_folder, elements_filter)
         # Interactive elements:
         {interactive_elements_str}
         """
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        # filename = f"interactive_elements_{timestamp}.txt"
-        # file_path = os.path.join(log_folder, 'prompt', filename)
-        # os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        # with open(file_path, 'w', encoding='utf8') as file:
-        #     file.write(interactive_elements_str)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"interactive_elements_{timestamp}.txt"
+        file_path = os.path.join(log_folder, 'prompt', filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf8') as file:
+            file.write(interactive_elements_str)
 
     # TODO: clean dom elements
     if "dom" in features:
@@ -144,12 +217,12 @@ def prepare_prompt(page_info, action_set, features, log_folder, elements_filter)
         # Current DOM:
         {dom_str}
         """
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        # filename = f"dom_{timestamp}.txt"
-        # file_path = os.path.join(log_folder, 'prompt', filename)
-        # os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        # with open(file_path, 'w', encoding='utf8') as file:
-        #     file.write(dom_str)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"dom_{timestamp}.txt"
+        file_path = os.path.join(log_folder, 'prompt', filename)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf8') as file:
+            file.write(dom_str)
 
     prompt += f"""
         # Action Space
@@ -167,4 +240,11 @@ def prepare_prompt(page_info, action_set, features, log_folder, elements_filter)
         Please analyze the screenshot and the Accessibility Tree to determine the next appropriate action. Refer to visual elements from the screenshot if relevant to your decision.
         Provide ONLY ONE action. Do not suggest multiple actions or a sequence of actions.
         """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    filename = f"prompt_{timestamp}.txt"
+    file_path = os.path.join(log_folder, 'prompt', filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w', encoding='utf8') as file:
+        file.write(prompt)
+    
     return prompt

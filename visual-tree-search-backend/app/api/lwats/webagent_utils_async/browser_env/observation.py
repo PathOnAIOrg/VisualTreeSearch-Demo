@@ -16,6 +16,7 @@ import pkgutil
 import re
 import base64
 import asyncio
+from datetime import datetime
 
 MARK_FRAMES_MAX_TRIES = 3
 
@@ -64,29 +65,62 @@ async def _pre_extract(page: playwright.async_api.Page):
 
     await mark_frames_recursive(page.main_frame, frame_bid="")
 
-import time
-async def extract_page_info(page, log_folder):
+
+async def extract_page_info(page, fullpage, log_folder):
     page_info = {}
     await _pre_extract(page)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    filename = f"screenshot_{timestamp}.png"
+    screenshot_path = os.path.join(log_folder, 'screenshots', filename)
+    await page.screenshot(path=screenshot_path, full_page=fullpage)
+    # Capture screenshot as bytes
+    # Wait for 3 seconds (if this wait is necessary)
     await asyncio.sleep(3)
-    screenshot_bytes = await page.screenshot()
+    screenshot_bytes = await page.screenshot(full_page=fullpage)
+
+    # Store the bytes directly in page_info
     page_info['screenshot'] = screenshot_bytes
     page_info['dom'] = await extract_dom_snapshot(page)
     page_info['axtree'] = await extract_merged_axtree(page)
     page_info['focused_element'] = await extract_focused_element_bid(page)
     page_info['extra_properties'] = extract_dom_extra_properties(page_info.get('dom'))
     page_info['interactive_elements'] = await extract_interactive_elements(page)
-
-    # fix extract_interactive_elements
-    # highlight_elements
-    # remove_highlights
-    # flatten_interactive_elements_to_str
-    # page are all async page
     await highlight_elements(page, page_info['interactive_elements'])
-    screenshot_bytes = await page.screenshot()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    filename = f"screenshot_som_{timestamp}.png"
+    screenshot_path = os.path.join(log_folder, 'screenshots', filename)
+    await page.screenshot(path=screenshot_path, full_page=fullpage)
+    await asyncio.sleep(3)
+    screenshot_bytes = await page.screenshot(full_page=fullpage)
     page_info['screenshot_som'] = screenshot_bytes
     await _post_extract(page)
     return page_info
+
+
+
+# import time
+# async def extract_page_info(page, log_folder):
+#     page_info = {}
+#     await _pre_extract(page)
+#     await asyncio.sleep(3)
+#     screenshot_bytes = await page.screenshot()
+#     page_info['screenshot'] = screenshot_bytes
+#     page_info['dom'] = await extract_dom_snapshot(page)
+#     page_info['axtree'] = await extract_merged_axtree(page)
+#     page_info['focused_element'] = await extract_focused_element_bid(page)
+#     page_info['extra_properties'] = extract_dom_extra_properties(page_info.get('dom'))
+#     page_info['interactive_elements'] = await extract_interactive_elements(page)
+
+#     # fix extract_interactive_elements
+#     # highlight_elements
+#     # remove_highlights
+#     # flatten_interactive_elements_to_str
+#     # page are all async page
+#     await highlight_elements(page, page_info['interactive_elements'])
+#     screenshot_bytes = await page.screenshot()
+#     page_info['screenshot_som'] = screenshot_bytes
+#     await _post_extract(page)
+#     return page_info
 
 async def _post_extract(page: playwright.async_api.Page):
     js_frame_unmark_elements = pkgutil.get_data(

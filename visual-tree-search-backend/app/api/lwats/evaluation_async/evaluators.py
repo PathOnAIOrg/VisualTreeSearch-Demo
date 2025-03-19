@@ -7,6 +7,7 @@ import base64
 
 class IsGoalFinished(BaseModel):
     goal_finished: bool
+
 def goal_finished_evaluator(messages, openai_client, goal, screenshot, model='gpt-4o-mini'):
     system_message = """You are an AI assistant evaluating the progress of a web browsing task. Your role is to determine if the overall goal of the task has been accomplished based on the actions taken and the conversation history.
 
