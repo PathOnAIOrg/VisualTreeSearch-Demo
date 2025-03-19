@@ -39,12 +39,14 @@ from app.api.routes.hello import router as hello_router
 from app.api.routes.sse import router as sse_router
 from app.api.routes.websocket import router as ws_router
 from app.api.routes.tree_websocket import router as tree_ws_router
+from app.api.routes.tree_search import router as tree_search_router
 
 # Include routers from different modules
 app.include_router(hello_router, prefix="/api/hello", tags=["hello"])
 app.include_router(sse_router, prefix="/api/sse", tags=["sse"])
 app.include_router(ws_router, prefix="/api/ws", tags=["websocket"])
 app.include_router(tree_ws_router, prefix="/api/tree", tags=["tree"])
+app.include_router(tree_search_router, prefix="/api/tree-search", tags=["tree-search"])
 
 # Import the WebSocket endpoint handlers
 from app.api.routes.websocket import websocket_endpoint

@@ -4,7 +4,7 @@ import logging
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from lwats.core.config import AgentConfig
+from .config import AgentConfig
 from ..agents.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
 from ..webagent_utils_sync.utils.utils import setup_logger
 from ..webagent_utils_sync.utils.playwright_manager import setup_playwright
@@ -40,11 +40,9 @@ Remember: Your role is to execute the given task precisely as instructed, using 
 
 def setup_search_agent(
     agent_type,
-
     starting_url,
     goal,
     images,
-
     agent_config: AgentConfig
 ):
     logger = setup_logger()
