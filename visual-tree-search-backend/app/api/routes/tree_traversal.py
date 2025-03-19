@@ -17,14 +17,16 @@ async def bfs_traversal(websocket: WebSocket, tree_data: Dict[str, Any]):
     """Perform BFS traversal of the tree and send updates to the client"""
     try:
         # Send acknowledgment
-        await websocket.send_json({
+        info_message = {
             "type": "info",
             "message": "Starting BFS traversal",
             "timestamp": datetime.utcnow().isoformat()
-        })
+        }
+        logging.info(f"Sending to websocket: {json.dumps(info_message)}")
+        await websocket.send_json(info_message)
         
         # Send the root node first
-        await websocket.send_json({
+        root_message = {
             "type": "traversal",  # Changed to 'traversal' for consistency with frontend
             "algorithm": "bfs",
             "nodeId": tree_data["id"],
@@ -33,7 +35,9 @@ async def bfs_traversal(websocket: WebSocket, tree_data: Dict[str, Any]):
             "isRoot": True,
             "message": f"Root node: {tree_data['name']} (ID: {tree_data['id']})",
             "timestamp": datetime.utcnow().isoformat()
-        })
+        }
+        logging.info(f"Sending to websocket: {json.dumps(root_message)}")
+        await websocket.send_json(root_message)
         
         # Wait to make the traversal visible
         await asyncio.sleep(1)
@@ -56,7 +60,7 @@ async def bfs_traversal(websocket: WebSocket, tree_data: Dict[str, Any]):
                 visited.add(child["id"])
                 
                 # Send child node with parent reference
-                await websocket.send_json({
+                node_message = {
                     "type": "traversal",  # Changed to 'traversal' for consistency with frontend
                     "algorithm": "bfs",
                     "nodeId": child["id"],
@@ -65,7 +69,9 @@ async def bfs_traversal(websocket: WebSocket, tree_data: Dict[str, Any]):
                     "isRoot": False,
                     "message": f"Visiting node: {child['name']} (ID: {child['id']}, Parent: {parent['name']})",
                     "timestamp": datetime.utcnow().isoformat()
-                })
+                }
+                logging.info(f"Sending to websocket: {json.dumps(node_message)}")
+                await websocket.send_json(node_message)
                 
                 # Wait to make the traversal visible
                 await asyncio.sleep(1)
@@ -76,11 +82,13 @@ async def bfs_traversal(websocket: WebSocket, tree_data: Dict[str, Any]):
                         queue.append((grandchild, child))  # Store child with its parent
         
         # Send completion message
-        await websocket.send_json({
+        completion_message = {
             "type": "info",
             "message": "BFS traversal completed",
             "timestamp": datetime.utcnow().isoformat()
-        })
+        }
+        logging.info(f"Sending to websocket: {json.dumps(completion_message)}")
+        await websocket.send_json(completion_message)
         
     except WebSocketDisconnect:
         logging.info("Client disconnected during tree traversal")
