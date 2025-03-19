@@ -8,6 +8,7 @@ from lwats.core_async.config import AgentConfig, add_agent_config_arguments, fil
 load_dotenv()
 from lwats.core_async.agent_factory import setup_search_agent
 
+
 async def main(args):
     # Log the arguments to help debug
     logging.info(f"Running tree search with args: {args.__dict__}")
@@ -20,6 +21,7 @@ async def main(args):
     logging.info(f"Using starting URL: {args.starting_url}")
     
     agent_config = AgentConfig(**filter_valid_config_args(args.__dict__))
+    print(agent_config)
     agent, playwright_manager = await setup_search_agent(
         agent_type=args.agent_type,
         starting_url=args.starting_url,
