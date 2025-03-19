@@ -279,20 +279,22 @@ const D3Playground = () => {
   }, [treeData]);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">D3 Tree Visualization Playground</h1>
-      
-      {/* Controls section */}
-      <div className="mb-6 flex gap-4">
-        <Button onClick={generateTree} disabled={connected}>
-          Generate Tree
-        </Button>
-        <Button onClick={connect} disabled={connected || !treeData}>
-          Connect & Start Traversal
-        </Button>
-        <Button onClick={disconnect} disabled={!connected}>
-          Disconnect
-        </Button>
+    <div className="container mx-auto p-4 max-h-screen overflow-y-auto">
+      <div className="sticky top-0 z-10 bg-background pb-4">
+        <h1 className="text-2xl font-bold mb-4">D3 Tree Visualization Playground</h1>
+        
+        {/* Controls section - fixed at the top */}
+        <div className="mb-6 flex gap-4">
+          <Button onClick={generateTree} disabled={connected}>
+            Generate Tree
+          </Button>
+          <Button onClick={connect} disabled={connected || !treeData}>
+            Connect & Start Traversal
+          </Button>
+          <Button onClick={disconnect} disabled={!connected}>
+            Disconnect
+          </Button>
+        </div>
       </div>
       
       {/* Visualization section */}
@@ -300,7 +302,7 @@ const D3Playground = () => {
         {/* Original tree visualization */}
         <div className="border rounded p-4 bg-card">
           <h2 className="text-xl font-semibold mb-2">Original Tree</h2>
-          <div ref={treeContainerRef} className="w-full h-[400px]"></div>
+          <div ref={treeContainerRef} className="w-full h-[300px] overflow-auto"></div>
         </div>
         
         {/* Tree reconstruction visualization */}
@@ -309,7 +311,7 @@ const D3Playground = () => {
           <TreeReconstructor 
             messages={treeMessages} 
             width={400} 
-            height={400} 
+            height={300} 
           />
         </div>
       </div>
@@ -317,7 +319,7 @@ const D3Playground = () => {
       {/* Log section */}
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-2">Message Log</h2>
-        <div className="border rounded p-4 bg-card h-[300px] overflow-y-auto">
+        <div className="border rounded p-4 bg-card h-[200px] overflow-y-auto">
           {messages.map((msg, index) => (
             <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-blue-500' : ''}`}>
               <pre className="whitespace-pre-wrap">{msg.content}</pre>
