@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 import json
 import logging
 
-from .lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
+from lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
 load_dotenv()
-from .lwats.core.agent_factory import setup_search_agent
+from lwats.core.agent_factory import setup_search_agent
 
 def main(args):
     # Log the arguments to help debug
@@ -41,8 +41,8 @@ if __name__ == "__main__":
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from app.api.lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
-    from app.api.lwats.core.agent_factory import setup_search_agent
+    from lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
+    from lwats.core.agent_factory import setup_search_agent
     
     parser = argparse.ArgumentParser(description="Run web agent with specified configuration")
     parser.add_argument("--agent-type", type=str, default="LATSAgent",
