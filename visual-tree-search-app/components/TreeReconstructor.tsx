@@ -18,17 +18,33 @@ interface TreeReconstructorProps {
   }[];
   width?: number;
   height?: number;
+  reset?: boolean;
 }
 
 const TreeReconstructor: React.FC<TreeReconstructorProps> = ({ 
   messages, 
   width = 800, 
-  height = 600 
+  height = 600,
+  reset = false
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [nodeMap, setNodeMap] = useState<Map<string, TreeNode>>(new Map());
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
+
+  // Reset tree when reset prop changes to true
+  useEffect(() => {
+    if (reset) {
+      setTree(null);
+      setNodeMap(new Map());
+      setCurrentNodeId(null);
+      
+      // Clear the SVG
+      if (svgRef.current) {
+        d3.select(svgRef.current).selectAll("*").remove();
+      }
+    }
+  }, [reset]);
 
   // Process messages to build tree
   useEffect(() => {

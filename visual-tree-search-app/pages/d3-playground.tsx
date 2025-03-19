@@ -13,37 +13,6 @@ interface TreeNode {
   current?: boolean;
 }
 
-// Sample tree data
-const sampleTree: TreeNode = {
-  id: "1",
-  name: "Root",
-  children: [
-    {
-      id: "2",
-      name: "Child 1",
-      children: [
-        { id: "5", name: "Grandchild 1" },
-        { id: "6", name: "Grandchild 2" }
-      ]
-    },
-    {
-      id: "3",
-      name: "Child 2",
-      children: [
-        { id: "7", name: "Grandchild 3" }
-      ]
-    },
-    {
-      id: "4",
-      name: "Child 3",
-      children: [
-        { id: "8", name: "Grandchild 4" },
-        { id: "9", name: "Grandchild 5" }
-      ]
-    }
-  ]
-};
-
 // Define a type for tree messages
 interface TreeMessage {
   type: string;
@@ -61,6 +30,7 @@ const D3Playground = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const [treeMessages, setTreeMessages] = useState<TreeMessage[]>([]);
+  const [resetTree, setResetTree] = useState(false);
 
   // Initialize backend URL from env variable
   useEffect(() => {
@@ -89,11 +59,49 @@ const D3Playground = () => {
     }]);
   };
 
-  // Generate a new random tree
+  // Generate a new tree
   const generateTree = () => {
-    // For simplicity, we'll use the sample tree
-    setTreeData(JSON.parse(JSON.stringify(sampleTree)));
-    logMessage("Generated new tree", "outgoing");
+    // Generate a random tree instead of using the sample tree
+    const randomTree = generateRandomTree(3, 3); // Max depth of 3, max children of 3
+    setTreeData(randomTree);
+    
+    // Clear previous tree messages
+    setTreeMessages([]);
+    
+    logMessage("Generated new random tree", "outgoing");
+  };
+
+  // Function to generate a random tree
+  const generateRandomTree = (maxDepth: number, maxChildren: number, currentDepth = 0, id = "1"): TreeNode => {
+    // Create a node with a random name
+    const node: TreeNode = {
+      id,
+      name: currentDepth === 0 ? "Root" : `Node ${id}`,
+    };
+    
+    // Stop adding children if we've reached max depth
+    if (currentDepth >= maxDepth) {
+      return node;
+    }
+    
+    // Randomly decide how many children to create (0 to maxChildren)
+    const numChildren = Math.floor(Math.random() * (maxChildren + 1));
+    
+    if (numChildren > 0) {
+      node.children = [];
+      for (let i = 0; i < numChildren; i++) {
+        const childId = `${id}-${i+1}`;
+        const child = generateRandomTree(
+          maxDepth,
+          maxChildren,
+          currentDepth + 1,
+          childId
+        );
+        node.children.push(child);
+      }
+    }
+    
+    return node;
   };
 
   // Connect to WebSocket
@@ -125,6 +133,10 @@ const D3Playground = () => {
         
         // Clear previous tree messages when starting a new connection
         setTreeMessages([]);
+        
+        // Reset the tree reconstruction
+        setResetTree(true);
+        setTimeout(() => setResetTree(false), 100);
       };
       
       wsRef.current.onmessage = (event) => {
@@ -168,10 +180,17 @@ const D3Playground = () => {
     }
   };
 
-  // Disconnect from WebSocket
-  const disconnect = () => {
+  // Rename disconnect to restart and clear tree reconstruction
+  const restart = () => {
     if (wsRef.current) {
       wsRef.current.close();
+      
+      // Clear tree messages to make tree constructor visualization blank
+      setTreeMessages([]);
+      
+      // Reset the tree reconstruction
+      setResetTree(true);
+      setTimeout(() => setResetTree(false), 100);
     }
   };
 
@@ -291,8 +310,8 @@ const D3Playground = () => {
           <Button onClick={connect} disabled={connected || !treeData}>
             Connect & Start Traversal
           </Button>
-          <Button onClick={disconnect} disabled={!connected}>
-            Disconnect
+          <Button onClick={restart} disabled={!connected}>
+            Restart
           </Button>
         </div>
       </div>
@@ -311,7 +330,8 @@ const D3Playground = () => {
           <TreeReconstructor 
             messages={treeMessages} 
             width={400} 
-            height={300} 
+            height={300}
+            reset={resetTree}
           />
         </div>
       </div>
