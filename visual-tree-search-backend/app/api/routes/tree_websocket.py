@@ -90,6 +90,25 @@ async def tree_websocket_endpoint(websocket: WebSocket):
                     
                     # Start BFS traversal
                     await bfs_traversal(websocket, tree_data)
+                    
+                # Handle traversal request
+                elif parsed_data.get("type") == "traversal_request":
+                    algorithm = parsed_data.get("algorithm", "bfs")
+                    tree_data = parsed_data.get("tree")
+                    
+                    if tree_data:
+                        if algorithm == "bfs":
+                            await bfs_traversal(websocket, tree_data)
+                        else:
+                            await websocket.send_json({
+                                "type": "error",
+                                "message": f"Unsupported algorithm: {algorithm}"
+                            })
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "No tree data provided for traversal"
+                        })
                 else:
                     # Echo back other message types
                     await websocket.send_json({

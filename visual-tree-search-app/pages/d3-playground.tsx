@@ -1,7 +1,8 @@
+import React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as d3 from 'd3';
+import TreeReconstructor from "@/components/TreeReconstructor";
 
 // Define types for our tree nodes
 interface TreeNode {
@@ -43,6 +44,14 @@ const sampleTree: TreeNode = {
   ]
 };
 
+// Define a type for tree messages
+interface TreeMessage {
+  type: string;
+  nodeId?: string;
+  content?: TreeNode;
+  timestamp?: string;
+}
+
 const D3Playground = () => {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<{content: string; type: 'incoming' | 'outgoing'; timestamp: string}[]>([]);
@@ -50,7 +59,8 @@ const D3Playground = () => {
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  const [treeMessages, setTreeMessages] = useState<TreeMessage[]>([]);
 
   // Initialize backend URL from env variable
   useEffect(() => {
@@ -112,6 +122,9 @@ const D3Playground = () => {
         
         wsRef.current?.send(JSON.stringify(data));
         logMessage(data, 'outgoing');
+        
+        // Clear previous tree messages when starting a new connection
+        setTreeMessages([]);
       };
       
       wsRef.current.onmessage = (event) => {
@@ -122,6 +135,17 @@ const D3Playground = () => {
           // Check if this is a tree traversal message
           if (data.type === 'traversal' && data.nodeId) {
             updateTreeVisualization(data.nodeId);
+            
+            // Store traversal messages for tree reconstruction
+            setTreeMessages(prev => [...prev, data]);
+          }
+          
+          // Also handle node messages for traversal visualization
+          if (data.type === 'node' && data.nodeId) {
+            updateTreeVisualization(data.nodeId);
+            
+            // Store node messages for tree reconstruction
+            setTreeMessages(prev => [...prev, data]);
           }
         } catch {
           logMessage(event.data);
@@ -186,14 +210,22 @@ const D3Playground = () => {
 
   // Render D3 tree visualization
   useEffect(() => {
-    if (!treeData || !svgRef.current) return;
+    if (!treeData || !treeContainerRef.current) return;
 
     // Clear previous visualization
-    d3.select(svgRef.current).selectAll("*").remove();
+    d3.select(treeContainerRef.current).selectAll("*").remove();
 
     const width = 600;
     const height = 400;
     const margin = { top: 20, right: 90, bottom: 30, left: 90 };
+
+    // Create SVG element if it doesn't exist
+    const svg = d3.select(treeContainerRef.current)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Create a tree layout
     const treeLayout = d3.tree<TreeNode>()
@@ -205,13 +237,6 @@ const D3Playground = () => {
     // Assign x and y coordinates to each node
     const treeData2 = treeLayout(root);
     
-    // Create an SVG container
-    const svg = d3.select(svgRef.current)
-      .attr("width", width)
-      .attr("height", height)
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
     // Add links between nodes
     svg.selectAll(".link")
       .data(treeData2.links())
@@ -254,73 +279,51 @@ const D3Playground = () => {
   }, [treeData]);
 
   return (
-    <div className="flex flex-col space-y-4 p-6">
-      <h1 className="text-2xl font-bold text-center">D3 Tree Visualization</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">D3 Tree Visualization Playground</h1>
       
-      <div className="flex flex-row space-x-4">
-        {/* Left side - D3 Visualization */}
-        <div className="flex-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tree Visualization</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex space-x-2 mb-4">
-                <Button 
-                  onClick={generateTree} 
-                  variant="default"
-                >
-                  Generate Tree
-                </Button>
-                <Button 
-                  onClick={connect} 
-                  disabled={connected || !treeData}
-                  variant="default"
-                >
-                  Connect
-                </Button>
-                <Button 
-                  onClick={disconnect} 
-                  disabled={!connected}
-                  variant="destructive"
-                >
-                  Disconnect
-                </Button>
-              </div>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-                <svg ref={svgRef} width="600" height="400"></svg>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Controls section */}
+      <div className="mb-6 flex gap-4">
+        <Button onClick={generateTree} disabled={connected}>
+          Generate Tree
+        </Button>
+        <Button onClick={connect} disabled={connected || !treeData}>
+          Connect & Start Traversal
+        </Button>
+        <Button onClick={disconnect} disabled={!connected}>
+          Disconnect
+        </Button>
+      </div>
+      
+      {/* Visualization section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Original tree visualization */}
+        <div className="border rounded p-4 bg-card">
+          <h2 className="text-xl font-semibold mb-2">Original Tree</h2>
+          <div ref={treeContainerRef} className="w-full h-[400px]"></div>
         </div>
         
-        {/* Right side - WebSocket Messages */}
-        <div className="flex-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className={connected ? "text-green-600" : "text-red-600"}>
-                {connected ? "Connected" : "Disconnected"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-900">
-                {messages.map((msg, index) => (
-                  <div 
-                    key={index} 
-                    className={`mb-2 p-2 rounded ${
-                      msg.type === 'incoming' 
-                        ? 'bg-gray-100 dark:bg-gray-800' 
-                        : 'bg-blue-100 dark:bg-blue-900 text-right'
-                    }`}
-                  >
-                    <div>{msg.content}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{msg.timestamp}</div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tree reconstruction visualization */}
+        <div className="border rounded p-4 bg-card">
+          <h2 className="text-xl font-semibold mb-2">Tree Reconstruction</h2>
+          <TreeReconstructor 
+            messages={treeMessages} 
+            width={400} 
+            height={400} 
+          />
+        </div>
+      </div>
+      
+      {/* Log section */}
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-2">Message Log</h2>
+        <div className="border rounded p-4 bg-card h-[300px] overflow-y-auto">
+          {messages.map((msg, index) => (
+            <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-blue-500' : ''}`}>
+              <pre className="whitespace-pre-wrap">{msg.content}</pre>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
       </div>
     </div>
