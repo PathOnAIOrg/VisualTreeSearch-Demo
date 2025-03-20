@@ -177,7 +177,7 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
         setTree(rootNode);
       }
     }
-  }, [messages, nodeMap]);
+  }, [messages]);
 
   // Render tree with D3
   useEffect(() => {
