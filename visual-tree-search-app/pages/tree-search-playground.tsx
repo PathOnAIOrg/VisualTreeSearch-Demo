@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import TreeReconstructor from "@/components/TreeReconstructor_d3";
+import TreeReconstructor from "../components/TreeReconstructor_d3";
 import { Info } from "lucide-react";
 
 // Define types for our messages
@@ -304,7 +304,7 @@ const TreeSearchPlayground = () => {
               <p className="text-sm text-blue-700 dark:text-blue-400">
                 1. Connect to the websocket server using the controls below.<br />
                 2. Configure your search parameters.<br />
-                3. Click "Start Search" to begin the visualization.<br />
+                3. Click &quot;Start Search&quot; to begin the visualization.<br />
                 4. The tree of possible actions will appear on the left, while the resulting web page will display on the right.
               </p>
             </div>
