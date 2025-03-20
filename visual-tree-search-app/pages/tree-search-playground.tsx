@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import TreeReconstructor from "@/components/TreeReconstructor_d3";
 
 // Define types for our messages
 interface Message {
@@ -20,6 +21,55 @@ interface SearchParams {
   maxDepth: number;
 }
 
+// Define type for tree messages used by TreeReconstructor - simpler version matching d3-playground
+interface TreeMessage {
+  type: string;
+  nodeId?: string;
+  nodeName?: string;
+  parentId?: string;
+  isRoot?: boolean;
+  timestamp?: string;
+  description?: string | null;
+}
+
+interface TreeNode {
+  id: number;
+  parent_id: number | null;
+  action: string;
+  description: string | null;
+  depth: number;
+  is_terminal: boolean;
+}
+
+interface BaseMessage {
+  type: string;
+  timestamp: string;
+}
+
+interface NodeProcessingMessage extends BaseMessage {
+  type: 'node_processing';
+  node_id: number;
+  depth: number;
+}
+
+interface NodeExpandingMessage extends BaseMessage {
+  type: 'node_expanding';
+  node_id: number;
+}
+
+interface NodeQueuedMessage extends BaseMessage {
+  type: 'node_queued';
+  node_id: number;
+  parent_id: number;
+}
+
+interface TreeUpdateMessage extends BaseMessage {
+  type: 'tree_update';
+  tree: TreeNode[];
+}
+
+type WebSocketMessage = NodeProcessingMessage | NodeExpandingMessage | NodeQueuedMessage | TreeUpdateMessage;
+
 const TreeSearchPlayground = () => {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -27,7 +77,11 @@ const TreeSearchPlayground = () => {
   const [liveBrowserUrl, setLiveBrowserUrl] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
+  // Tree visualization state - simpler, just like d3-playground
+  const [treeMessages, setTreeMessages] = useState<TreeMessage[]>([]);
+  const [resetTree, setResetTree] = useState(false);
+
   // Search parameters
   const [searchParams, setSearchParams] = useState<SearchParams>({
     startingUrl: 'http://128.105.145.205:7770/',
@@ -70,13 +124,13 @@ const TreeSearchPlayground = () => {
   // Log message to UI
   const logMessage = (message: unknown, type: 'incoming' | 'outgoing' = 'incoming') => {
     const content = typeof message === 'object' ? JSON.stringify(message, null, 2) : String(message);
-    
+
     // Check for live browser URL and update state if found
     const url = extractLiveBrowserUrl(content);
     if (url) {
       setLiveBrowserUrl(url);
     }
-    
+
     setMessages(prev => [...prev, {
       content,
       type,
@@ -84,34 +138,110 @@ const TreeSearchPlayground = () => {
     }]);
   };
 
+  // Process messages for tree visualization - simpler logic like d3-playground
+  const processTreeMessage = (data: WebSocketMessage) => {
+    // Handle tree initialization when we see the root node for the first time
+    if (data.type === 'node_processing' && data.depth === 0) {
+      // This is the root node, reset the tree and add the root
+      setTreeMessages([]);
+      setResetTree(true);
+      setTimeout(() => setResetTree(false), 100);
+
+      // Create the root node message
+      const rootMessage: TreeMessage = {
+        type: 'node',
+        nodeId: data.node_id.toString(),
+        nodeName: 'ROOT',
+        isRoot: true,
+        timestamp: data.timestamp
+      };
+
+      setTreeMessages([rootMessage]);
+    }
+
+    // Handle any node traversal (processing or expanding)
+    else if ((data.type === 'node_processing' || data.type === 'node_expanding') && data.node_id) {
+      const traversalMessage: TreeMessage = {
+        type: 'traversal',
+        nodeId: data.node_id.toString(),
+        timestamp: data.timestamp
+      };
+
+      setTreeMessages(prev => [...prev, traversalMessage]);
+    }
+
+    // Handle node queued - add a new node to the tree
+    else if (data.type === 'node_queued' && data.node_id && data.parent_id) {
+      const nodeMessage: TreeMessage = {
+        type: 'node',
+        nodeId: data.node_id.toString(),
+        nodeName: `Action ${data.node_id}`,
+        parentId: data.parent_id.toString(),
+        timestamp: data.timestamp
+      };
+
+      setTreeMessages(prev => [...prev, nodeMessage]);
+    }
+
+    // Handle tree update - extract node information
+    else if (data.type === 'tree_update' && Array.isArray(data.tree)) {
+      // Update node names and actions based on the tree update
+      data.tree.forEach((node: TreeNode) => {
+        if (node.id) {
+          // Create a message to update the node name and description
+          const updateMessage: TreeMessage = {
+            type: 'node',
+            nodeId: node.id.toString(),
+            nodeName: node.action,
+            description: node.description,
+            timestamp: data.timestamp
+          };
+
+          // If it's a root node
+          if (node.parent_id === null) {
+            updateMessage.isRoot = true;
+          } else {
+            // If it's a child node
+            updateMessage.parentId = node.parent_id.toString();
+          }
+
+          setTreeMessages(prev => [...prev, updateMessage]);
+        }
+      });
+    }
+  };
+
   // Connect to WebSocket
   const connect = () => {
     const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
     console.log(`Connecting to Tree Search WebSocket at: ${wsUrl}`);
-    
+
     try {
       wsRef.current = new WebSocket(wsUrl);
-      
+
       wsRef.current.onopen = () => {
         logMessage('Connected to Tree Search WebSocket server');
         setConnected(true);
       };
-      
+
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           logMessage(data);
+
+          // Process message for tree visualization
+          processTreeMessage(data);
         } catch {
           logMessage(event.data);
         }
       };
-      
+
       wsRef.current.onclose = () => {
         logMessage('Disconnected from WebSocket server');
         setConnected(false);
         wsRef.current = null;
       };
-      
+
       wsRef.current.onerror = (error) => {
         logMessage(`WebSocket error: ${error instanceof Error ? error.message : String(error)}`);
         setConnected(false);
@@ -135,6 +265,11 @@ const TreeSearchPlayground = () => {
       logMessage("Please connect to the WebSocket server first", "incoming");
       return;
     }
+
+    // Reset tree visualization
+    setTreeMessages([]);
+    setResetTree(true);
+    setTimeout(() => setResetTree(false), 100);
 
     const request = {
       type: "start_search",
@@ -162,7 +297,7 @@ const TreeSearchPlayground = () => {
     <div className="container mx-auto p-4 max-h-screen overflow-y-auto">
       <div className="sticky top-0 z-10 bg-background pb-4">
         <h1 className="text-2xl font-bold mb-4">Tree Search Playground</h1>
-        
+
         {/* Controls section - fixed at the top */}
         <div className="mb-6 flex gap-4">
           <Button onClick={connect} disabled={connected}>
@@ -176,34 +311,34 @@ const TreeSearchPlayground = () => {
           </Button>
         </div>
       </div>
-      
+
       {/* Parameters section */}
       <div className="border rounded p-4 bg-card mb-6">
         <h2 className="text-xl font-semibold mb-4">Search Parameters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="startingUrl">Starting URL</Label>
-            <Input 
+            <Input
               id="startingUrl"
               value={searchParams.startingUrl}
               onChange={(e) => handleParamChange('startingUrl', e.target.value)}
               disabled={connected}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="goal">Goal</Label>
-            <Input 
+            <Input
               id="goal"
               value={searchParams.goal}
               onChange={(e) => handleParamChange('goal', e.target.value)}
               disabled={connected}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="algorithm">Algorithm</Label>
-            <select 
+            <select
               id="algorithm"
               value={searchParams.algorithm}
               onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
@@ -214,10 +349,10 @@ const TreeSearchPlayground = () => {
               <option value="dfs">Depth-First Search (DFS)</option>
             </select>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="maxDepth">Max Depth</Label>
-            <Input 
+            <Input
               id="maxDepth"
               type="number"
               min={1}
@@ -227,10 +362,10 @@ const TreeSearchPlayground = () => {
               disabled={connected}
             />
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="headless" 
+            <Checkbox
+              id="headless"
               checked={searchParams.headless}
               onCheckedChange={(checked) => handleParamChange('headless', !!checked)}
               disabled={connected}
@@ -239,13 +374,24 @@ const TreeSearchPlayground = () => {
           </div>
         </div>
       </div>
-      
+      {/* Tree Visualization section */}
+      <div className="border rounded p-4 bg-card mb-6">
+        <h2 className="text-xl font-semibold mb-2">Tree Visualization</h2>
+        <div className="w-full h-[800px]">
+          <TreeReconstructor
+            messages={treeMessages}
+            width={1200}
+            height={800}
+            reset={resetTree}
+          />
+        </div>
+      </div>
       {/* Live Browser View */}
       {liveBrowserUrl && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Live Browser View</h2>
           <div className="border rounded p-4 bg-card">
-            <iframe 
+            <iframe
               src={liveBrowserUrl}
               className="w-full border rounded"
               style={{ height: '500px' }}
@@ -254,7 +400,7 @@ const TreeSearchPlayground = () => {
           </div>
         </div>
       )}
-      
+
       {/* Log section */}
       <div>
         <h2 className="text-xl font-semibold mb-2">Message Log</h2>
@@ -272,4 +418,4 @@ const TreeSearchPlayground = () => {
   );
 };
 
-export default TreeSearchPlayground; 
+export default TreeSearchPlayground;
