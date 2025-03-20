@@ -50,3 +50,8 @@ curl -X POST "http://localhost:3000/api/tree-search/run" \
 ```
 
 ## 3. test websocket
+```
+just uvicorn app.main:app --host 0.0.0.0 --port 3000
+
+python test/test-tree-search-ws.py
+```
