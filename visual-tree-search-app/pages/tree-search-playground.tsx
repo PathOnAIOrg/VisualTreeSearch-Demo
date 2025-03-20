@@ -24,6 +24,7 @@ const TreeSearchPlayground = () => {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [backendUrl, setBackendUrl] = useState<string>('');
+  const [liveBrowserUrl, setLiveBrowserUrl] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -53,9 +54,29 @@ const TreeSearchPlayground = () => {
     return date.toLocaleTimeString();
   };
 
+  // Extract live browser URL from message content if present
+  const extractLiveBrowserUrl = (content: string): string | null => {
+    try {
+      // Try to parse JSON content
+      const data = JSON.parse(content);
+      return data.live_browser_url || null;
+    } catch {
+      // If not JSON, try to find URL in string
+      const match = content.match(/"live_browser_url":\s*"([^"]+)"/);
+      return match ? match[1] : null;
+    }
+  };
+
   // Log message to UI
   const logMessage = (message: unknown, type: 'incoming' | 'outgoing' = 'incoming') => {
     const content = typeof message === 'object' ? JSON.stringify(message, null, 2) : String(message);
+    
+    // Check for live browser URL and update state if found
+    const url = extractLiveBrowserUrl(content);
+    if (url) {
+      setLiveBrowserUrl(url);
+    }
+    
     setMessages(prev => [...prev, {
       content,
       type,
@@ -218,6 +239,21 @@ const TreeSearchPlayground = () => {
           </div>
         </div>
       </div>
+      
+      {/* Live Browser View */}
+      {liveBrowserUrl && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Live Browser View</h2>
+          <div className="border rounded p-4 bg-card">
+            <iframe 
+              src={liveBrowserUrl}
+              className="w-full border rounded"
+              style={{ height: '500px' }}
+              title="Live Browser View"
+            />
+          </div>
+        </div>
+      )}
       
       {/* Log section */}
       <div>

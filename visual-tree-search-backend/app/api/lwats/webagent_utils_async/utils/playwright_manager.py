@@ -1,6 +1,14 @@
 import os
 import asyncio
 from playwright.async_api import async_playwright
+from dotenv import load_dotenv
+import aiohttp
+
+# Load environment variables from .env file
+load_dotenv()
+
+API_KEY = os.environ["BROWSERBASE_API_KEY"]
+PROJECT_ID = os.environ["BROWSERBASE_PROJECT_ID"]
 
 async def debug_browser_state(browser):
     """
@@ -38,8 +46,44 @@ async def get_non_extension_context_and_page(browser):
                 return context, page
     return None, None
 
+async def create_session() -> str:
+    """
+    Create a Browserbase session - a single browser instance.
+
+    :returns: The new session's ID.
+    """
+    sessions_url = "https://www.browserbase.com/v1/sessions"
+    headers = {
+        "Content-Type": "application/json",
+        "x-bb-api-key": API_KEY,
+    }
+    json = {"projectId": PROJECT_ID}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(sessions_url, json=json, headers=headers) as response:
+            response.raise_for_status()
+            data = await response.json()
+            return data["id"]
+
+async def get_browser_url(session_id: str) -> str:
+    """
+    Get the URL to show the live view for the current browser session.
+
+    :returns: URL
+    """
+    session_url = f"https://www.browserbase.com/v1/sessions/{session_id}/debug"
+    headers = {
+        "Content-Type": "application/json",
+        "x-bb-api-key": API_KEY,
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.get(session_url, headers=headers) as response:
+            response.raise_for_status()
+            data = await response.json()
+            return data["debuggerFullscreenUrl"]
+
 class AsyncPlaywrightManager:
-    def __init__(self, storage_state=None, headless=False, mode="chromium"):
+    def __init__(self, storage_state=None, headless=False, mode="chromium", session_id=None):
         self.playwright = None
         self.browser = None
         self.context = None
@@ -48,6 +92,8 @@ class AsyncPlaywrightManager:
         self.lock = asyncio.Lock()
         self.headless = headless
         self.mode = mode
+        self.session_id = session_id
+        self.live_browser_url = None
     
     async def initialize(self):
         async with self.lock:
@@ -67,6 +113,29 @@ class AsyncPlaywrightManager:
                     
                     await debug_browser_state(self.browser)
                 
+                elif self.mode == "browserbase":
+                    if self.session_id is None:
+                        self.session_id = await create_session()
+                    
+                    self.live_browser_url = await get_browser_url(self.session_id)
+                    
+                    self.browser = await self.playwright.chromium.connect_over_cdp(
+                        f"wss://connect.browserbase.com?apiKey={API_KEY}&sessionId={self.session_id}"
+                    )
+                    
+                    await debug_browser_state(self.browser)
+                    
+                    # Create new context with storage state if provided
+                    context_options = {}
+                    if self.storage_state:
+                        context_options["storage_state"] = self.storage_state
+                        print(f"Using storage state from: {self.storage_state}")
+                    
+                    self.context = await self.browser.new_context(**context_options)
+                    self.page = await self.context.new_page()
+                    
+                    await debug_browser_state(self.browser)
+                
                 elif self.mode == "chromium":
                     self.browser = await self.playwright.chromium.launch(headless=self.headless)
                     context_options = {}
@@ -78,7 +147,15 @@ class AsyncPlaywrightManager:
                     self.page = await self.context.new_page()
                     
                 else:
-                    raise ValueError(f"Invalid mode: {self.mode}. Expected 'cdp' or 'chromium'")
+                    raise ValueError(f"Invalid mode: {self.mode}. Expected 'cdp', 'browserbase', or 'chromium'")
+    
+    async def get_live_browser_url(self):
+        if self.mode == "browserbase" and self.session_id:
+            self.live_browser_url = await get_browser_url(self.session_id)
+        return self.live_browser_url
+    
+    def get_session_id(self):
+        return self.session_id
     
     async def get_browser(self):
         if self.browser is None:
@@ -111,10 +188,54 @@ class AsyncPlaywrightManager:
             self.browser = None
             self.playwright = None
 
-async def setup_playwright(storage_state='state.json', headless=False, mode="chromium"):
-    playwright_manager = AsyncPlaywrightManager(storage_state=storage_state, headless=headless, mode=mode)
+async def setup_playwright(storage_state=None, headless=False, mode="chromium", session_id=None):
+    playwright_manager = AsyncPlaywrightManager(storage_state=storage_state, headless=headless, mode=mode, session_id=session_id)
     browser = await playwright_manager.get_browser()
     context = await playwright_manager.get_context()
     page = await playwright_manager.get_page()
     playwright_manager.playwright.selectors.set_test_id_attribute('data-unique-test-id')
     return playwright_manager
+
+async def test_chromium_mode():
+    """Test the Playwright manager in Chromium mode"""
+    print("\n=== Testing Chromium Mode ===")
+    manager = await setup_playwright(mode="chromium", headless=False)
+    
+    try:
+        page = await manager.get_page()
+        print(f"Navigating to example.com...")
+        await page.goto("https://example.com")
+        print(f"Current URL: {page.url}")
+        await asyncio.sleep(3)  # Wait to see the page
+    finally:
+        print("Closing Chromium browser...")
+        await manager.close()
+
+async def test_browserbase_mode():
+    """Test the Playwright manager in Browserbase mode"""
+    print("\n=== Testing Browserbase Mode ===")
+    manager = await setup_playwright(mode="browserbase")
+    
+    try:
+        page = await manager.get_page()
+        print(f"Session ID: {manager.get_session_id()}")
+        print(f"Live Browser URL: {await manager.get_live_browser_url()}")
+        print(f"Navigating to example.com...")
+        await page.goto("https://example.com")
+        print(f"Current URL: {page.url}")
+        print(f"You can view the browser at: {await manager.get_live_browser_url()}")
+        await asyncio.sleep(10)  # Give more time to check the live URL
+    finally:
+        print("Closing Browserbase browser...")
+        await manager.close()
+
+async def main():
+    """Main function to test different browser modes"""
+    # Test Chromium mode
+    await test_chromium_mode()
+    
+    # Test Browserbase mode
+    await test_browserbase_mode()
+
+if __name__ == "__main__":
+    asyncio.run(main())
