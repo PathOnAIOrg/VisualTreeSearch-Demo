@@ -2,7 +2,7 @@ import React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import * as d3 from 'd3';
-import TreeReconstructor from "@/components/TreeReconstructor";
+import TreeReconstructor from "@/components/TreeReconstructor_d3";
 
 // Define types for our tree nodes
 interface TreeNode {
