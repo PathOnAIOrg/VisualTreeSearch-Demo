@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import TreeReconstructor from "@/components/TreeReconstructor_d3";
+import TreeReconstructor from "../components/TreeReconstructor_d3";
+import { Info } from "lucide-react";
 
 // Define types for our messages
 interface Message {
@@ -98,11 +99,6 @@ const TreeSearchPlayground = () => {
     console.log(`Backend URL from env: ${envBackendUrl}`);
   }, []);
 
-  // Scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   // Format time
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString();
@@ -155,7 +151,7 @@ const TreeSearchPlayground = () => {
         isRoot: true,
         timestamp: data.timestamp
       };
-
+      
       setTreeMessages([rootMessage]);
     }
 
@@ -294,124 +290,177 @@ const TreeSearchPlayground = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-h-screen overflow-y-auto">
-      <div className="sticky top-0 z-10 bg-background pb-4">
-        <h1 className="text-2xl font-bold mb-4">Tree Search Playground</h1>
-
-        {/* Controls section - fixed at the top */}
-        <div className="mb-6 flex gap-4">
-          <Button onClick={connect} disabled={connected}>
-            Connect
-          </Button>
-          <Button onClick={disconnect} disabled={!connected} variant="destructive">
-            Disconnect
-          </Button>
-          <Button onClick={startSearch} disabled={!connected} variant="secondary">
-            Start Search
-          </Button>
-        </div>
-      </div>
-
-      {/* Parameters section */}
-      <div className="border rounded p-4 bg-card mb-6">
-        <h2 className="text-xl font-semibold mb-4">Search Parameters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="startingUrl">Starting URL</Label>
-            <Input
-              id="startingUrl"
-              value={searchParams.startingUrl}
-              onChange={(e) => handleParamChange('startingUrl', e.target.value)}
-              disabled={connected}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="goal">Goal</Label>
-            <Input
-              id="goal"
-              value={searchParams.goal}
-              onChange={(e) => handleParamChange('goal', e.target.value)}
-              disabled={connected}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="algorithm">Algorithm</Label>
-            <select
-              id="algorithm"
-              value={searchParams.algorithm}
-              onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-              disabled={connected}
-              className="w-full p-2 border rounded bg-background"
-            >
-              <option value="bfs">Breadth-First Search (BFS)</option>
-              <option value="dfs">Depth-First Search (DFS)</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="maxDepth">Max Depth</Label>
-            <Input
-              id="maxDepth"
-              type="number"
-              min={1}
-              max={10}
-              value={searchParams.maxDepth}
-              onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
-              disabled={connected}
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="headless"
-              checked={searchParams.headless}
-              onCheckedChange={(checked) => handleParamChange('headless', !!checked)}
-              disabled={connected}
-            />
-            <Label htmlFor="headless">Run in Headless Mode</Label>
-          </div>
-        </div>
-      </div>
-      {/* Tree Visualization section */}
-      <div className="border rounded p-4 bg-card mb-6">
-        <h2 className="text-xl font-semibold mb-2">Tree Visualization</h2>
-        <div className="w-full h-[800px]">
-          <TreeReconstructor
-            messages={treeMessages}
-            width={1200}
-            height={800}
-            reset={resetTree}
-          />
-        </div>
-      </div>
-      {/* Live Browser View */}
-      {liveBrowserUrl && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Live Browser View</h2>
-          <div className="border rounded p-4 bg-card">
-            <iframe
-              src={liveBrowserUrl}
-              className="w-full border rounded"
-              style={{ height: '500px' }}
-              title="Live Browser View"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Log section */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Message Log</h2>
-        <div className="border rounded p-4 bg-card h-[400px] overflow-y-auto">
-          {messages.map((msg, index) => (
-            <div key={index} className={`mb-4 ${msg.type === 'outgoing' ? 'text-blue-500' : ''}`}>
-              <div className="text-xs text-gray-500 mb-1">{msg.timestamp} - {msg.type}</div>
-              <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-2 rounded">{msg.content}</pre>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-8">
+      {/* Header with title and guidance */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b sticky top-0 z-10">
+        <div className="container mx-auto py-4 px-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Visual Tree Search</h1>
+          
+          {/* Introduction/Guidance Section */}
+          <div className="mt-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4 flex gap-2">
+            <Info className="h-5 w-5 text-blue-500 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-blue-800 dark:text-blue-300">How to use this playground</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-400">
+                1. Connect to the websocket server using the controls below.<br />
+                2. Configure your search parameters.<br />
+                3. Click &quot;Start Search&quot; to begin the visualization.<br />
+                4. The tree of possible actions will appear on the left, while the resulting web page will display on the right.
+              </p>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Controls section */}
+          <div className="flex gap-4 mt-4">
+            <Button onClick={connect} disabled={connected} className="bg-green-600 hover:bg-green-700">
+              Connect
+            </Button>
+            <Button onClick={disconnect} disabled={!connected} variant="destructive">
+              Disconnect
+            </Button>
+            <Button onClick={startSearch} disabled={!connected} variant="secondary" className="bg-blue-600 hover:bg-blue-700 text-white">
+              Start Search
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Main content area - two column layout */}
+      <div className="container mx-auto px-6 mt-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          
+          {/* Left column - Tree Visualization */}
+          <div className="lg:w-1/2 h-full flex flex-col">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 h-full flex-grow">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                </svg>
+                Tree Visualization
+              </h2>
+              <div className="h-[800px] rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                <TreeReconstructor
+                  messages={treeMessages}
+                  width={600}
+                  height={800}
+                  reset={resetTree}
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Right column - Browser View & Controls */}
+          <div className="lg:w-1/2 h-full flex flex-col gap-6">
+            
+            {/* Live Browser View */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clipRule="evenodd" />
+                </svg>
+                Live Browser View
+              </h2>
+              <div className="rounded-md overflow-hidden border border-gray-300 dark:border-gray-600 bg-white">
+                {liveBrowserUrl ? (
+                  <iframe
+                    src={liveBrowserUrl}
+                    className="w-full rounded-md"
+                    style={{ height: '400px' }}
+                    title="Live Browser View"
+                  />
+                ) : (
+                  <div className="h-[400px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                    <p>Browser view will appear here once the search starts</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Search Parameters */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                Search Parameters
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startingUrl" className="text-gray-700 dark:text-gray-300">Starting URL</Label>
+                  <Input
+                    id="startingUrl"
+                    value={searchParams.startingUrl}
+                    onChange={(e) => handleParamChange('startingUrl', e.target.value)}
+                    className="border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="goal" className="text-gray-700 dark:text-gray-300">Goal</Label>
+                  <Input
+                    id="goal"
+                    value={searchParams.goal}
+                    onChange={(e) => handleParamChange('goal', e.target.value)}
+                    className="border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="algorithm" className="text-gray-700 dark:text-gray-300">Algorithm</Label>
+                  <select
+                    id="algorithm"
+                    value={searchParams.algorithm}
+                    onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
+                    className="w-full p-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-600"
+                  >
+                    <option value="bfs">Breadth-First Search (BFS)</option>
+                    <option value="dfs">Depth-First Search (DFS)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maxDepth" className="text-gray-700 dark:text-gray-300">Max Depth</Label>
+                  <Input
+                    id="maxDepth"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={searchParams.maxDepth}
+                    onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
+                    className="border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="headless"
+                    checked={searchParams.headless}
+                    onCheckedChange={(checked) => handleParamChange('headless', !!checked)}
+                  />
+                  <Label htmlFor="headless" className="text-gray-700 dark:text-gray-300">Run in Headless Mode</Label>
+                </div>
+              </div>
+            </div>
+            
+            {/* Message Log */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                </svg>
+                Message Log
+              </h2>
+              <div className="h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900">
+                {messages.map((msg, index) => (
+                  <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{msg.timestamp} - {msg.type}</div>
+                    <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-2 rounded text-sm border border-gray-200 dark:border-gray-700">{msg.content}</pre>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -177,7 +177,8 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
         setTree(rootNode);
       }
     }
-  }, [messages, nodeMap]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   // Render tree with D3
   useEffect(() => {
