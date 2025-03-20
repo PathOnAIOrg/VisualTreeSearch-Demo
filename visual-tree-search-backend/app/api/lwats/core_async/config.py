@@ -5,7 +5,7 @@ from typing import List, Optional
 class AgentConfig:
     # Browser settings
     headless: bool = False
-    browser_mode: str = "chromium"
+    browser_mode: str = "browserbase"
     storage_state: str = 'state.json'
     
     # Model settings
