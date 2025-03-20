@@ -5,12 +5,12 @@ from collections import deque
 
 from openai import OpenAI
 
-from ...core.config import AgentConfig
+from ...core_sync.config import AgentConfig
 
 from ...webagent_utils_sync.action.highlevel import HighLevelActionSet
 from ...webagent_utils_sync.utils.playwright_manager import PlaywrightManager, setup_playwright
 from ...webagent_utils_sync.utils.utils import parse_function_args, locate_element
-from ...evaluation.evaluators import goal_finished_evaluator
+from ...evaluation_sync.evaluators import goal_finished_evaluator
 from ...replay import generate_feedback, playwright_step_execution
 from ...webagent_utils_sync.action.prompt_functions import extract_top_actions
 from ...webagent_utils_sync.browser_env.observation import extract_page_info
