@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import TreeReconstructor from "@/components/TreeReconstructor";
 
 // Define types for our messages
 interface Message {
@@ -20,12 +21,27 @@ interface SearchParams {
   maxDepth: number;
 }
 
+// Define type for tree messages used by TreeReconstructor - simpler version matching d3-playground
+interface TreeMessage {
+  type: string;
+  nodeId?: string;
+  nodeName?: string;
+  parentId?: string;
+  isRoot?: boolean;
+  timestamp?: string;
+  description?: string;
+}
+
 const TreeSearchPlayground = () => {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [backendUrl, setBackendUrl] = useState<string>('');
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Tree visualization state - simpler, just like d3-playground
+  const [treeMessages, setTreeMessages] = useState<TreeMessage[]>([]);
+  const [resetTree, setResetTree] = useState(false);
   
   // Search parameters
   const [searchParams, setSearchParams] = useState<SearchParams>({
@@ -63,6 +79,79 @@ const TreeSearchPlayground = () => {
     }]);
   };
 
+  // Process messages for tree visualization - simpler logic like d3-playground
+  const processTreeMessage = (data: any) => {
+    // Handle tree initialization when we see the root node for the first time
+    if (data.type === 'node_processing' && data.depth === 0) {
+      // This is the root node, reset the tree and add the root
+      setTreeMessages([]);
+      setResetTree(true);
+      setTimeout(() => setResetTree(false), 100);
+      
+      // Create the root node message
+      const rootMessage: TreeMessage = {
+        type: 'node',
+        nodeId: data.node_id.toString(),
+        nodeName: 'ROOT',
+        isRoot: true,
+        timestamp: data.timestamp
+      };
+      
+      setTreeMessages(prev => [rootMessage]);
+    }
+    
+    // Handle any node traversal (processing or expanding)
+    else if ((data.type === 'node_processing' || data.type === 'node_expanding') && data.node_id) {
+      const traversalMessage: TreeMessage = {
+        type: 'traversal',
+        nodeId: data.node_id.toString(),
+        timestamp: data.timestamp
+      };
+      
+      setTreeMessages(prev => [...prev, traversalMessage]);
+    }
+    
+    // Handle node queued - add a new node to the tree
+    else if (data.type === 'node_queued' && data.node_id && data.parent_id) {
+      const nodeMessage: TreeMessage = {
+        type: 'node',
+        nodeId: data.node_id.toString(),
+        nodeName: `Action ${data.node_id}`,
+        parentId: data.parent_id.toString(),
+        timestamp: data.timestamp
+      };
+      
+      setTreeMessages(prev => [...prev, nodeMessage]);
+    }
+    
+    // Handle tree update - extract node information
+    else if (data.type === 'tree_update' && Array.isArray(data.tree)) {
+      // Update node names and actions based on the tree update
+      data.tree.forEach((node: any) => {
+        if (node.id) {
+          // Create a message to update the node name and description
+          const updateMessage: TreeMessage = {
+            type: 'node',
+            nodeId: node.id.toString(),
+            nodeName: node.action,
+            description: node.description,
+            timestamp: data.timestamp
+          };
+          
+          // If it's a root node
+          if (node.parent_id === null) {
+            updateMessage.isRoot = true;
+          } else {
+            // If it's a child node
+            updateMessage.parentId = node.parent_id.toString();
+          }
+          
+          setTreeMessages(prev => [...prev, updateMessage]);
+        }
+      });
+    }
+  };
+
   // Connect to WebSocket
   const connect = () => {
     const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
@@ -80,6 +169,9 @@ const TreeSearchPlayground = () => {
         try {
           const data = JSON.parse(event.data);
           logMessage(data);
+          
+          // Process message for tree visualization
+          processTreeMessage(data);
         } catch {
           logMessage(event.data);
         }
@@ -114,6 +206,11 @@ const TreeSearchPlayground = () => {
       logMessage("Please connect to the WebSocket server first", "incoming");
       return;
     }
+
+    // Reset tree visualization
+    setTreeMessages([]);
+    setResetTree(true);
+    setTimeout(() => setResetTree(false), 100);
 
     const request = {
       type: "start_search",
@@ -216,6 +313,19 @@ const TreeSearchPlayground = () => {
             />
             <Label htmlFor="headless">Run in Headless Mode</Label>
           </div>
+        </div>
+      </div>
+      
+      {/* Tree Visualization section */}
+      <div className="border rounded p-4 bg-card mb-6">
+        <h2 className="text-xl font-semibold mb-2">Tree Visualization</h2>
+        <div className="w-full h-[800px]">
+          <TreeReconstructor 
+            messages={treeMessages} 
+            width={1200} 
+            height={800}
+            reset={resetTree}
+          />
         </div>
       </div>
       
