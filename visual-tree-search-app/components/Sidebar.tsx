@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Home, LayoutDashboard, Network } from 'lucide-react';
+import { Home, LayoutDashboard, Network, Search } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -22,6 +22,11 @@ const Sidebar = () => {
       name: 'D3 Playground',
       href: '/d3-playground',
       icon: Network
+    },
+    {
+      name: 'Tree Search',
+      href: '/tree-search-playground',
+      icon: Search
     },
   ];
 

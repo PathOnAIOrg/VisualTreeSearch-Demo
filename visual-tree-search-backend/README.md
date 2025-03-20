@@ -1,5 +1,5 @@
 # Backend
-## Run demo tree search
+## 1. Run demo tree search
 ```
 python run_demo_treesearch.py \
     --browser-mode chromium \
@@ -31,7 +31,7 @@ python run_demo_treesearch_async.py \
     --search_algorithm bfs
 ```
 
-## tree search api route
+## 2. tree search api route
 ```
 curl -X POST "http://localhost:3000/api/tree-search/run" \
   -H "Content-Type: application/json" \
@@ -47,4 +47,11 @@ curl -X POST "http://localhost:3000/api/tree-search/run" \
     "search_algorithm": "bfs",
     "headless": false
   }'
+```
+
+## 3. test websocket
+```
+just uvicorn app.main:app --host 0.0.0.0 --port 3000
+
+python test/test-tree-search-ws.py
 ```

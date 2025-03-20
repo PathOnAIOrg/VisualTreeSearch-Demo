@@ -40,6 +40,7 @@ from app.api.routes.sse import router as sse_router
 from app.api.routes.websocket import router as ws_router
 from app.api.routes.tree_websocket import router as tree_ws_router
 from app.api.routes.tree_search import router as tree_search_router
+from app.api.routes.tree_search_websocket import router as tree_search_ws_router
 
 # Include routers from different modules
 app.include_router(hello_router, prefix="/api/hello", tags=["hello"])
@@ -47,11 +48,12 @@ app.include_router(sse_router, prefix="/api/sse", tags=["sse"])
 app.include_router(ws_router, prefix="/api/ws", tags=["websocket"])
 app.include_router(tree_ws_router, prefix="/api/tree", tags=["tree"])
 app.include_router(tree_search_router, prefix="/api/tree-search", tags=["tree-search"])
+app.include_router(tree_search_ws_router, prefix="/api/tree-search-ws", tags=["tree-search-ws"])
 
 # Import the WebSocket endpoint handlers
 from app.api.routes.websocket import websocket_endpoint
 from app.api.routes.tree_websocket import tree_websocket_endpoint
-
+from app.api.routes.tree_search_websocket import tree_search_websocket_endpoint
 # Register the WebSocket endpoints
 @app.websocket("/ws")
 async def websocket_route(websocket: WebSocket):
@@ -60,6 +62,10 @@ async def websocket_route(websocket: WebSocket):
 @app.websocket("/tree-ws")
 async def tree_websocket_route(websocket: WebSocket):
     await tree_websocket_endpoint(websocket)
+
+@app.websocket("/tree-search-ws")
+async def tree_search_websocket_route(websocket: WebSocket):
+    await tree_search_websocket_endpoint(websocket)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 3000))

@@ -2,13 +2,15 @@ import asyncio
 import json
 import websockets
 import logging
+import uuid
 
 # Set up logging to see more details
 logging.basicConfig(level=logging.INFO)
 
-async def test_tree_search_websocket():
-    search_id = "search_20250319_203804_831926"
-    uri = f"ws://localhost:3000/tree-search-ws/{search_id}"
+async def test_websocket():
+    uri = "ws://localhost:3000/ws"
+    
+    print(f"Connecting to {uri}")
     
     async with websockets.connect(uri) as websocket:
         print("Connected to WebSocket")
@@ -18,23 +20,19 @@ async def test_tree_search_websocket():
             "type": "ping"
         }))
         
-        # Wait for pong response
+        # Wait for response
         response = await websocket.recv()
         print(f"Received: {response}")
         
-        # Start a search
+        # You can send other test messages here
+        # For example, if the websocket supports it:
         await websocket.send(json.dumps({
-            "type": "start_search",  # Changed from search_agent_request to match expected type
-            "agent_type": "SimpleSearchAgent",
-            "starting_url": "http://128.105.145.205:7770/",
-            "goal": "search running shoes, click on the first result",
-            "search_algorithm": "bfs",
-            "headless": True,
-            "max_depth": 3
+            "type": "hello",
+            "message": "Testing the websocket connection"
         }))
         
         # Set a timeout to prevent hanging indefinitely
-        timeout = 120  # 2 minutes
+        timeout = 60  # 1 minute
         start_time = asyncio.get_event_loop().time()
         
         # Continuously receive messages with timeout
@@ -49,12 +47,14 @@ async def test_tree_search_websocket():
                     break
                 
                 response = await asyncio.wait_for(websocket.recv(), timeout=remaining)
-                data = json.loads(response)
-                print(f"Received: {data['type']}")
+                print(f"Received: {response}")
                 
-                # Print more details for certain message types
-                if data["type"] in ["node_update", "trajectory_start", "trajectory_complete", "status_update", "tree_complete"]:
+                try:
+                    data = json.loads(response)
+                    print(f"Message type: {data.get('type', 'unknown')}")
                     print(json.dumps(data, indent=2))
+                except json.JSONDecodeError:
+                    print("Received non-JSON message")
                 
             except asyncio.TimeoutError:
                 print("Timeout waiting for response from WebSocket")
@@ -66,4 +66,4 @@ async def test_tree_search_websocket():
                 print(f"Error: {e}")
                 break
 
-asyncio.run(test_tree_search_websocket())
+asyncio.run(test_websocket())
