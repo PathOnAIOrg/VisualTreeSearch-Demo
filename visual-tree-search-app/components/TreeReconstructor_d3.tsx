@@ -10,6 +10,15 @@ interface TreeNode {
   _highlighted?: boolean;
 }
 
+interface TreeUpdateNode {
+  id: number;
+  parent_id: number | null;
+  action: string;
+  description: string | null;
+  depth: number;
+  is_terminal: boolean;
+}
+
 interface TreeReconstructorProps {
   messages: {
     type: string;
@@ -83,7 +92,7 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
       if (message.type === 'tree_update' && Array.isArray(message.tree)) {
         console.log("Processing tree update:", message.tree); // Debug log
         // Handle tree update messages
-        message.tree.forEach((node: any) => {
+        message.tree.forEach((node: TreeUpdateNode) => {
           if (node.id) {
             const existingNode = newNodeMap.get(node.id.toString());
             if (existingNode) {
@@ -168,7 +177,7 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
         setTree(rootNode);
       }
     }
-  }, [messages]);
+  }, [messages, nodeMap]);
 
   // Render tree with D3
   useEffect(() => {

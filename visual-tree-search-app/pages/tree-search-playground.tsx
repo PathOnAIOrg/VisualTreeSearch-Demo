@@ -29,8 +29,46 @@ interface TreeMessage {
   parentId?: string;
   isRoot?: boolean;
   timestamp?: string;
-  description?: string;
+  description?: string | null;
 }
+
+interface TreeNode {
+  id: number;
+  parent_id: number | null;
+  action: string;
+  description: string | null;
+  depth: number;
+  is_terminal: boolean;
+}
+
+interface BaseMessage {
+  type: string;
+  timestamp: string;
+}
+
+interface NodeProcessingMessage extends BaseMessage {
+  type: 'node_processing';
+  node_id: number;
+  depth: number;
+}
+
+interface NodeExpandingMessage extends BaseMessage {
+  type: 'node_expanding';
+  node_id: number;
+}
+
+interface NodeQueuedMessage extends BaseMessage {
+  type: 'node_queued';
+  node_id: number;
+  parent_id: number;
+}
+
+interface TreeUpdateMessage extends BaseMessage {
+  type: 'tree_update';
+  tree: TreeNode[];
+}
+
+type WebSocketMessage = NodeProcessingMessage | NodeExpandingMessage | NodeQueuedMessage | TreeUpdateMessage;
 
 const TreeSearchPlayground = () => {
   const [connected, setConnected] = useState(false);
@@ -80,7 +118,7 @@ const TreeSearchPlayground = () => {
   };
 
   // Process messages for tree visualization - simpler logic like d3-playground
-  const processTreeMessage = (data: any) => {
+  const processTreeMessage = (data: WebSocketMessage) => {
     // Handle tree initialization when we see the root node for the first time
     if (data.type === 'node_processing' && data.depth === 0) {
       // This is the root node, reset the tree and add the root
@@ -97,7 +135,7 @@ const TreeSearchPlayground = () => {
         timestamp: data.timestamp
       };
       
-      setTreeMessages(prev => [rootMessage]);
+      setTreeMessages([rootMessage]);
     }
     
     // Handle any node traversal (processing or expanding)
@@ -127,7 +165,7 @@ const TreeSearchPlayground = () => {
     // Handle tree update - extract node information
     else if (data.type === 'tree_update' && Array.isArray(data.tree)) {
       // Update node names and actions based on the tree update
-      data.tree.forEach((node: any) => {
+      data.tree.forEach((node: TreeNode) => {
         if (node.id) {
           // Create a message to update the node name and description
           const updateMessage: TreeMessage = {
