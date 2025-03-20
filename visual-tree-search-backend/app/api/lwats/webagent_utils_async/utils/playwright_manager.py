@@ -65,6 +65,7 @@ async def create_session() -> str:
             data = await response.json()
             return data["id"]
 
+
 async def get_browser_url(session_id: str) -> str:
     """
     Get the URL to show the live view for the current browser session.
@@ -80,7 +81,7 @@ async def get_browser_url(session_id: str) -> str:
         async with session.get(session_url, headers=headers) as response:
             response.raise_for_status()
             data = await response.json()
-            return data["debuggerFullscreenUrl"]
+            return data["debuggerUrl"]
 
 class AsyncPlaywrightManager:
     def __init__(self, storage_state=None, headless=False, mode="chromium", session_id=None):
@@ -94,6 +95,33 @@ class AsyncPlaywrightManager:
         self.mode = mode
         self.session_id = session_id
         self.live_browser_url = None
+    
+    async def setup_context_and_page(self, context_options=None):
+        """Common function to handle context and page setup"""
+        if context_options is None:
+            context_options = {
+                "viewport": {"width": 1920, "height": 1080},
+                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            }
+
+        if self.storage_state:
+            context_options["storage_state"] = self.storage_state
+            print(f"Using storage state from: {self.storage_state}")
+
+        contexts = self.browser.contexts
+        if contexts:
+            print("Found existing contexts, using the first one")
+            self.context = contexts[0]
+            if self.context.pages:
+                print(f"Found existing page at URL: {self.context.pages[0].url}")
+                self.page = self.context.pages[0]
+            else:
+                print("No pages in existing context, creating new page")
+                self.page = await self.context.new_page()
+        else:
+            print("No existing contexts found, creating new one")
+            self.context = await self.browser.new_context(**context_options)
+            self.page = await self.context.new_page()
     
     async def initialize(self):
         async with self.lock:
@@ -125,26 +153,16 @@ class AsyncPlaywrightManager:
                     
                     await debug_browser_state(self.browser)
                     
-                    # Create new context with storage state if provided
-                    context_options = {}
-                    if self.storage_state:
-                        context_options["storage_state"] = self.storage_state
-                        print(f"Using storage state from: {self.storage_state}")
-                    
-                    self.context = await self.browser.new_context(**context_options)
-                    self.page = await self.context.new_page()
+                    # Use the common setup method
+                    await self.setup_context_and_page()
                     
                     await debug_browser_state(self.browser)
                 
                 elif self.mode == "chromium":
                     self.browser = await self.playwright.chromium.launch(headless=self.headless)
-                    context_options = {}
                     
-                    if self.storage_state:
-                        context_options["storage_state"] = self.storage_state
-                    
-                    self.context = await self.browser.new_context(**context_options)
-                    self.page = await self.context.new_page()
+                    # Use the common setup method
+                    await self.setup_context_and_page()
                     
                 else:
                     raise ValueError(f"Invalid mode: {self.mode}. Expected 'cdp', 'browserbase', or 'chromium'")
@@ -221,18 +239,18 @@ async def test_browserbase_mode():
         print(f"Session ID: {manager.get_session_id()}")
         print(f"Live Browser URL: {await manager.get_live_browser_url()}")
         print(f"Navigating to example.com...")
-        await page.goto("https://example.com")
+        await page.goto("http://128.105.145.205:7770/")
         print(f"Current URL: {page.url}")
         print(f"You can view the browser at: {await manager.get_live_browser_url()}")
-        await asyncio.sleep(10)  # Give more time to check the live URL
+        await asyncio.sleep(100)  # Give more time to check the live URL
     finally:
         print("Closing Browserbase browser...")
         await manager.close()
 
 async def main():
     """Main function to test different browser modes"""
-    # Test Chromium mode
-    await test_chromium_mode()
+    # # Test Chromium mode
+    # await test_chromium_mode()
     
     # Test Browserbase mode
     await test_browserbase_mode()
