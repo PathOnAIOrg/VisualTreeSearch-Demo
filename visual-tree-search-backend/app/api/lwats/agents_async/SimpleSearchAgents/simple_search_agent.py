@@ -6,12 +6,12 @@ from datetime import datetime
 
 from openai import OpenAI
 
-from ...core.config import AgentConfig
+from ...core_sync.config import AgentConfig
 
 from ...webagent_utils_async.action.highlevel import HighLevelActionSet
 from ...webagent_utils_async.utils.playwright_manager import AsyncPlaywrightManager, setup_playwright
 from ...webagent_utils_async.utils.utils import parse_function_args, locate_element
-from ...evaluation.evaluators import goal_finished_evaluator
+from ...evaluation_async.evaluators import goal_finished_evaluator
 from ...replay_async import generate_feedback, playwright_step_execution
 from ...webagent_utils_async.action.prompt_functions import extract_top_actions
 from ...webagent_utils_async.browser_env.observation import extract_page_info
@@ -68,8 +68,8 @@ class SimpleSearchAgent:
             logger.info("Starting DFS algorithm")
             return await self.dfs()
 
-    async def _reset_browser(self) -> None:
-        """Reset the browser to initial state."""
+    async def _reset_browser(self) -> Optional[str]:
+        """Reset the browser to initial state and return the live browser URL if available."""
         await self.playwright_manager.close()
         self.playwright_manager = await setup_playwright(
             storage_state=self.config.storage_state,
@@ -77,23 +77,33 @@ class SimpleSearchAgent:
             mode=self.config.browser_mode
         )
         page = await self.playwright_manager.get_page()
+        live_browser_url = None
+        if self.config.browser_mode == "browserbase":
+            live_browser_url = await self.playwright_manager.get_live_browser_url()
         await page.goto(self.starting_url, wait_until="networkidle")
-    
-    # def expand(self, node: LATSNode, finished_score_threshold: float = 0.9) -> bool:
-    
-    async def expand(self, node: LATSNode) -> None:
+        return live_browser_url  # Return the URL so it can be used by other methods
+
+    async def expand(self, node: LATSNode, websocket=None) -> None:
         """
         Expand a node by generating its children.
         
         Args:
             node: Node to expand
+            websocket: Optional WebSocket connection to send updates to
         """
         if node.depth >= 7:
             logger.info("Depth limit reached")
             node.is_terminal = True
+            if websocket:
+                await websocket.send_json({
+                    "type": "node_terminal",
+                    "node_id": id(node),
+                    "reason": "depth_limit",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             return
             
-        children_state = await self.generate_children(node)
+        children_state = await self.generate_children(node, websocket)
         for child_state in children_state:
             child = LATSNode(
                 natural_language_description=child_state["natural_language_description"],
@@ -104,22 +114,53 @@ class SimpleSearchAgent:
                 parent=node
             )
             node.children.append(child)
+            
+            # Send child creation update if websocket is provided
+            if websocket:
+                await websocket.send_json({
+                    "type": "node_created",
+                    "node_id": id(child),
+                    "parent_id": id(node),
+                    "action": child.action,
+                    "description": child.natural_language_description,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
 
-    async def generate_children(self, node: LATSNode) -> list[dict]:
+    async def generate_children(self, node: LATSNode, websocket=None) -> list[dict]:
         """
         Generate child nodes for a given node.
         
         Args:
             node: Parent node to generate children for
+            websocket: Optional WebSocket connection to send updates to
             
         Returns:
             list[dict]: List of child state dictionaries
         """
-        await self._reset_browser()
+        # Reset browser and get live URL
+        live_browser_url = await self._reset_browser()
+        
+        # Send browser URL update if websocket is provided
+        if websocket and live_browser_url:
+            await websocket.send_json({
+                "type": "browser_url_update",
+                "live_browser_url": live_browser_url,
+                "node_id": id(node),
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
         path = self.get_path_to_root(node)
         
         # Execute path
         for n in path[1:]:  # Skip root node
+            if websocket:
+                await websocket.send_json({
+                    "type": "replaying_action",
+                    "node_id": id(n),
+                    "action": n.action,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
             success = await playwright_step_execution(
                 n,
                 self.goal,
@@ -129,6 +170,12 @@ class SimpleSearchAgent:
             )
             if not success:
                 n.is_terminal = True
+                if websocket:
+                    await websocket.send_json({
+                        "type": "replay_failed",
+                        "node_id": id(n),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
                 return []
             
             if not n.feedback:
@@ -137,6 +184,13 @@ class SimpleSearchAgent:
                     n.natural_language_description,
                     self.playwright_manager,
                 )
+                if websocket:
+                    await websocket.send_json({
+                        "type": "feedback_generated",
+                        "node_id": id(n),
+                        "feedback": n.feedback,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
 
         time.sleep(3)
         page = await self.playwright_manager.get_page()
@@ -144,7 +198,13 @@ class SimpleSearchAgent:
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
         
-        ## TODO: add feedback as well?
+        if websocket:
+            await websocket.send_json({
+                "type": "generating_actions",
+                "node_id": id(node),
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
         next_actions = await extract_top_actions(
             [{"natural_language_description": n.natural_language_description, "action": n.action, "feedback": n.feedback} for n in path[1:]],
             self.goal,
@@ -166,11 +226,17 @@ class SimpleSearchAgent:
             if action["action"] == "FINISH":
                 if action["prob"] > 0.2:
                     node.is_terminal = True
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_terminal",
+                            "node_id": id(node),
+                            "reason": "finish_action",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                     return []
                 continue
-                
+            
             page = await self.playwright_manager.get_page()
-            # page_info = extract_page_info(page, self.fullpage, self.log_folder)
             code, function_calls = self.action_set.to_python_code(action["action"])
 
             if len(function_calls) == 1:
@@ -179,13 +245,27 @@ class SimpleSearchAgent:
                         extracted_number = parse_function_args(function_args)
                         element = await locate_element(page, extracted_number)
                         action["element"] = element
-                except Exception:
+                except Exception as e:
                     action["element"] = None
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "element_location_failed",
+                            "action": action["action"],
+                            "error": str(e),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                 children.append(action)
 
         if not children:
             node.is_terminal = True
-            
+            if websocket:
+                await websocket.send_json({
+                    "type": "node_terminal",
+                    "node_id": id(node),
+                    "reason": "no_valid_actions",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+        
         return children
     
     def get_path_to_root(self, node: LATSNode) -> List[LATSNode]:
@@ -370,13 +450,17 @@ class SimpleSearchAgent:
         best_score = float('-inf')
         best_path = None
         
+        # Get the live browser URL during initial setup
+        live_browser_url = await self._reset_browser()
+        
         # Send initial status if websocket is provided
         if websocket:
             await websocket.send_json({
                 "type": "search_status",
                 "status": "started",
                 "message": "BFS search started",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
+                "live_browser_url": live_browser_url  # Include the live browser URL
             })
         
         while queue:
@@ -416,7 +500,8 @@ class SimpleSearchAgent:
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
-                await self.expand(current_node)
+                # Pass the websocket to expand method
+                await self.expand(current_node, websocket)
                 
                 # Send tree update after expansion
                 if websocket:
@@ -426,7 +511,7 @@ class SimpleSearchAgent:
                         "tree": tree_data,
                         "timestamp": datetime.utcnow().isoformat()
                     })
-                
+            
             # Get the path from root to this node
             path = self.get_path_to_root(current_node)
             
