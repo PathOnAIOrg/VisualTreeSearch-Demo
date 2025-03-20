@@ -1,7 +1,7 @@
 # Backend
 ## 1. Run demo tree search
 ```
-python run_demo_treesearch.py \
+python run_demo_treesearch_sync.py \
     --browser-mode chromium \
     --storage-state shopping.json \
     --starting-url "http://128.105.145.205:7770/" \

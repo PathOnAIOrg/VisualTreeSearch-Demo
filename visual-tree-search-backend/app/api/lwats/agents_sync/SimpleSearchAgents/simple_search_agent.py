@@ -2,19 +2,18 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 from collections import deque
-from datetime import datetime
 
 from openai import OpenAI
 
 from ...core_sync.config import AgentConfig
 
-from ...webagent_utils_async.action.highlevel import HighLevelActionSet
-from ...webagent_utils_async.utils.playwright_manager import AsyncPlaywrightManager, setup_playwright
-from ...webagent_utils_async.utils.utils import parse_function_args, locate_element
-from ...evaluation.evaluators import goal_finished_evaluator
-from ...replay_async import generate_feedback, playwright_step_execution
-from ...webagent_utils_async.action.prompt_functions import extract_top_actions
-from ...webagent_utils_async.browser_env.observation import extract_page_info
+from ...webagent_utils_sync.action.highlevel import HighLevelActionSet
+from ...webagent_utils_sync.utils.playwright_manager import PlaywrightManager, setup_playwright
+from ...webagent_utils_sync.utils.utils import parse_function_args, locate_element
+from ...evaluation_sync.evaluators import goal_finished_evaluator
+from ...replay import generate_feedback, playwright_step_execution
+from ...webagent_utils_sync.action.prompt_functions import extract_top_actions
+from ...webagent_utils_sync.browser_env.observation import extract_page_info
 from .lats_node import LATSNode
 from .tree_vis import better_print, print_trajectory, collect_all_nodes, GREEN, RESET, print_entire_tree
 from .trajectory_score import create_llm_prompt, score_trajectory_with_openai
@@ -30,7 +29,7 @@ class SimpleSearchAgent:
         messages: list[dict[str, Any]],
         goal: str,
         images: list,
-        playwright_manager: AsyncPlaywrightManager,
+        playwright_manager: PlaywrightManager,
         config: AgentConfig,
     ):
         self.starting_url = starting_url
@@ -57,31 +56,29 @@ class SimpleSearchAgent:
             parent=None
         )
 
-    async def run(self, websocket=None) -> List[Dict[str, Any]]:
+    def run(self) -> List[Dict[str, Any]]:
         if self.config.search_algorithm == "bfs":
             logger.info("Starting BFS algorithm")
-            if websocket:
-                return await self.bfs_with_websocket(websocket)
-            else:
-                return await self.bfs()
+            return self.bfs()
         else:
             logger.info("Starting DFS algorithm")
-            return await self.dfs()
+            return self.dfs()
 
-    async def _reset_browser(self) -> None:
+    def _reset_browser(self) -> None:
         """Reset the browser to initial state."""
-        await self.playwright_manager.close()
-        self.playwright_manager = await setup_playwright(
+        self.playwright_manager.close()
+        self.playwright_manager = setup_playwright(
+            log_folder=self.config.log_folder,
             storage_state=self.config.storage_state,
             headless=self.config.headless,
             mode=self.config.browser_mode
         )
-        page = await self.playwright_manager.get_page()
-        await page.goto(self.starting_url, wait_until="networkidle")
+        page = self.playwright_manager.get_page()
+        page.goto(self.starting_url, wait_until="networkidle")
     
     # def expand(self, node: LATSNode, finished_score_threshold: float = 0.9) -> bool:
     
-    async def expand(self, node: LATSNode) -> None:
+    def expand(self, node: LATSNode) -> None:
         """
         Expand a node by generating its children.
         
@@ -93,7 +90,7 @@ class SimpleSearchAgent:
             node.is_terminal = True
             return
             
-        children_state = await self.generate_children(node)
+        children_state = self.generate_children(node)
         for child_state in children_state:
             child = LATSNode(
                 natural_language_description=child_state["natural_language_description"],
@@ -105,7 +102,7 @@ class SimpleSearchAgent:
             )
             node.children.append(child)
 
-    async def generate_children(self, node: LATSNode) -> list[dict]:
+    def generate_children(self, node: LATSNode) -> list[dict]:
         """
         Generate child nodes for a given node.
         
@@ -115,12 +112,12 @@ class SimpleSearchAgent:
         Returns:
             list[dict]: List of child state dictionaries
         """
-        await self._reset_browser()
+        self._reset_browser()
         path = self.get_path_to_root(node)
         
         # Execute path
         for n in path[1:]:  # Skip root node
-            success = await playwright_step_execution(
+            success = playwright_step_execution(
                 n,
                 self.goal,
                 self.playwright_manager,
@@ -132,20 +129,20 @@ class SimpleSearchAgent:
                 return []
             
             if not n.feedback:
-                n.feedback = await generate_feedback(
+                n.feedback = generate_feedback(
                     self.goal,
                     n.natural_language_description,
                     self.playwright_manager,
                 )
 
         time.sleep(3)
-        page = await self.playwright_manager.get_page()
-        page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
+        page = self.playwright_manager.get_page()
+        page_info = extract_page_info(page, self.config.fullpage, self.config.log_folder)
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
         
         ## TODO: add feedback as well?
-        next_actions = await extract_top_actions(
+        next_actions = extract_top_actions(
             [{"natural_language_description": n.natural_language_description, "action": n.action, "feedback": n.feedback} for n in path[1:]],
             self.goal,
             self.images, 
@@ -169,7 +166,7 @@ class SimpleSearchAgent:
                     return []
                 continue
                 
-            page = await self.playwright_manager.get_page()
+            page = self.playwright_manager.get_page()
             # page_info = extract_page_info(page, self.fullpage, self.log_folder)
             code, function_calls = self.action_set.to_python_code(action["action"])
 
@@ -177,7 +174,7 @@ class SimpleSearchAgent:
                 try:
                     for function_name, function_args in function_calls:
                         extracted_number = parse_function_args(function_args)
-                        element = await locate_element(page, extracted_number)
+                        element = locate_element(page, extracted_number)
                         action["element"] = element
                 except Exception:
                     action["element"] = None
@@ -196,7 +193,7 @@ class SimpleSearchAgent:
             current = current.parent
         return list(reversed(path))
 
-    async def bfs(self) -> List[Dict[str, Any]]:
+    def bfs(self) -> List[Dict[str, Any]]:
         """
         Performs breadth-first search starting from the root node.
         Skips nodes that are marked as terminal.
@@ -221,7 +218,7 @@ class SimpleSearchAgent:
                 
             # Expand current node if it hasn't been expanded yet
             if not current_node.children:
-                await self.expand(current_node)
+                self.expand(current_node)
                 
             # Get the path from root to this node
             path = self.get_path_to_root(current_node)
@@ -268,7 +265,7 @@ class SimpleSearchAgent:
         logger.warning("No valid path found")
         return []
 
-    async def dfs(self) -> List[Dict[str, Any]]:
+    def dfs(self) -> List[Dict[str, Any]]:
         """
         Performs depth-first search starting from the root node.
         Skips nodes that are marked as terminal.
@@ -321,7 +318,7 @@ class SimpleSearchAgent:
             
             # Expand current node if it hasn't been expanded yet
             if not current_node.children:
-                await self.expand(current_node)
+                self.expand(current_node)
                 
             score, should_terminate = evaluate_node(current_node)
             
@@ -354,197 +351,3 @@ class SimpleSearchAgent:
         # If no path was found at all
         logger.warning("No valid path found")
         return []
-
-    async def bfs_with_websocket(self, websocket=None) -> List[Dict[str, Any]]:
-        """
-        Performs breadth-first search starting from the root node with WebSocket updates.
-        Skips nodes that are marked as terminal.
-        
-        Args:
-            websocket: Optional WebSocket connection to send updates to
-            
-        Returns:
-            List[Dict[str, Any]]: List of actions in the best path found
-        """
-        queue = deque([self.root_node])
-        best_score = float('-inf')
-        best_path = None
-        
-        # Send initial status if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "BFS search started",
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        
-        while queue:
-            current_node = queue.popleft()
-            
-            # Send node processing update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_processing",
-                    "node_id": id(current_node),
-                    "depth": current_node.depth,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Print debug info
-            print("print the trajectory")
-            print_trajectory(current_node)
-            print("print the entire tree")
-            print_entire_tree(self.root_node)
-            
-            # Skip terminal nodes
-            if current_node.is_terminal:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_terminal",
-                        "node_id": id(current_node),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                continue
-                
-            # Expand current node if it hasn't been expanded yet
-            if not current_node.children:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_expanding",
-                        "node_id": id(current_node),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-                await self.expand(current_node)
-                
-                # Send tree update after expansion
-                if websocket:
-                    tree_data = self._get_tree_data()
-                    await websocket.send_json({
-                        "type": "tree_update",
-                        "tree": tree_data,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-            # Get the path from root to this node
-            path = self.get_path_to_root(current_node)
-            
-            # Create trajectory for scoring
-            trajectory = []
-            for node in path[1:]:  # Skip root node
-                trajectory.append({
-                    "natural_language_description": node.natural_language_description,
-                    "action": node.action,
-                    "feedback": node.feedback
-                })
-            
-            # Score the trajectory
-            prompt = create_llm_prompt(trajectory, self.goal)
-            result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
-
-            score = result["score"]
-            
-            # Send score update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_scored",
-                    "node_id": id(current_node),
-                    "score": score,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Update best path if this score is better
-            if score > best_score:
-                best_score = score
-                best_path = path
-                
-                # Send best path update if websocket is provided
-                if websocket:
-                    await websocket.send_json({
-                        "type": "best_path_update",
-                        "score": best_score,
-                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-            logger.info(f"Node score: {score}")
-            
-            # If we've found a satisfactory solution, return it
-            if score >= 9:
-                logger.info("Found satisfactory solution")
-                
-                # Send completion update if websocket is provided
-                if websocket:
-                    await websocket.send_json({
-                        "type": "search_complete",
-                        "status": "success",
-                        "score": score,
-                        "path": [{"id": id(node), "action": node.action} for node in path[1:]],
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-                return [{"action": node.action} for node in path[1:]]
-            
-            # Add non-terminal children to queue
-            for child in current_node.children:
-                if not child.is_terminal and child not in queue:
-                    queue.append(child)
-                    
-                    # Send queue update if websocket is provided
-                    if websocket:
-                        await websocket.send_json({
-                            "type": "node_queued",
-                            "node_id": id(child),
-                            "parent_id": id(current_node),
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-        
-        # If we've exhausted all nodes and haven't found a perfect solution,
-        # return the best path we found
-        if best_path:
-            logger.info(f"Returning best path found with score {best_score}")
-            
-            # Send completion update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "search_complete",
-                    "status": "partial_success",
-                    "score": best_score,
-                    "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            return [{"action": node.action} for node in best_path[1:]]
-        
-        # If no path was found at all
-        logger.warning("No valid path found")
-        
-        # Send failure update if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_complete",
-                "status": "failure",
-                "message": "No valid path found",
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        
-        return []
-
-    def _get_tree_data(self):
-        """Get tree data in a format suitable for visualization"""
-        nodes = collect_all_nodes(self.root_node)
-        tree_data = []
-        
-        for node in nodes:
-            node_data = {
-                "id": id(node),
-                "parent_id": id(node.parent) if node.parent else None,
-                "action": node.action if node.action else "ROOT",
-                "description": node.natural_language_description,
-                "depth": node.depth,
-                "is_terminal": node.is_terminal
-            }
-            tree_data.append(node_data)
-        
-        return tree_data

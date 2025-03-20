@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 import json
 import logging
 
-from ..lwats.core.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
+from ..lwats.core_sync.config import AgentConfig, add_agent_config_arguments, filter_valid_config_args
 load_dotenv()
-from ..lwats.core.agent_factory import setup_search_agent
+from ..lwats.core_sync.agent_factory import setup_search_agent
 
 def run_tree_search(args):
     # Log the arguments to help debug
@@ -45,7 +45,7 @@ def run_tree_search(args):
     playwright_manager.close()
     
     return results
-from ..lwats.core.config import AgentConfig, filter_valid_config_args
+from ..lwats.core_sync.config import AgentConfig, filter_valid_config_args
 
 router = APIRouter()
 

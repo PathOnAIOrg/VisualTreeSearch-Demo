@@ -5,7 +5,7 @@ from collections import deque
 
 from openai import OpenAI
 
-from ...core.config import AgentConfig
+from ...core_sync.config import AgentConfig
 
 from ...webagent_utils_sync.action.highlevel import HighLevelActionSet
 from ...webagent_utils_sync.utils.playwright_manager import PlaywrightManager, setup_playwright

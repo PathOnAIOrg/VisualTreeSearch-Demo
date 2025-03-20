@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from .config import AgentConfig
-from ..agents.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
+from ..agents_sync.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
 from ..webagent_utils_sync.utils.utils import setup_logger
 from ..webagent_utils_sync.utils.playwright_manager import setup_playwright
 
