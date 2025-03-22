@@ -1,5 +1,6 @@
 import os
 import asyncio
+import json
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
 import aiohttp
@@ -83,6 +84,100 @@ async def get_browser_url(session_id: str) -> str:
             data = await response.json()
             return data["debuggerUrl"]
 
+async def read_account_credentials(storage_state_path):
+    """
+    Read account credentials from the storage state file.
+    
+    Args:
+        storage_state_path: Path to the storage state file (e.g., shopping.json)
+    Returns:
+        dict: Dictionary containing account credentials if found, None otherwise
+    """
+    try:
+        with open(storage_state_path, 'r') as f:
+            data = json.load(f)
+            # Look for credentials in the root of the JSON file
+            if 'credentials' in data:
+                return data['credentials']
+            # Also check if the file contains cookies (indicating it's a storage state file)
+            if 'cookies' in data:
+                print(f"Found storage state file with cookies at {storage_state_path}")
+                return None
+    except Exception as e:
+        print(f"Error reading credentials from {storage_state_path}: {e}")
+    return None
+
+async def auto_login(page, credentials, starting_url):
+    """
+    Perform auto-login based on the website and credentials provided.
+    
+    Args:
+        page: Playwright page object
+        credentials: Dictionary containing login credentials and website info
+        starting_url: The URL to navigate to after successful login
+    """
+    if not credentials:
+        return False
+        
+    try:
+        # Navigate to login page if specified
+        if 'login_url' in credentials:
+            print(f"Navigating to login page: {credentials['login_url']}")
+            await page.goto(credentials['login_url'])
+            
+        # Click the Sign In button if we're on the main page
+        print("Looking for Sign In button...")
+        sign_in_button = page.get_by_role("link", name="Sign In")
+        if sign_in_button:
+            print("Clicking Sign In button...")
+            await sign_in_button.click()
+            await page.wait_for_load_state('networkidle')
+            
+        # Wait for login form to be ready
+        await page.wait_for_load_state('networkidle')
+        
+        # Fill in username/email
+        if 'username_field' in credentials and 'username' in credentials:
+            print(f"Filling username field: {credentials['username_field']}")
+            await page.fill(credentials['username_field'], credentials['username'])
+            
+        # Fill in password
+        if 'password_field' in credentials and 'password' in credentials:
+            print(f"Filling password field: {credentials['password_field']}")
+            await page.fill(credentials['password_field'], credentials['password'])
+            
+        # Click the Sign In button in the login form
+        print("Looking for Sign In button in login form...")
+        login_form_button = page.get_by_role("button", name="Sign In")
+        if login_form_button:
+            print("Clicking Sign In button in login form...")
+            await login_form_button.click()
+            await page.wait_for_load_state('networkidle')
+            
+        # Wait for login to complete
+        await page.wait_for_load_state('networkidle')
+        
+        # Check if login was successful
+        if 'success_indicator' in credentials and len(credentials['success_indicator']) > 0:
+            print(f"Waiting for success indicator: {credentials['success_indicator']}")
+            await page.wait_for_selector(credentials['success_indicator'])
+            
+        # Check current URL and redirect to starting URL if needed
+        if starting_url:
+            current_url = page.url
+            print(f"Current URL after login: {current_url}")
+            if current_url != starting_url:
+                print(f"Redirecting to starting URL: {starting_url}")
+                await page.goto(starting_url)
+                await page.wait_for_load_state('networkidle')
+                print(f"Successfully redirected to: {page.url}")
+            
+        return True
+        
+    except Exception as e:
+        print(f"Error during auto-login: {e}")
+        return False
+
 class AsyncPlaywrightManager:
     def __init__(self, storage_state=None, headless=False, mode="chromium", session_id=None):
         self.playwright = None
@@ -95,8 +190,10 @@ class AsyncPlaywrightManager:
         self.mode = mode
         self.session_id = session_id
         self.live_browser_url = None
+        self.credentials = None
+        self.starting_url = None
     
-    async def setup_context_and_page(self, context_options=None):
+    async def setup_context_and_page(self, context_options=None, starting_url=None):
         """Common function to handle context and page setup"""
         if context_options is None:
             context_options = {
@@ -107,6 +204,10 @@ class AsyncPlaywrightManager:
         if self.storage_state:
             context_options["storage_state"] = self.storage_state
             print(f"Using storage state from: {self.storage_state}")
+            # Read credentials if storage state file exists
+            self.credentials = await read_account_credentials(self.storage_state)
+
+        self.starting_url = starting_url
 
         contexts = self.browser.contexts
         if contexts:
@@ -122,6 +223,20 @@ class AsyncPlaywrightManager:
             print("No existing contexts found, creating new one")
             self.context = await self.browser.new_context(**context_options)
             self.page = await self.context.new_page()
+            
+        # Attempt auto-login if credentials are available
+        if self.credentials:
+            print("Attempting auto-login...")
+            success = await auto_login(self.page, self.credentials, self.starting_url)
+            if success:
+                print("Auto-login successful")
+            else:
+                print("Auto-login failed")
+        elif self.starting_url:
+            # If no credentials but we have a starting URL, navigate to it
+            print(f"Navigating to starting URL: {self.starting_url}")
+            await self.page.goto(self.starting_url)
+            await self.page.wait_for_load_state('networkidle')
     
     async def initialize(self):
         async with self.lock:
@@ -250,10 +365,10 @@ async def test_browserbase_mode():
 async def main():
     """Main function to test different browser modes"""
     # # Test Chromium mode
-    # await test_chromium_mode()
+    await test_chromium_mode()
     
     # Test Browserbase mode
-    await test_browserbase_mode()
+    # await test_browserbase_mode()
 
 if __name__ == "__main__":
     asyncio.run(main())
