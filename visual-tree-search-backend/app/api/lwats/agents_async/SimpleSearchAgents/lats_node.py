@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 from pydantic import BaseModel
 import base64
-from ...webagent_utils_sync.evaluation.feedback import Feedback
+from ...webagent_utils_async.evaluation.feedback import Feedback
 
 @dataclass
 class Element:

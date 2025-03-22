@@ -6,7 +6,7 @@ from datetime import datetime
 
 from openai import OpenAI
 
-from ...core_sync.config import AgentConfig
+from ...core_async.config import AgentConfig
 
 from ...webagent_utils_async.action.highlevel import HighLevelActionSet
 from ...webagent_utils_async.utils.playwright_manager import AsyncPlaywrightManager, setup_playwright
@@ -18,7 +18,7 @@ from ...webagent_utils_async.browser_env.observation import extract_page_info
 from .lats_node import LATSNode
 from .tree_vis import better_print, print_trajectory, collect_all_nodes, GREEN, RESET, print_entire_tree
 from .trajectory_score import create_llm_prompt, score_trajectory_with_openai
-from ...webagent_utils_sync.utils.utils import urls_to_images
+from ...webagent_utils_async.utils.utils import urls_to_images
 
 logger = logging.getLogger(__name__)
 openai_client = OpenAI()
