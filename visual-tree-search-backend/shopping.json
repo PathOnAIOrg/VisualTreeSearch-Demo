@@ -1,4 +1,14 @@
 {
+    "credentials": {
+        "login_url": "http://xwebarena.pathonai.org:7770/customer/account/login/",
+        "username_field": "#email",
+        "password_field": "#pass",
+        "username": "emma.lopez@gmail.com",
+        "password": "Password.123",
+        "login_button": "button[type='submit']",
+        "success_indicator": ".customer-welcome"
+    },
+    
     "cookies": [
         {
             "name": "mage-cache-storage",
