@@ -365,10 +365,10 @@ async def test_browserbase_mode():
 async def main():
     """Main function to test different browser modes"""
     # # Test Chromium mode
-    await test_chromium_mode()
+    # await test_chromium_mode()
     
     # Test Browserbase mode
-    # await test_browserbase_mode()
+    await test_browserbase_mode()
 
 if __name__ == "__main__":
     asyncio.run(main())
