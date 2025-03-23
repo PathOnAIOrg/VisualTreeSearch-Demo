@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import TreeReconstructor from "../components/TreeReconstructor_d3";
 import { Info } from "lucide-react";
 
@@ -18,7 +17,6 @@ interface SearchParams {
   startingUrl: string;
   goal: string;
   algorithm: 'bfs' | 'dfs';
-  headless: boolean;
   maxDepth: number;
 }
 
@@ -88,7 +86,6 @@ const TreeSearchPlayground = () => {
     startingUrl: 'http://128.105.145.205:7770/',
     goal: 'search running shoes, click on the first result',
     algorithm: 'bfs',
-    headless: true,
     maxDepth: 3
   });
 
@@ -273,7 +270,6 @@ const TreeSearchPlayground = () => {
       starting_url: searchParams.startingUrl,
       goal: searchParams.goal,
       search_algorithm: searchParams.algorithm,
-      headless: searchParams.headless,
       max_depth: searchParams.maxDepth
     };
 
@@ -325,12 +321,69 @@ const TreeSearchPlayground = () => {
         </div>
       </div>
       
-      {/* Main content area - two column layout */}
-      <div className="container mx-auto px-6 mt-6">
-        <div className="flex flex-col lg:flex-row gap-6">
+      {/* Main content area - using full width */}
+      <div className="container mx-auto px-2 mt-6 max-w-full">
+        {/* Search Parameters - Moved to top */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+            </svg>
+            Search Parameters
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startingUrl" className="text-gray-700 dark:text-gray-300">Starting URL</Label>
+              <Input
+                id="startingUrl"
+                value={searchParams.startingUrl}
+                onChange={(e) => handleParamChange('startingUrl', e.target.value)}
+                className="border-gray-300 dark:border-gray-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="goal" className="text-gray-700 dark:text-gray-300">Goal</Label>
+              <Input
+                id="goal"
+                value={searchParams.goal}
+                onChange={(e) => handleParamChange('goal', e.target.value)}
+                className="border-gray-300 dark:border-gray-600"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="algorithm" className="text-gray-700 dark:text-gray-300">Algorithm</Label>
+              <select
+                id="algorithm"
+                value={searchParams.algorithm}
+                onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
+                className="w-full p-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-600"
+              >
+                <option value="bfs">Breadth-First Search (BFS)</option>
+                <option value="dfs">Depth-First Search (DFS)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxDepth" className="text-gray-700 dark:text-gray-300">Max Depth</Label>
+              <Input
+                id="maxDepth"
+                type="number"
+                min={1}
+                max={10}
+                value={searchParams.maxDepth}
+                onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
+                className="border-gray-300 dark:border-gray-600"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-4">
           
-          {/* Left column - Tree Visualization */}
-          <div className="lg:w-1/2 h-full flex flex-col">
+          {/* Left column - Tree Visualization (60% width) */}
+          <div className="lg:w-3/5 h-full flex flex-col">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 h-full flex-grow">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
@@ -338,19 +391,19 @@ const TreeSearchPlayground = () => {
                 </svg>
                 Tree Visualization
               </h2>
-              <div className="h-[800px] rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+              <div className="h-[900px] rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                 <TreeReconstructor
                   messages={treeMessages}
-                  width={600}
-                  height={800}
+                  width={1200}
+                  height={900}
                   reset={resetTree}
                 />
               </div>
             </div>
           </div>
           
-          {/* Right column - Browser View & Controls */}
-          <div className="lg:w-1/2 h-full flex flex-col gap-6">
+          {/* Right column - Browser View (40% width) */}
+          <div className="lg:w-2/5 h-full flex flex-col">
             
             {/* Live Browser View */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
@@ -365,101 +418,35 @@ const TreeSearchPlayground = () => {
                   <iframe
                     src={liveBrowserUrl}
                     className="w-full rounded-md"
-                    style={{ height: '400px' }}
+                    style={{ height: '600px' }}
                     title="Live Browser View"
                   />
                 ) : (
-                  <div className="h-[400px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                  <div className="h-[600px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
                     <p>Browser view will appear here once the search starts</p>
                   </div>
                 )}
               </div>
             </div>
-            
-            {/* Search Parameters */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                </svg>
-                Search Parameters
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startingUrl" className="text-gray-700 dark:text-gray-300">Starting URL</Label>
-                  <Input
-                    id="startingUrl"
-                    value={searchParams.startingUrl}
-                    onChange={(e) => handleParamChange('startingUrl', e.target.value)}
-                    className="border-gray-300 dark:border-gray-600"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="goal" className="text-gray-700 dark:text-gray-300">Goal</Label>
-                  <Input
-                    id="goal"
-                    value={searchParams.goal}
-                    onChange={(e) => handleParamChange('goal', e.target.value)}
-                    className="border-gray-300 dark:border-gray-600"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="algorithm" className="text-gray-700 dark:text-gray-300">Algorithm</Label>
-                  <select
-                    id="algorithm"
-                    value={searchParams.algorithm}
-                    onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-                    className="w-full p-2 border rounded bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-600"
-                  >
-                    <option value="bfs">Breadth-First Search (BFS)</option>
-                    <option value="dfs">Depth-First Search (DFS)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxDepth" className="text-gray-700 dark:text-gray-300">Max Depth</Label>
-                  <Input
-                    id="maxDepth"
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={searchParams.maxDepth}
-                    onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
-                    className="border-gray-300 dark:border-gray-600"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="headless"
-                    checked={searchParams.headless}
-                    onCheckedChange={(checked) => handleParamChange('headless', !!checked)}
-                  />
-                  <Label htmlFor="headless" className="text-gray-700 dark:text-gray-300">Run in Headless Mode</Label>
-                </div>
+          </div>
+        </div>
+        
+        {/* Message Log - Moved to bottom */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 mt-4">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+            </svg>
+            Message Log
+          </h2>
+          <div className="h-[250px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900">
+            {messages.map((msg, index) => (
+              <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{msg.timestamp} - {msg.type}</div>
+                <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-2 rounded text-sm border border-gray-200 dark:border-gray-700">{msg.content}</pre>
               </div>
-            </div>
-            
-            {/* Message Log */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                </svg>
-                Message Log
-              </h2>
-              <div className="h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-gray-50 dark:bg-gray-900">
-                {messages.map((msg, index) => (
-                  <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-800 dark:text-gray-200'}`}>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{msg.timestamp} - {msg.type}</div>
-                    <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-800 p-2 rounded text-sm border border-gray-200 dark:border-gray-700">{msg.content}</pre>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
         </div>
       </div>
