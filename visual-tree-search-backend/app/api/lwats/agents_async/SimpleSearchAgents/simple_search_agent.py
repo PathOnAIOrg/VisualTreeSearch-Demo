@@ -91,18 +91,6 @@ class SimpleSearchAgent:
             node: Node to expand
             websocket: Optional WebSocket connection to send updates to
         """
-        if node.depth >= 7:
-            logger.info("Depth limit reached")
-            node.is_terminal = True
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_terminal",
-                    "node_id": id(node),
-                    "reason": "depth_limit",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            return
-            
         children_state = await self.generate_children(node, websocket)
         for child_state in children_state:
             child = LATSNode(
@@ -465,6 +453,17 @@ class SimpleSearchAgent:
         
         while queue:
             current_node = queue.popleft()
+            
+            # Check if we've reached the maximum depth
+            if current_node.depth >= self.config.max_depth:
+                if websocket:
+                    await websocket.send_json({
+                        "type": "node_terminal",
+                        "node_id": id(current_node),
+                        "reason": "depth_limit",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                continue
             
             # Send node processing update if websocket is provided
             if websocket:
