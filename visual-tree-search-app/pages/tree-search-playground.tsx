@@ -18,7 +18,6 @@ interface SearchParams {
   startingUrl: string;
   goal: string;
   algorithm: 'bfs' | 'dfs';
-  headless: boolean;
   maxDepth: number;
 }
 
@@ -88,7 +87,6 @@ const TreeSearchPlayground = () => {
     startingUrl: 'http://128.105.145.205:7770/',
     goal: 'search running shoes, click on the first result',
     algorithm: 'bfs',
-    headless: true,
     maxDepth: 3
   });
 
@@ -273,7 +271,6 @@ const TreeSearchPlayground = () => {
       starting_url: searchParams.startingUrl,
       goal: searchParams.goal,
       search_algorithm: searchParams.algorithm,
-      headless: searchParams.headless,
       max_depth: searchParams.maxDepth
     };
 
@@ -429,15 +426,6 @@ const TreeSearchPlayground = () => {
                     onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
                     className="border-gray-300 dark:border-gray-600"
                   />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="headless"
-                    checked={searchParams.headless}
-                    onCheckedChange={(checked) => handleParamChange('headless', !!checked)}
-                  />
-                  <Label htmlFor="headless" className="text-gray-700 dark:text-gray-300">Run in Headless Mode</Label>
                 </div>
               </div>
             </div>

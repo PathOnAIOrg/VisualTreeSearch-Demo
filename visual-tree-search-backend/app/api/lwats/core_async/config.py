@@ -33,8 +33,6 @@ class AgentConfig:
 
 def add_agent_config_arguments(parser):
     # Environment
-    parser.add_argument("--headless", type=bool, required=False,
-                        help="Specify if the browser should run in headless mode")
     parser.add_argument("--browser-mode", type=str, required=False,
                         help="Specify the browser mode")
     parser.add_argument("--storage-state", type=str, required=False,

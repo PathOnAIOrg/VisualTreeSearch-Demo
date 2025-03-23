@@ -22,7 +22,6 @@ async def connect_and_test_search(
     starting_url: str,
     goal: str,
     search_algorithm: str = "bfs",
-    headless: bool = True,
     max_depth: int = 3
 ):
     """
@@ -33,7 +32,6 @@ async def connect_and_test_search(
         starting_url: URL to start the search from
         goal: Goal to achieve
         search_algorithm: Search algorithm to use (bfs or dfs)
-        headless: Whether to run the browser in headless mode
         max_depth: Maximum depth for the search tree
     """
     logger.info(f"Connecting to WebSocket at {ws_url}")
@@ -54,7 +52,6 @@ async def connect_and_test_search(
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
-            "headless": headless,
             "max_depth": max_depth
         }
         
@@ -134,12 +131,6 @@ def parse_arguments():
     parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs"], default="bfs",
                         help="Search algorithm to use (default: bfs)")
     
-    parser.add_argument("--headless", action="store_true", default=True,
-                        help="Run browser in headless mode (default: True)")
-    
-    parser.add_argument("--visible", action="store_false", dest="headless",
-                        help="Run browser in visible mode")
-    
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
     
@@ -154,7 +145,6 @@ async def main():
     logger.info(f"Starting URL: {args.starting_url}")
     logger.info(f"Goal: {args.goal}")
     logger.info(f"Algorithm: {args.algorithm}")
-    logger.info(f"Headless: {args.headless}")
     logger.info(f"Max depth: {args.max_depth}")
     
     await connect_and_test_search(
@@ -162,7 +152,6 @@ async def main():
         starting_url=args.starting_url,
         goal=args.goal,
         search_algorithm=args.algorithm,
-        headless=args.headless,
         max_depth=args.max_depth
     )
 

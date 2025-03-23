@@ -75,7 +75,6 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         starting_url = message.get("starting_url", "http://128.105.145.205:7770/")
         goal = message.get("goal", "search running shoes, click on the first result")
         search_algorithm = message.get("search_algorithm", "bfs")
-        headless = message.get("headless", True)
         max_depth = message.get("max_depth", 3)
         storage_state = message.get("storage_state", "shopping.json")
         
@@ -89,10 +88,10 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         
         # Create agent configuration
         config = AgentConfig(
-            headless=headless,
             search_algorithm=search_algorithm,
             max_depth=max_depth,
-            storage_state=storage_state
+            storage_state=storage_state,
+            headless=False
         )
         
         # Send status update
