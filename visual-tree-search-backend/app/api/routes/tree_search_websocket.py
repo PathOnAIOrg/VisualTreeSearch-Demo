@@ -120,9 +120,12 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         })
         
         # Run search with WebSocket updates
-        if search_algorithm == "bfs":
+        if search_algorithm.lower() == "bfs":
             # Use the agent's built-in WebSocket-enabled BFS method
             await agent.bfs_with_websocket(websocket)
+        elif search_algorithm.lower() == "dfs":
+            # Use the agent's built-in WebSocket-enabled DFS method
+            await agent.dfs_with_websocket(websocket)
         else:
             await websocket.send_json({
                 "type": "error",
