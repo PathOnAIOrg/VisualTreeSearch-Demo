@@ -43,16 +43,40 @@ interface TreeReconstructorProps {
 
 const TreeReconstructor: React.FC<TreeReconstructorProps> = ({ 
   messages, 
-  width = 800, 
-  height = 600,
+  width = 1200,
+  height = 900,
   reset = false
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [nodeMap, setNodeMap] = useState<Map<string, TreeNode>>(new Map());
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const { theme } = useTheme();
+  const [containerWidth, setContainerWidth] = useState(width);
+
+  // Set up resize observer to make the visualization responsive
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target === containerRef.current) {
+          const newWidth = entry.contentRect.width;
+          if (newWidth > 0) {
+            setContainerWidth(newWidth);
+          }
+        }
+      }
+    });
+    
+    resizeObserver.observe(containerRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Cleanup tooltip on unmount
   useEffect(() => {
@@ -201,19 +225,23 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
       .style("background-color", theme === 'dark' ? "#1F2937" : "#FFFFFF")
       .style("border", `1px solid ${theme === 'dark' ? "#374151" : "#E5E7EB"}`)
       .style("border-radius", "4px")
-      .style("padding", "8px 12px")
-      .style("font-size", "14px")
+      .style("padding", "12px 16px")
+      .style("font-size", "15px")
       .style("color", theme === 'dark' ? "#FFFFFF" : "#111827")
       .style("pointer-events", "none")
       .style("z-index", "1000")
+      .style("max-width", "400px")
       .style("box-shadow", theme === 'dark' 
         ? "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
         : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)")
       .node() as HTMLDivElement;
 
+    // Use container width if available, otherwise use width prop
+    const actualWidth = containerWidth || width;
+
     // Increase right margin to accommodate labels
-    const margin = { top: 20, right: 150, bottom: 30, left: 90 };
-    const innerWidth = width - margin.left - margin.right;
+    const margin = { top: 40, right: 200, bottom: 40, left: 120 };
+    const innerWidth = actualWidth - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
     // Create D3 hierarchy
@@ -228,7 +256,7 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
 
     // Create SVG container with overflow handling
     const svg = d3.select(svgRef.current)
-      .attr("width", width)
+      .attr("width", actualWidth)
       .attr("height", height)
       .attr("overflow", "visible")
       .append("g")
@@ -249,7 +277,8 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
       })
       .attr("fill", "none")
       .attr("stroke", theme === 'dark' ? "#9CA3AF" : "#6B7280")
-      .attr("stroke-width", 1.5);
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.7);
 
     // Add nodes
     const nodes = svg.selectAll(".node")
@@ -261,18 +290,18 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
 
     // Add node circles
     nodes.append("circle")
-      .attr("r", 10)
+      .attr("r", 12)
       .attr("fill", d => d.data.id === currentNodeId ? "#ff5722" : "#69b3a2")
       .attr("stroke", d => d.data.id === currentNodeId ? "#ff0000" : "#2c3e50")
-      .attr("stroke-width", d => d.data.id === currentNodeId ? 3 : 1.5);
+      .attr("stroke-width", d => d.data.id === currentNodeId ? 3 : 2);
 
     // Add node labels with tooltips
     nodes.append("text")
       .attr("dy", ".35em")
-      .attr("x", d => d.children ? -15 : 15)
+      .attr("x", d => d.children ? -18 : 18)
       .attr("text-anchor", d => d.children ? "end" : "start")
       .text(d => d.data.name)
-      .attr("font-size", "14px")
+      .attr("font-size", "15px")
       .attr("font-weight", "500")
       .attr("fill", d => {
         if (d.data.id === currentNodeId) {
@@ -290,14 +319,14 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
             .duration(200)
             .style("opacity", .9);
           tooltip.html(d.data.description)
-            .style("left", (event.pageX +10 ) + "px")
-            .style("top", (event.pageY - 50) + "px");
+            .style("left", (event.pageX +15 ) + "px")
+            .style("top", (event.pageY - 60) + "px");
         }
       })
       .on("mousemove", function(event) {
         if (tooltipRef.current) {
           d3.select(tooltipRef.current)
-            .style("left", (event.pageX + 10) + "px")
+            .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 28) + "px");
         }
       })
@@ -310,12 +339,18 @@ const TreeReconstructor: React.FC<TreeReconstructorProps> = ({
         }
       });
 
-  }, [tree, width, height, currentNodeId, theme]);
+  }, [tree, width, height, containerWidth, currentNodeId, theme]);
 
   return (
-    <div className="tree-reconstructor">
-      <div className="border rounded p-2 bg-card overflow-visible">
-        <svg ref={svgRef} width={width} height={height} className="overflow-visible"></svg>
+    <div ref={containerRef} className="tree-reconstructor w-full h-full">
+      <div className="border rounded-lg p-4 bg-card overflow-visible shadow-md h-full">
+        <svg 
+          ref={svgRef} 
+          width="100%" 
+          height={height} 
+          className="overflow-visible"
+          style={{ maxWidth: '100%' }}
+        ></svg>
       </div>
     </div>
   );
