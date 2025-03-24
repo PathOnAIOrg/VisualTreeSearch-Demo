@@ -693,10 +693,50 @@ Hence, both local and remote show that Magento’s reCAPTCHA modules are present
 ## 9. steps
 ```
 ssh -i ~/.ssh/id_rsa_personal pentium3@128.105.145.205
-
 "username": "emma.lopez@gmail.com",
 "password": "Password.123",
+```
+
+
+
 
 1. restart docker
+curl -N http://localhost:8000/api/container/reset/128.105.145.205
+```
+docker exec -it shopping mysql -u root -p
+# Then enter the password when prompted
+# Then run:
+CREATE USER 'root'@'172.17.0.1' IDENTIFIED BY '1234567890';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'172.17.0.1' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+# Or to allow connections from any host:
+Or to allow connections from any host:
+CopyCREATE USER 'root'@'%' IDENTIFIED BY '1234567890';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
 2. test disable captcha/ recaptcha
+```
+mysql -u root -p1234567890 -h 127.0.0.1 -P 33061 magentodb
+```
+
+http://128.105.145.205:7770/admin
+
+disable in sequence
+```
+bin/magento module:disable Magento_ReCaptchaCheckout
+bin/magento module:disable Magento_ReCaptchaCheckoutSalesRule
+bin/magento module:disable PayPal_BraintreeGraphQl
+bin/magento module:disable PayPal_Braintree
+bin/magento module:disable Magento_ReCaptchaWebapiUi
+bin/magento module:disable Magento_ReCaptchaFrontendUi
+bin/magento module:disable Magento_Captcha --force
+bin/magento module:disable Magento_PaypalCaptcha
+bin/magento cache:flush
+```
+
+check log
+```
+tail -n 100 var/log/exception.log
 ```
