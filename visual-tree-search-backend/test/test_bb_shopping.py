@@ -77,7 +77,7 @@ def run(browser_tab: Page):
     restore_cookies(browser_tab)
 
     # Instruct the browser to go to a protected page
-    browser_tab.goto("http://128.105.145.205:7770/")
+    browser_tab.goto("http://128.105.145.205:7770/customer/account/login/")
     print(browser_tab.url)
 
     
@@ -110,6 +110,11 @@ with sync_playwright() as playwright:
 
     context = browser.contexts[0]
     browser_tab = context.pages[0]
+    # Retrieve live view URLs for the running session
+    live_info = bb.sessions.debug(session.id)
+    print("Live view URL (fullscreen):", live_info.debugger_fullscreen_url)
+    print("Live view URL (with browser UI):", live_info.debugger_url)
+    browser_tab.goto("https://www.google.com")
 
     try:
         # Perform our browser commands

@@ -103,6 +103,11 @@ with sync_playwright() as playwright:
 
     context = browser.contexts[0]
     browser_tab = context.pages[0]
+    # Retrieve live view URLs for the running session
+    live_info = bb.sessions.debug(session.id)
+    print("Live view URL (fullscreen):", live_info.debugger_fullscreen_url)
+    print("Live view URL (with browser UI):", live_info.debugger_url)
+
 
     try:
         # Perform our browser commands
