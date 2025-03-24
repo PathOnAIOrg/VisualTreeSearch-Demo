@@ -149,7 +149,7 @@ mysql>
 ```
 
 
-### Cookies Just Stored (Markdown Table)
+## Cookies Just Stored (Markdown Table)
 
 | **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
 |----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
@@ -186,3 +186,55 @@ Cookies after login attempt (13) (Markdown Table):
 | recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
 | product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
 | section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774377034 |
+
+
+## Magento Cookie Comparison: Remote Browserbase vs Local Chrome
+
+### Remote Browserbase Cookies
+
+| Name | Value (first 10 chars) | Domain | Path | HttpOnly | Secure | SameSite | Expires |
+|------|------------------------|--------|------|----------|--------|----------|---------|
+| test_cookie | 1 | 128.105.145.205 | / | False | False | Lax | -1 |
+| PHPSESSID | 9e51da9385... | 128.105.145.205 | / | True | False | Lax | 1774377035.337659 |
+| form_key | RHI8Ca8byh... | 128.105.145.205 | / | False | False | Lax | 1774377035.337806 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774377034 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774377035 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774377026 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774377034 |
+
+### Local Chrome Browser Cookies (From DevTools Screenshot)
+
+| Name | Value | Domain | Path | Expires / Max-Age | Size | HttpOnly | Secure | SameSite | Partition Key | Cross Site | Priority |
+|------|-------|--------|------|-------------------|------|----------|--------|----------|--------------|------------|----------|
+| PHPSESSID | 61e492df411a16932d7dc3790da00e7e | 128.105.145.205 | / | 2026-03-24T1... | 41 | ✓ |  | Lax |  |  | Medium |
+| X-Magento-Vary | 9bf9a599123e6402b85cde6714477a08b817412 | 128.105.145.205 | / | 2026-03-24T1... | 54 | ✓ |  | Lax |  |  | Medium |
+| form_key | WdjJuHYiAUcZ8cls | 128.105.145.205 | / | 2026-03-24T1... | 24 |  |  | Lax |  |  | Medium |
+| mage-cache-sessid | true | 128.105.145.205 | / | 2026-03-24T1... | 21 |  |  | Lax |  |  | Medium |
+| mage-cache-storage | {} | 128.105.145.205 | / | 2026-03-12T2... | 20 |  |  | Lax |  |  | Medium |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | 2026-03-12T2... | 41 |  |  | Lax |  |  | Medium |
+| mage-messages |  | 128.105.145.205 | / | 2026-03-24T1... | 13 |  |  | Strict |  |  | Medium |
+| private_content_version | 0ae9963018e21a8c07a7912346cb7835 | 128.105.145.205 | / | 2026-04-28T1... | 55 |  |  | Lax |  |  | Medium |
+| product_data_storage | {} | 128.105.145.205 | / | 2026-03-12T2... | 22 |  |  | Lax |  |  | Medium |
+| recently_compared_product | {} | 128.105.145.205 | / | 2026-03-12T2... | 27 |  |  | Lax |  |  | Medium |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | 2026-03-12T2... | 36 |  |  | Lax |  |  | Medium |
+| recently_viewed_product | {} | 128.105.145.205 | / | 2026-03-12T2... | 25 |  |  | Lax |  |  | Medium |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | 2026-03-12T2... | 34 |  |  | Lax |  |  | Medium |
+| section_data_ids | {%22customer%22:1742840624%2C%22compare-products%2... | 128.105.145.205 | / | 2026-03-24T1... | 530 |  |  | Lax |  |  | Medium |
+
+### Key Differences
+
+1. **Missing Frontend Cookie:** The remote Browserbase session doesn't have the `X-Magento-Vary` cookie that appears in your local Chrome browser.
+
+2. **Missing Private Content Version:** The remote session is missing the `private_content_version` cookie which helps Magento manage private content caching.
+
+3. **Value Differences:** The cookie values for PHPSESSID and form_key are different between environments (expected).
+
+4. **Section Data IDs Format:** The contents of the section_data_ids cookie appear to have different structures.
+
+These differences may explain why the login isn't working in the remote environment but works in your local browser.
