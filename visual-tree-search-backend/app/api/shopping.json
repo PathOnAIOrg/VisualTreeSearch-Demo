@@ -1,6 +1,6 @@
 {
     "credentials": {
-        "login_url": "http://xwebarena.pathonai.org:7770/customer/account/login/",
+        "login_url": "http://128.105.145.205:7770/customer/account/login/",
         "username_field": "#email",
         "password_field": "#pass",
         "username": "emma.lopez@gmail.com",

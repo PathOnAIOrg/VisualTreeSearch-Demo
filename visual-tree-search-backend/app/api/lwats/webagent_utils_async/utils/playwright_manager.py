@@ -385,7 +385,7 @@ async def test_chromium_mode():
     try:
         page = await manager.get_page()
         print(f"Navigating to example.com...")
-        await page.goto("http://xwebarena.pathonai.org:7770/sales/order/history/")
+        await page.goto("http://128.105.145.205:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         await asyncio.sleep(3)  # Wait to see the page
     finally:
@@ -402,7 +402,7 @@ async def test_browserbase_mode():
         print(f"Session ID: {manager.get_session_id()}")
         print(f"Live Browser URL: {await manager.get_live_browser_url()}")
         print(f"Navigating to example.com...")
-        await page.goto("http://xwebarena.pathonai.org:7770/sales/order/history/")
+        await page.goto("http://128.105.145.205:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         print(f"You can view the browser at: {await manager.get_live_browser_url()}")
         await asyncio.sleep(10)  # Give more time to check the live URL
