@@ -443,3 +443,4 @@ bash-5.1# cat config.php | grep -i recaptcha
         'Magento_ReCaptchaWebapiUi' => 1,
 bash-5.1# 
 ```
+https://experienceleague.adobe.com/en/docs/commerce-admin/systems/security/captcha/security-captcha

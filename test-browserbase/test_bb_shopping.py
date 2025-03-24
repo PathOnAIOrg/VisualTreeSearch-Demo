@@ -239,7 +239,30 @@ def run(browser_tab: Page):
 def main():
     with sync_playwright() as playwright:
         bb = Browserbase(api_key=API_KEY)
-        session = bb.sessions.create(project_id=os.environ["BROWSERBASE_PROJECT_ID"], proxies=False)
+        #session = bb.sessions.create(project_id=os.environ["BROWSERBASE_PROJECT_ID"], proxies=False)
+        session = bb.sessions.create(
+            project_id=os.environ["BROWSERBASE_PROJECT_ID"],
+            browser_settings={
+                "fingerprint": {
+                    "browsers": ["chrome", "firefox", "edge", "safari"],
+                    "devices": ["mobile", "desktop"],
+                    "locales": ["en-US", "en-GB"],
+                    "operatingSystems": ["android", "ios", "linux", "macos", "windows"],
+                    "screen": {
+                        "maxHeight": 1080,
+                        "maxWidth": 1920,
+                        "minHeight": 1080,
+                        "minWidth": 1920,
+                    },
+                    "viewport": {
+                        "width": 1920,
+                        "height": 1080,
+                    },
+                },
+                "solveCaptchas": True,
+            },
+            proxies=False,
+        )
         browser = playwright.chromium.connect_over_cdp(session.connectUrl)
 
         print(
