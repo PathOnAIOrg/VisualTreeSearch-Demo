@@ -238,3 +238,147 @@ Cookies after login attempt (13) (Markdown Table):
 4. **Section Data IDs Format:** The contents of the section_data_ids cookie appear to have different structures.
 
 These differences may explain why the login isn't working in the remote environment but works in your local browser.
+
+## 6. captcha issues
+```
+pentium3@node-0:~$ mysql -u root -p1234567890 -h 127.0.0.1 -P 33061 magentodb
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 89471
+Server version: 5.5.5-10.6.12-MariaDB MariaDB Server
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> SELECT config_id, scope, scope_id, path, value
+    -> FROM core_config_data
+    -> WHERE path LIKE 'customer/captcha/%';
++-----------+---------+----------+-------------------------+-------+
+| config_id | scope   | scope_id | path                    | value |
++-----------+---------+----------+-------------------------+-------+
+|        31 | default |        0 | customer/captcha/enable | 0     |
+|        32 | default |        0 | customer/captcha/forms  | NULL  |
++-----------+---------+----------+-------------------------+-------+
+2 rows in set (0.00 sec)
+
+mysql> SELECT config_id, scope, scope_id, path, value
+    -> FROM core_config_data
+    -> WHERE path = 'customer/captcha/enable';
++-----------+---------+----------+-------------------------+-------+
+| config_id | scope   | scope_id | path                    | value |
++-----------+---------+----------+-------------------------+-------+
+|        31 | default |        0 | customer/captcha/enable | 0     |
++-----------+---------+----------+-------------------------+-------+
+1 row in set (0.00 sec)
+
+mysql> SELECT *
+    -> FROM core_config_data
+    -> WHERE path LIKE '%captcha%'
+    ->    OR path LIKE '%recaptcha%'
+    ->    OR path LIKE 'msp_securitysuite/recaptcha%'
+    ->    OR path LIKE 'googlerecaptcha/%';
++-----------+---------+----------+----------------------------------------------+-------+---------------------+
+| config_id | scope   | scope_id | path                                         | value | updated_at          |
++-----------+---------+----------+----------------------------------------------+-------+---------------------+
+|        14 | default |        0 | msp_securitysuite_recaptcha/frontend/enabled | 0     | 2023-04-10 14:43:35 |
+|        15 | default |        0 | msp_securitysuite_recaptcha/backend/enabled  | 0     | 2023-04-10 14:43:35 |
+|        31 | default |        0 | customer/captcha/enable                      | 0     | 2023-04-10 14:47:51 |
+|        32 | default |        0 | customer/captcha/forms                       | NULL  | 2023-04-10 14:47:51 |
+|        34 | default |        0 | admin/captcha/enable                         | 0     | 2023-04-10 14:49:01 |
+|        35 | default |        0 | admin/captcha/forms                          | NULL  | 2023-04-10 14:49:01 |
++-----------+---------+----------+----------------------------------------------+-------+---------------------+
+6 rows in set (0.00 sec)
+
+```
+
+## 7. Local test passed
+```
+python test_local_shopping.py                         
+No cookie file found. Will need to authenticate.
+Need to authenticate
+
+Attempting login with Playwright form submission
+Cleared cookies before login.
+
+Current URL: http://128.105.145.205:7770/customer/account/login/
+Filling in login form...
+
+Filled email field
+Filled password field
+Examining form elements...
+
+  Form input: form_key = q12ndBy3xOvtYupN (type: hidden)
+  Form input: login[username] = [empty] (type: email)
+  Form input: login[password] = [empty] (type: password)
+  Form input: show-password = [empty] (type: checkbox)
+  Form input: username = [empty] (type: email)
+  Form input: password = [empty] (type: password)
+  Form input: captcha_form_id = user_login (type: hidden)
+  Form input: context = checkout (type: hidden)
+
+Clicking login button...
+Found login button: id=send2 type=submit
+Clicked login button and waited for navigation.
+
+Saved 15 cookie(s) from the browser context
+
+### Cookies Just Stored (Markdown Table)
+
+| **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
+|----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
+| test_cookie | 1 | 128.105.145.205 | / | False | False | Lax | -1 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774379255 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| private_content_version | 5ba45ab90f... | 128.105.145.205 | / | False | False | Lax | 1777403254.995122 |
+| PHPSESSID | aa8870e555... | 128.105.145.205 | / | True | False | Lax | 1774379255.930625 |
+| X-Magento-Vary | 9bf9a59912... | 128.105.145.205 | / | True | False | Lax | 1774379255.930965 |
+| form_key | kRXiR9CATs... | 128.105.145.205 | / | False | False | Lax | 1774379255.930852 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774379255 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774379255 |
+
+Checking if login succeeded...
+
+Cookies after login attempt (15) (Markdown Table):
+
+| **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
+|----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
+| test_cookie | 1 | 128.105.145.205 | / | False | False | Lax | -1 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774379255 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774379253 |
+| private_content_version | 5ba45ab90f... | 128.105.145.205 | / | False | False | Lax | 1777403254.995122 |
+| PHPSESSID | aa8870e555... | 128.105.145.205 | / | True | False | Lax | 1774379255.930625 |
+| X-Magento-Vary | 9bf9a59912... | 128.105.145.205 | / | True | False | Lax | 1774379255.930965 |
+| form_key | kRXiR9CATs... | 128.105.145.205 | / | False | False | Lax | 1774379255.930852 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774379255 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774379255 |
+
+✅ Found 1 potential Magento session cookie(s): PHPSESSID
+✅ Found welcome message containing 'Emma': Emma Lopez
+                    emma.lopez@gmail.com
+✅ Page title indicates logged in: My Account
+✅ Successfully logged in!
+
+Accessing protected URL: http://128.105.145.205:7770/sales/order/history
+Final page: http://128.105.145.205:7770/sales/order/history | Title: My Orders
+✅ Successfully accessing protected page!
+```
