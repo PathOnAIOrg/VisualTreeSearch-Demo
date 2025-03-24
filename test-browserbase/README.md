@@ -687,3 +687,16 @@ Also loads the same captcha and recaptcha scripts ([CAPTCHA-REQUEST] ... [CAPTCH
 The final page is again "Customer Login,” so the session is never recognized.
 
 Hence, both local and remote show that Magento’s reCAPTCHA modules are present, but local passes (maybe reCAPTCHA sees a higher “human” trust score, or your IP is whitelisted), while remote fails behind the scenes.
+
+
+
+## 9. steps
+```
+ssh -i ~/.ssh/id_rsa_personal pentium3@128.105.145.205
+
+"username": "emma.lopez@gmail.com",
+"password": "Password.123",
+
+1. restart docker
+2. test disable captcha/ recaptcha
+```
