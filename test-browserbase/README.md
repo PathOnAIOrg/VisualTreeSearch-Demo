@@ -382,3 +382,64 @@ Accessing protected URL: http://128.105.145.205:7770/sales/order/history
 Final page: http://128.105.145.205:7770/sales/order/history | Title: My Orders
 ✅ Successfully accessing protected page!
 ```
+
+## 8. captcha
+```
+docker exec -it shopping bash
+cd /var/www/magento2/app/etc
+bash-5.1# ls
+NonComposerComponentRegistration.php  di.xml                                vendor_path.php
+config.php                            env.php
+db_schema.xml                         registration_globlist.php
+bash-5.1# cat config.php | grep -i captcha
+        'Magento_Captcha' => 1,
+        'Magento_ReCaptchaAdminUi' => 1,
+        'Magento_ReCaptchaCheckout' => 1,
+        'Magento_ReCaptchaCheckoutSalesRule' => 1,
+        'Magento_ReCaptchaContact' => 1,
+        'Magento_ReCaptchaCustomer' => 1,
+        'Magento_ReCaptchaFrontendUi' => 1,
+        'Magento_ReCaptchaMigration' => 1,
+        'Magento_ReCaptchaNewsletter' => 1,
+        'Magento_ReCaptchaPaypal' => 1,
+        'Magento_ReCaptchaReview' => 1,
+        'Magento_ReCaptchaSendFriend' => 1,
+        'Magento_ReCaptchaStorePickup' => 1,
+        'Magento_ReCaptchaUi' => 1,
+        'Magento_ReCaptchaUser' => 1,
+        'Magento_ReCaptchaValidation' => 1,
+        'Magento_ReCaptchaValidationApi' => 1,
+        'Magento_ReCaptchaVersion2Checkbox' => 1,
+        'Magento_ReCaptchaVersion2Invisible' => 1,
+        'Magento_ReCaptchaVersion3Invisible' => 1,
+        'Magento_ReCaptchaWebapiApi' => 1,
+        'Magento_ReCaptchaWebapiGraphQl' => 1,
+        'Magento_ReCaptchaWebapiRest' => 1,
+        'Magento_ReCaptchaWebapiUi' => 1,
+        'Magento_PaypalCaptcha' => 1,
+bash-5.1# cat config.php | grep -i recaptcha
+        'Magento_ReCaptchaAdminUi' => 1,
+        'Magento_ReCaptchaCheckout' => 1,
+        'Magento_ReCaptchaCheckoutSalesRule' => 1,
+        'Magento_ReCaptchaContact' => 1,
+        'Magento_ReCaptchaCustomer' => 1,
+        'Magento_ReCaptchaFrontendUi' => 1,
+        'Magento_ReCaptchaMigration' => 1,
+        'Magento_ReCaptchaNewsletter' => 1,
+        'Magento_ReCaptchaPaypal' => 1,
+        'Magento_ReCaptchaReview' => 1,
+        'Magento_ReCaptchaSendFriend' => 1,
+        'Magento_ReCaptchaStorePickup' => 1,
+        'Magento_ReCaptchaUi' => 1,
+        'Magento_ReCaptchaUser' => 1,
+        'Magento_ReCaptchaValidation' => 1,
+        'Magento_ReCaptchaValidationApi' => 1,
+        'Magento_ReCaptchaVersion2Checkbox' => 1,
+        'Magento_ReCaptchaVersion2Invisible' => 1,
+        'Magento_ReCaptchaVersion3Invisible' => 1,
+        'Magento_ReCaptchaWebapiApi' => 1,
+        'Magento_ReCaptchaWebapiGraphQl' => 1,
+        'Magento_ReCaptchaWebapiRest' => 1,
+        'Magento_ReCaptchaWebapiUi' => 1,
+bash-5.1# 
+```
