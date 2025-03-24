@@ -107,17 +107,15 @@ async def read_account_credentials(storage_state_path):
         print(f"Error reading credentials from {storage_state_path}: {e}")
     return None
 
-async def auto_login(page, credentials, starting_url):
+async def auto_login(page, credentials):
     """
     Perform auto-login based on the website and credentials provided.
     
     Args:
         page: Playwright page object
         credentials: Dictionary containing login credentials and website info
-        starting_url: The URL to navigate to after successful login
     """
     print(f"=== Starting auto_login process ===")
-    print(f"Target URL after login: {starting_url}")
     
     if not credentials:
         print("No credentials provided, aborting login")
@@ -163,7 +161,7 @@ async def auto_login(page, credentials, starting_url):
         # Fill in password
         if 'password_field' in credentials and 'password' in credentials:
             print(f"Found password field selector: {credentials['password_field']}")
-            print(f"Filling password field.")
+            print(f"Filling password field with: {credentials['password']}")
             await page.fill(credentials['password_field'], credentials['password'])
             print("Password filled successfully")
         else:
@@ -194,25 +192,6 @@ async def auto_login(page, credentials, starting_url):
         else:
             print("No success_indicator provided, unable to confirm login success")
         
-        # Check current URL and redirect to starting URL if needed
-        if starting_url:
-            current_url = page.url
-            print(f"Current URL after login: {current_url}")
-            if current_url != starting_url:
-                print(f"Current URL doesn't match target URL, redirecting to: {starting_url}")
-                await page.goto(starting_url)
-                print("Waiting for page to load after redirection")
-                await page.wait_for_load_state('networkidle')
-                print(f"Page loaded after redirection, final URL: {page.url}")
-                if page.url == starting_url:
-                    print("Successfully reached target URL")
-                else:
-                    print(f"Warning: Final URL ({page.url}) doesn't match target URL ({starting_url})")
-            else:
-                print("Already at target URL, no redirection needed")
-        else:
-            print("No starting_url provided, staying on current page")
-        
         print("=== Auto-login process completed successfully ===")
         return True
     
@@ -237,9 +216,8 @@ class AsyncPlaywrightManager:
         self.session_id = session_id
         self.live_browser_url = None
         self.credentials = None
-        self.starting_url = None
     
-    async def setup_context_and_page(self, context_options=None, starting_url=None):
+    async def setup_context_and_page(self, context_options=None):
         """Common function to handle context and page setup"""
         if context_options is None:
             context_options = {
@@ -252,8 +230,6 @@ class AsyncPlaywrightManager:
             print(f"Using storage state from: {self.storage_state}")
             # Read credentials if storage state file exists
             self.credentials = await read_account_credentials(self.storage_state)
-
-        self.starting_url = starting_url
 
         contexts = self.browser.contexts
         if contexts:
@@ -273,17 +249,12 @@ class AsyncPlaywrightManager:
         # Attempt auto-login if credentials are available
         if self.credentials:
             print("Attempting auto-login...")
-            success = await auto_login(self.page, self.credentials, self.starting_url)
+            success = await auto_login(self.page, self.credentials)
             if success:
                 print("Auto-login successful")
             else:
                 print("Auto-login failed")
-        elif self.starting_url:
-            # If no credentials but we have a starting URL, navigate to it
-            print(f"Navigating to starting URL: {self.starting_url}")
-            await self.page.goto(self.starting_url)
-            await self.page.wait_for_load_state('networkidle')
-    
+
     async def initialize(self):
         async with self.lock:
             if self.playwright is None:
@@ -303,16 +274,7 @@ class AsyncPlaywrightManager:
                     await debug_browser_state(self.browser)
                 
                 elif self.mode == "browserbase":
-                    if self.session_id is None:
-                        self.session_id = await create_session()
-                    
-                    self.live_browser_url = await get_browser_url(self.session_id)
-                    
-                    self.browser = await self.playwright.chromium.connect_over_cdp(
-                        f"wss://connect.browserbase.com?apiKey={API_KEY}&sessionId={self.session_id}"
-                    )
-                    
-                    await debug_browser_state(self.browser)
+                    self.browser = await self.playwright.chromium.launch(headless=self.headless)
                     
                     # Use the common setup method
                     await self.setup_context_and_page()
@@ -329,12 +291,9 @@ class AsyncPlaywrightManager:
                     raise ValueError(f"Invalid mode: {self.mode}. Expected 'cdp', 'browserbase', or 'chromium'")
     
     async def get_live_browser_url(self):
-        if self.mode == "browserbase" and self.session_id:
+        if self.mode == "browserbase":
             self.live_browser_url = await get_browser_url(self.session_id)
         return self.live_browser_url
-    
-    def get_session_id(self):
-        return self.session_id
     
     async def get_browser(self):
         if self.browser is None:

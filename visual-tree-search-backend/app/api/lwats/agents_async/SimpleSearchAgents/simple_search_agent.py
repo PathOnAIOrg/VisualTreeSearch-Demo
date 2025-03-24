@@ -95,20 +95,43 @@ class SimpleSearchAgent:
                 })
             raise ValueError(error_msg)
 
-    async def _reset_browser(self) -> Optional[str]:
-        """Reset the browser to initial state and return the live browser URL if available."""
-        await self.playwright_manager.close()
+    async def _reset_browser(self):
+        """Reset browser state and navigate to starting URL"""
+        print("\n=== Resetting Browser State ===")
+        
+        # Close existing browser if any
+        if self.playwright_manager:
+            print("Closing existing browser...")
+            await self.playwright_manager.close()
+            print("Browser closed successfully")
+        
+        # Initialize new browser
+        print("Initializing new browser...")
         self.playwright_manager = await setup_playwright(
             storage_state=self.config.storage_state,
             headless=self.config.headless,
             mode=self.config.browser_mode
         )
+        
+        # Get the page and navigate to starting URL
         page = await self.playwright_manager.get_page()
-        live_browser_url = None
-        if self.config.browser_mode == "browserbase":
-            live_browser_url = await self.playwright_manager.get_live_browser_url()
-        await page.goto(self.starting_url, wait_until="networkidle")
-        return live_browser_url  # Return the URL so it can be used by other methods
+        if self.starting_url:
+            print(f"Navigating to starting URL: {self.starting_url}")
+            await page.goto(self.starting_url)
+            await page.wait_for_load_state('networkidle')
+            print(f"Current URL after navigation: {page.url}")
+            
+            # Verify we reached the correct URL
+            if page.url != self.starting_url:
+                print(f"Warning: Current URL ({page.url}) doesn't match starting URL ({self.starting_url})")
+                print("Attempting to navigate again...")
+                await page.goto(self.starting_url)
+                await page.wait_for_load_state('networkidle')
+                print(f"Final URL after second attempt: {page.url}")
+        else:
+            print("No starting URL provided, staying on current page")
+        
+        print("=== Browser Reset Complete ===")
 
     async def expand(self, node: LATSNode, websocket=None) -> None:
         """
@@ -153,16 +176,7 @@ class SimpleSearchAgent:
             list[dict]: List of child state dictionaries
         """
         # Reset browser and get live URL
-        live_browser_url = await self._reset_browser()
-        
-        # Send browser URL update if websocket is provided
-        if websocket and live_browser_url:
-            await websocket.send_json({
-                "type": "browser_url_update",
-                "live_browser_url": live_browser_url,
-                "node_id": id(node),
-                "timestamp": datetime.utcnow().isoformat()
-            })
+        await self._reset_browser()
         
         path = self.get_path_to_root(node)
         
