@@ -274,7 +274,16 @@ class AsyncPlaywrightManager:
                     await debug_browser_state(self.browser)
                 
                 elif self.mode == "browserbase":
-                    self.browser = await self.playwright.chromium.launch(headless=self.headless)
+                    if self.session_id is None:
+                        self.session_id = await create_session()
+                    
+                    self.live_browser_url = await get_browser_url(self.session_id)
+                    
+                    self.browser = await self.playwright.chromium.connect_over_cdp(
+                        f"wss://connect.browserbase.com?apiKey={API_KEY}&sessionId={self.session_id}"
+                    )
+                    
+                    await debug_browser_state(self.browser)
                     
                     # Use the common setup method
                     await self.setup_context_and_page()
@@ -294,6 +303,9 @@ class AsyncPlaywrightManager:
         if self.mode == "browserbase":
             self.live_browser_url = await get_browser_url(self.session_id)
         return self.live_browser_url
+    
+    def get_session_id(self):
+        return self.session_id
     
     async def get_browser(self):
         if self.browser is None:
@@ -370,10 +382,10 @@ async def test_browserbase_mode():
 async def main():
     """Main function to test different browser modes"""
     # Test Chromium mode
-    await test_chromium_mode()
+    #await test_chromium_mode()
     
     # Test Browserbase mode
-    # await test_browserbase_mode()
+    await test_browserbase_mode()
 
 if __name__ == "__main__":
     asyncio.run(main())
