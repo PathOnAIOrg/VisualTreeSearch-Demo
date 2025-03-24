@@ -383,7 +383,7 @@ Final page: http://128.105.145.205:7770/sales/order/history | Title: My Orders
 ✅ Successfully accessing protected page!
 ```
 
-## 8. captcha
+## 8. captcha & recaptcha
 ```
 docker exec -it shopping bash
 cd /var/www/magento2/app/etc
@@ -444,3 +444,247 @@ bash-5.1# cat config.php | grep -i recaptcha
 bash-5.1# 
 ```
 https://experienceleague.adobe.com/en/docs/commerce-admin/systems/security/captcha/security-captcha
+
+
+When local Chromium testing logs in just fine (no captcha prompt), but the remote or headless session always sees (or silently fails) the reCAPTCHA, it usually boils down to how Magento’s reCAPTCHA (or other security modules) decide who must pass a challenge. There are a few specific reasons local Chromium seems to skip or pass the captcha, while your remote script fails.
+
+
+
+local chromium captcha check
+```
+### Cookies Just Stored (Markdown Table)
+
+| **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
+|----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
+| test_cookie | 1 | 128.105.145.205 | / | False | False | Lax | -1 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774381426 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| private_content_version | c53faa67b9... | 128.105.145.205 | / | False | False | Lax | 1777405425.569665 |
+| PHPSESSID | 6fd8520b7b... | 128.105.145.205 | / | True | False | Lax | 1774381426.451091 |
+| X-Magento-Vary | 9bf9a59912... | 128.105.145.205 | / | True | False | Lax | 1774381426.451445 |
+| form_key | 9KXkisD4jC... | 128.105.145.205 | / | False | False | Lax | 1774381426.451298 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774381426 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774381426 |
+
+Checking if login succeeded...
+
+Cookies after login attempt (15) (Markdown Table):
+
+| **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
+|----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
+| test_cookie | 1 | 128.105.145.205 | / | False | False | Lax | -1 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774381426 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381424 |
+| private_content_version | c53faa67b9... | 128.105.145.205 | / | False | False | Lax | 1777405425.569665 |
+| PHPSESSID | 6fd8520b7b... | 128.105.145.205 | / | True | False | Lax | 1774381426.451091 |
+| X-Magento-Vary | 9bf9a59912... | 128.105.145.205 | / | True | False | Lax | 1774381426.451445 |
+| form_key | 9KXkisD4jC... | 128.105.145.205 | / | False | False | Lax | 1774381426.451298 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774381426 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774381426 |
+
+✅ Found 1 potential Magento session cookie(s): PHPSESSID
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+✅ Found welcome message containing 'Emma': Emma Lopez
+                    emma.lopez@gmail.com
+✅ Page title indicates logged in: My Account
+✅ Successfully logged in!
+
+Accessing protected URL: http://128.105.145.205:7770/sales/order/history
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+Final page: http://128.105.145.205:7770/sales/order/history | Title: My Orders
+✅ Successfully accessing protected page!
+```
+
+browserbase captcha check
+```
+(venv) (venv) danqingzhang@Danqings-MBP test-browserbase % python test_bb_shopping_v4.py             
+Connected to Browserbase. chromium v128.0.6613.18
+Live view URL (fullscreen): https://www.browserbase.com/devtools-fullscreen/inspector.html?wss=connect.browserbase.com/debug/fdb3cc39-7408-4261-a76e-ab635d98f4fd/devtools/page/D42C1B2877AA8AE5CE23B045A6B7F4E7?debug=true
+Live view URL (with browser UI): https://www.browserbase.com/devtools/inspector.html?wss=connect.browserbase.com/debug/fdb3cc39-7408-4261-a76e-ab635d98f4fd/devtools/page/D42C1B2877AA8AE5CE23B045A6B7F4E7?debug=true
+Performing login with authenticate() ...
+
+Starting authenticate() – clearing cookies, then going to the login page.
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+Current URL: http://128.105.145.205:7770/customer/account/login/
+Filling username/password...
+Filled the login form fields.
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/customer/section/load/?sections=messages%2Ccustomer%2Ccompare-products%2Clast-ordered-items%2Ccart%2Cdirectory-data%2Ccaptcha%2Cinstant-purchase%2CloggedAsCustomer%2Cpersistent%2Creview%2Cwishlist%2Crecently_viewed_product%2Crecently_compared_product%2Cproduct_data_storage%2Cpaypal-billing-agreement&force_new_section_timestamp=false&_=1742845621770
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/customer/section/load/?sections=messages%2Ccustomer%2Ccompare-products%2Clast-ordered-items%2Ccart%2Cdirectory-data%2Ccaptcha%2Cinstant-purchase%2CloggedAsCustomer%2Cpersistent%2Creview%2Cwishlist%2Crecently_viewed_product%2Crecently_compared_product%2Cproduct_data_storage%2Cpaypal-billing-agreement&force_new_section_timestamp=false&_=1742845621770
+Clicked login button and waited for navigation.
+
+Cookies right after login attempt:
+Saved 12 cookie(s) to test-cookies_v3.json.
+
+#### Stored Cookies (Markdown Table)
+
+| **Name** | **Value** (truncated) | **Domain** | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
+|----------|------------------------|------------|----------|-------------|-----------|-------------|------------|
+| PHPSESSID | 2d7be84a49... | 128.105.145.205 | / | True | False | Lax | 1774381623.87701 |
+| form_key | 17u9BDvcmN... | 128.105.145.205 | / | False | False | Lax | 1774381623.877159 |
+| mage-cache-storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| mage-cache-storage-section-invalidation | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| mage-cache-sessid | true | 128.105.145.205 | / | False | False | Lax | 1774381623 |
+| mage-messages |  | 128.105.145.205 | / | False | False | Strict | 1774381623 |
+| recently_viewed_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| recently_viewed_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| recently_compared_product | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| recently_compared_product_previous | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| product_data_storage | {} | 128.105.145.205 | / | False | False | Lax | 1774381617 |
+| section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774381623 |
+
+After login attempt => URL: http://128.105.145.205:7770/customer/account/loginPost/ | Title: Customer Login
+❌ Looks like we're still on a login page. HTML snippet:
+<!DOCTYPE html><html lang="en"><head>         <script>     var LOCALE = 'en\u002DUS';     var BASE_URL = 'http\u003A\u002F\u002F128.105.145.205\u003A7770\u002F';     var require = {         'baseUrl': 'http\u003A\u002F\u002F128.105.145.205\u003A7770\u002Fstatic\u002Fversion1681826198\u002Ffrontend\u002FMagento\u002Fblank\u002Fen_US'     };</script>        <meta charset="utf-8"> <meta name="title" content="Customer Login"> <meta name="robots" content="INDEX,FOLLOW"> <meta name="viewport" content=...
+Login attempt didn't look successful, but continuing anyway...
+
+Visiting protected URL: http://128.105.145.205:7770/sales/order/history ...
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/loginCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/ui-messages-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captchaList.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_ReCaptchaFrontendUi/js/registry.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/view/checkout/defaultCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/model/captcha.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_PaypalCaptcha/js/model/skipRefreshCaptcha.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/js/action/refresh.js
+[CAPTCHA-REQUEST] GET -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+[CAPTCHA-RESPONSE] 200 -> http://128.105.145.205:7770/static/version1681826198/frontend/Magento/blank/en_US/Magento_Captcha/template/checkout/captcha.html
+Protected page => URL: http://128.105.145.205:7770/sales/order/history | Title: Customer Login
+❌ We are still on the login page – session not recognized.
+```
+
+
+```
+From your latest logs, you can see both the local Chromium run and the Browserbase (remote) run show requests for Magento’s captcha and recaptcha files:
+
+Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
+
+Magento_Captcha/js/view/checkout/loginCaptcha.js
+
+Magento_PaypalCaptcha/js/view/checkout/defaultCaptcha-mixin.js
+
+etc.
+
+What the logs reveal
+Local Chromium:
+
+Despite seeing the same requests to captcha/reCAPTCHA scripts, it successfully logs in (title: "My Account", cookies show a valid session).
+
+The final page is "My Orders," indicating login truly succeeded.
+
+Browserbase:
+
+Also loads the same captcha and recaptcha scripts ([CAPTCHA-REQUEST] ... [CAPTCHA-RESPONSE] 200), but remains on “Customer Login” at loginPost/.
+
+The final page is again "Customer Login,” so the session is never recognized.
+
+Hence, both local and remote show that Magento’s reCAPTCHA modules are present, but local passes (maybe reCAPTCHA sees a higher “human” trust score, or your IP is whitelisted), while remote fails behind the scenes.
+```

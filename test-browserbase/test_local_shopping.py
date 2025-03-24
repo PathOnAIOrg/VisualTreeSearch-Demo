@@ -11,6 +11,39 @@ SITE_LOGIN_URL = f"{SITE_URL}/customer/account/login/"
 SITE_PROTECTED_URL = f"{SITE_URL}/sales/order/history"
 COOKIE_FILE = "test-cookies.json"
 
+
+# 1) Captcha/Recaptcha Logging Tools
+def enable_captcha_logging(page: Page):
+    """
+    Attach listeners for requests and responses that reference
+    'captcha' or 'recaptcha' in the URL.
+    """
+    def on_request(request):
+        if "captcha" in request.url.lower() or "recaptcha" in request.url.lower():
+            print(f"[CAPTCHA-REQUEST] {request.method} -> {request.url}")
+
+    def on_response(response):
+        if "captcha" in response.url.lower() or "recaptcha" in response.url.lower():
+            print(f"[CAPTCHA-RESPONSE] {response.status} -> {response.url}")
+
+    page.on("request", on_request)
+    page.on("response", on_response)
+
+
+def enable_console_logging(page: Page):
+    """
+    Listen for console messages that might mention 'captcha',
+    'recaptcha', or 'login-required' in the text.
+    """
+    def on_console_message(msg):
+        text_lower = msg.text.lower()
+        if "captcha" in text_lower or "recaptcha" in text_lower or "login-required" in text_lower:
+            print(f"[CONSOLE] {msg.type}: {msg.text}")
+
+    page.on("console", on_console_message)
+
+
+# 2) Existing Support Functions
 def print_cookie_table_markdown(cookies: list):
     """
     Print cookie details in a Markdown table for easier debugging.
@@ -33,7 +66,9 @@ def print_cookie_table_markdown(cookies: list):
         same_site = c.get("sameSite", "")
         expires = c.get("expires", "")
         value_snippet = value[:10] + "..." if len(value) > 10 else value
+
         print(f"| {name} | {value_snippet} | {domain} | {path} | {http_only} | {secure} | {same_site} | {expires} |")
+
 
 def store_cookies(browser_tab: Page):
     """Retrieve all the cookies for SITE_URL and store them to a file, then print them in markdown."""
@@ -45,6 +80,7 @@ def store_cookies(browser_tab: Page):
     print("\n### Cookies Just Stored (Markdown Table)\n")
     print_cookie_table_markdown(all_cookies)
     print()
+
 
 def restore_cookies(browser_tab: Page):
     """Load cookies from our local file into the current browser context, if present."""
@@ -61,6 +97,7 @@ def restore_cookies(browser_tab: Page):
     print_cookie_table_markdown(cookies)
     print()
     return True
+
 
 def authenticate(browser_tab: Page):
     """Authenticate to Magento using Playwright form submission, then show a detailed cookie table."""
@@ -177,6 +214,7 @@ def authenticate(browser_tab: Page):
         print(f"Page content snippet:\n{snippet}...\n")
         return False
 
+
 def check_login_status(browser_tab: Page) -> bool:
     """Check if we're on the customer account page rather than the login page."""
     browser_tab.goto(f"{SITE_URL}/customer/account/")
@@ -190,8 +228,16 @@ def check_login_status(browser_tab: Page) -> bool:
         print("User is already logged in (account page). Title:", title)
         return True
 
+
 def run(browser_tab: Page):
-    """Main flow: restore cookies, check if logged in, if not, try authenticate, then visit the protected page."""
+    """
+    Main flow: attach captcha logging, restore cookies, check if logged in,
+    if not, try authenticate, then visit the protected page.
+    """
+    # Attach additional logging for captcha-related requests / console messages
+    enable_captcha_logging(browser_tab)
+    enable_console_logging(browser_tab)
+
     cookies_restored = restore_cookies(browser_tab)
 
     if cookies_restored and check_login_status(browser_tab):
@@ -214,6 +260,7 @@ def run(browser_tab: Page):
         print("✅ Successfully accessing protected page!")
         browser_tab.screenshot(path="screenshot_final_success.png")
 
+
 def main():
     with sync_playwright() as p:
         # Launch local Chromium (headless=False so you can see the browser)
@@ -230,5 +277,7 @@ def main():
             context.close()
             browser.close()
 
+
 if __name__ == "__main__":
     main()
+
