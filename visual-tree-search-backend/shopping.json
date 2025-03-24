@@ -6,7 +6,7 @@
         "username": "emma.lopez@gmail.com",
         "password": "Password.123",
         "login_button": "button[type='submit']",
-        "success_indicator": ".customer-welcome"
+       "success_indicator": ""
     },
     
     "cookies": [
