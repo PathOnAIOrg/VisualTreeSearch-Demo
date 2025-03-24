@@ -1,6 +1,6 @@
 # README
 
-## Set Up
+## 1. Set Up
 create .env file
 ```
 BROWSERBASE_PROJECT_ID=""
@@ -9,7 +9,7 @@ BROWSERBASE_API_KEY=""
 then create virtual environment using the requirements.txt file
 
 
-## Tests
+## 2. Tests
 ```
 python test_browserbase_auto_login.py
 python test_bb.py
@@ -81,7 +81,7 @@ Final page: http://128.105.145.205:7770/sales/order/history | Title: Customer Lo
 ❌ Failed to access protected page - still seeing login page
 ```
 
-## Cookie management
+## 3. Cookie management
 ```
 (venv) (venv) danqingzhang@Danqings-MBP VisualTreeSearch-demo % ssh -i ~/.ssh/id_rsa_personal pentium3@128.105.145.205
 Welcome to Ubuntu 22.04.2 LTS (GNU/Linux 5.15.0-131-generic x86_64)
@@ -149,7 +149,7 @@ mysql>
 ```
 
 
-## Cookies Just Stored (Markdown Table)
+## 4. Cookies Just Stored (Markdown Table)
 
 | **Name** | **Value (first 10 chars)** | **Domain**          | **Path** | **HttpOnly** | **Secure** | **SameSite** | **Expires** |
 |----------|----------------------------|---------------------|----------|-------------|-----------|-------------|------------|
@@ -188,7 +188,7 @@ Cookies after login attempt (13) (Markdown Table):
 | section_data_ids | {%22messag... | 128.105.145.205 | / | False | False | Lax | 1774377034 |
 
 
-## Magento Cookie Comparison: Remote Browserbase vs Local Chrome
+## 5. Magento Cookie Comparison: Remote Browserbase vs Local Chrome
 
 ### Remote Browserbase Cookies
 
