@@ -662,7 +662,7 @@ Protected page => URL: http://128.105.145.205:7770/sales/order/history | Title: 
 ```
 
 
-```
+
 From your latest logs, you can see both the local Chromium run and the Browserbase (remote) run show requests for Magento’s captcha and recaptcha files:
 
 Magento_ReCaptchaWebapiUi/js/jquery-mixin.js
@@ -687,4 +687,3 @@ Also loads the same captcha and recaptcha scripts ([CAPTCHA-REQUEST] ... [CAPTCH
 The final page is again "Customer Login,” so the session is never recognized.
 
 Hence, both local and remote show that Magento’s reCAPTCHA modules are present, but local passes (maybe reCAPTCHA sees a higher “human” trust score, or your IP is whitelisted), while remote fails behind the scenes.
-```
