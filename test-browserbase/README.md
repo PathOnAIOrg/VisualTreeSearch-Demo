@@ -11,10 +11,14 @@ then create virtual environment using the requirements.txt file
 
 ## 2. Tests
 ```
-python test_browserbase_auto_login.py
-python test_bb.py
-python test_bb_shopping.py
+# generate the test-cookies.json 
+python test_local_shopping.py
+
+# use test-cookies.json to auto login
+python test_bb_shopping_v5.py
 ```
+
+## 3. Testing
 
 ```
 python test_bb_shopping.py 
@@ -739,4 +743,40 @@ bin/magento cache:flush
 check log
 ```
 tail -n 100 var/log/exception.log
+```
+
+## 10. tries
+### 10.1
+```
+# Disable native Magento CAPTCHA
+bin/magento config:set customer/captcha/enable 0
+
+# Set the CAPTCHA forms to be disabled
+bin/magento config:set customer/captcha/forms 'null'
+
+# Disable reCAPTCHA for various forms by setting them to 'disabled'
+bin/magento config:set recaptcha_frontend/type_for/customer_login disabled
+bin/magento config:set recaptcha_frontend/type_for/customer_forgot_password disabled
+bin/magento config:set recaptcha_frontend/type_for/customer_create disabled
+bin/magento config:set recaptcha_frontend/type_for/customer_edit disabled
+bin/magento config:set recaptcha_frontend/type_for/contact disabled
+bin/magento config:set recaptcha_frontend/type_for/product_review disabled
+
+# Clear cache again
+bin/magento cache:flush
+
+```
+UI disappeared
+
+
+### 10.2
+```
+Alternatively, you could try overriding the CAPTCHA templates with empty ones:
+bashCopy# Find the CAPTCHA template files
+find vendor/magento -name "*captcha*.phtml"
+
+# Create a custom theme or module that overrides these templates with empty ones
+# For example, in your theme:
+mkdir -p app/design/frontend/[YourTheme]/[YourTheme]/Magento_Captcha/templates
+touch app/design/frontend/[YourTheme]/[YourTheme]/Magento_Captcha/templates/default.phtml
 ```

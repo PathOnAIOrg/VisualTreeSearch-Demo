@@ -1,0 +1,152 @@
+[
+    {
+        "name": "test_cookie",
+        "value": "1",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mage-cache-storage",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mage-cache-storage-section-invalidation",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mage-messages",
+        "value": "",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398348,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Strict"
+    },
+    {
+        "name": "recently_viewed_product",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "recently_viewed_product_previous",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "recently_compared_product",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "recently_compared_product_previous",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "product_data_storage",
+        "value": "{}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398346,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "private_content_version",
+        "value": "d89efba54bf03501001aef5288cd900d",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1777422348.190706,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "PHPSESSID",
+        "value": "123b64fe2665ce3925eb7242dfba92c2",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398349.625063,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "X-Magento-Vary",
+        "value": "9bf9a599123e6402b85cde67144717a08b817412",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398349.625427,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "form_key",
+        "value": "SKVkRg1SGFUWqrva",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398349.625311,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mage-cache-sessid",
+        "value": "true",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398348,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "section_data_ids",
+        "value": "{%22messages%22:1742862349%2C%22customer%22:1742862349%2C%22compare-products%22:1742862349%2C%22last-ordered-items%22:1742862349%2C%22cart%22:1742862349%2C%22directory-data%22:1742862349%2C%22captcha%22:1742862349%2C%22instant-purchase%22:1742862349%2C%22loggedAsCustomer%22:1742862349%2C%22persistent%22:1742862349%2C%22review%22:1742862349%2C%22wishlist%22:1742862349%2C%22recently_viewed_product%22:1742862349%2C%22recently_compared_product%22:1742862349%2C%22product_data_storage%22:1742862349%2C%22paypal-billing-agreement%22:1742862349}",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1774398348,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    }
+]
