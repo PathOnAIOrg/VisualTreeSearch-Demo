@@ -1,5 +1,13 @@
 # Backend
-## 1. Run demo tree search
+## 1. test playwright_manager
+```
+cd visual-tree-search-backend/app/api/lwats/webagent_utils_async/utils
+python playwright_manager.py
+```
+also we use this script to renew the cookies store in file `app/api/shopping.json`
+
+## 2. Run demo tree search
+chromium mode
 ```
 python run_demo_treesearch_async.py \
     --browser-mode chromium \
@@ -13,23 +21,7 @@ python run_demo_treesearch_async.py \
     --search_algorithm bfs
 ```
 
-
-## 2. test websocket
-```
-uvicorn app.main:app --host 0.0.0.0 --port 3000
-
-python test/test-tree-search-ws.py
-```
-
-## 3. end-to-end test with frontend
-```
-backend: uvicorn app.main:app --host 0.0.0.0 --port 3000
-frontend: npm run dev -- -p 3001
-then go to http://localhost:3001/tree-search-playground
-to test the message passing from the backend to the frontend
-```
-
-## 4. async browserbase mode
+browserbase mode
 ```
 python run_demo_treesearch_async.py \
     --browser-mode browserbase \
@@ -42,3 +34,20 @@ python run_demo_treesearch_async.py \
     --max_depth 3 \
     --search_algorithm bfs
 ```
+
+
+## 3. test websocket
+```
+uvicorn app.main:app --host 0.0.0.0 --port 3000
+
+python test/test-tree-search-ws.py
+```
+
+## 4. end-to-end test with frontend
+```
+backend: uvicorn app.main:app --host 0.0.0.0 --port 3000
+frontend: npm run dev -- -p 3001
+then go to http://localhost:3001/tree-search-playground
+to test the message passing from the backend to the frontend
+```
+

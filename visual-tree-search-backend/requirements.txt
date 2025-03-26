@@ -22,3 +22,4 @@ numpy==1.25.2
 aiolimiter==1.1.0
 transformers==4.34.0
 nltk==3.8.1
+browserbase
