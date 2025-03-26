@@ -382,29 +382,8 @@ const TreeSearchPlayground = () => {
 
         <div className="flex flex-col lg:flex-row gap-4">
           
-          {/* Left column - Tree Visualization (60% width) */}
-          <div className="lg:w-3/5 h-full flex flex-col">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 h-full flex-grow">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                </svg>
-                Tree Visualization
-              </h2>
-              <div className="h-[900px] rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                <TreeReconstructor
-                  messages={treeMessages}
-                  width={1200}
-                  height={900}
-                  reset={resetTree}
-                />
-              </div>
-            </div>
-          </div>
-          
-          {/* Right column - Browser View (40% width) */}
-          <div className="lg:w-2/5 h-full flex flex-col">
-            
+          {/* Left column - Browser View (70% width) */}
+          <div className="lg:w-[70%] h-full flex flex-col">
             {/* Live Browser View */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4">
               <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
@@ -418,17 +397,38 @@ const TreeSearchPlayground = () => {
                   <iframe
                     src={liveBrowserUrl}
                     className="w-full rounded-md"
-                    style={{ height: '600px' }}
+                    style={{ height: '800px' }}
                     title="Live Browser View"
                   />
                 ) : (
-                  <div className="h-[600px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                  <div className="h-[800px] flex items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
                     <p>Browser view will appear here once the search starts</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Right column - Tree Visualization (30% width) */}
+          <div className="lg:w-[30%] h-full flex flex-col">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 h-full flex-grow">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                </svg>
+                Tree Visualization
+              </h2>
+              <div className="h-[800px] rounded-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                <TreeReconstructor
+                  messages={treeMessages}
+                  width={400}
+                  height={800}
+                  reset={resetTree}
+                />
+              </div>
+            </div>
+          </div>
+          
         </div>
         
         {/* Message Log - Moved to bottom */}
