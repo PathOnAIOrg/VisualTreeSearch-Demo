@@ -15,6 +15,7 @@ class AgentConfig:
     planning_model: str = "gpt-4o"
     action_grounding_model: str = "gpt-4o"
     evaluation_model: str = "gpt-4o"
+    
     # Search settings
     search_algorithm: str = "bfs"
     exploration_weight: float = 1.41
@@ -22,6 +23,7 @@ class AgentConfig:
     iterations: int = 1
     max_depth: int = 3
     num_simulations: int = 100
+    account_reset: bool = True
     
     # Features
     features: List[str] = field(default_factory=lambda: ['axtree'])

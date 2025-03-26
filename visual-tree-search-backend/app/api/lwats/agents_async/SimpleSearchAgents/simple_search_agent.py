@@ -3,8 +3,14 @@ import time
 from typing import Any, Dict, List, Optional
 from collections import deque
 from datetime import datetime
+import os
+import json
+import subprocess
 
 from openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()
+import aiohttp
 
 from ...core_async.config import AgentConfig
 
@@ -56,6 +62,8 @@ class SimpleSearchAgent:
             goal=self.goal,
             parent=None
         )
+        self.reset_url = os.environ["ACCOUNT_RESET_URL"]
+
 
     async def run(self, websocket=None) -> List[Dict[str, Any]]:
         """
@@ -95,20 +103,110 @@ class SimpleSearchAgent:
                 })
             raise ValueError(error_msg)
 
-    async def _reset_browser(self) -> Optional[str]:
+    async def _reset_browser(self, websocket=None) -> Optional[str]:
         """Reset the browser to initial state and return the live browser URL if available."""
         await self.playwright_manager.close()
-        self.playwright_manager = await setup_playwright(
-            storage_state=self.config.storage_state,
-            headless=self.config.headless,
-            mode=self.config.browser_mode
-        )
-        page = await self.playwright_manager.get_page()
-        live_browser_url = None
-        if self.config.browser_mode == "browserbase":
-            live_browser_url = await self.playwright_manager.get_live_browser_url()
-        await page.goto(self.starting_url, wait_until="networkidle")
-        return live_browser_url  # Return the URL so it can be used by other methods
+        
+        ## reset account using api-based account reset
+        if self.config.account_reset:
+            if websocket:
+                await websocket.send_json({
+                    "type": "account_reset",
+                    "status": "started",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
+            try:
+                # Run the exact curl command that we know works
+                result = subprocess.run(
+                    ['curl', '-N', 'http://128.105.145.205:8000/api/sql/restore'],
+                    capture_output=True,
+                    text=True
+                )
+                
+                if result.returncode == 0:
+                    try:
+                        data = json.loads(result.stdout)
+                        print(f"Account reset successful: {data}")
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "account_reset",
+                                "status": "success",
+                                "data": data,
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                    except json.JSONDecodeError:
+                        print(f"Invalid JSON response: {result.stdout}")
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "account_reset",
+                                "status": "failed",
+                                "reason": "invalid_json_response",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                else:
+                    print(f"Curl command failed: {result.stderr}")
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "account_reset",
+                            "status": "failed",
+                            "reason": f"curl_error: {result.stderr}",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                
+            except Exception as e:
+                print(f"Error during account reset: {e}")
+                if websocket:
+                    await websocket.send_json({
+                        "type": "account_reset",
+                        "status": "failed",
+                        "reason": str(e),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+
+        try:
+            # Create new playwright manager
+            self.playwright_manager = await setup_playwright(
+                storage_state=self.config.storage_state,
+                headless=self.config.headless,
+                mode=self.config.browser_mode
+            )
+            page = await self.playwright_manager.get_page()
+            live_browser_url = None
+            if self.config.browser_mode == "browserbase":
+                live_browser_url = await self.playwright_manager.get_live_browser_url()
+            await page.goto(self.starting_url, wait_until="networkidle")
+            
+            # Send success message if websocket is provided
+            if websocket:
+                if self.config.storage_state:
+                    await websocket.send_json({
+                        "type": "browser_setup",
+                        "status": "success",
+                        "message": f"Browser successfully initialized with storage state file: {self.config.storage_state}",
+                        "live_browser_url": live_browser_url,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "browser_setup",
+                        "status": "success",
+                        "message": "Browser successfully initialized",
+                        "live_browser_url": live_browser_url,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+            
+            return live_browser_url
+        except Exception as e:
+            print(f"Error setting up browser: {e}")
+            if websocket:
+                await websocket.send_json({
+                    "type": "browser_setup",
+                    "status": "failed",
+                    "reason": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            return None
 
     async def expand(self, node: LATSNode, websocket=None) -> None:
         """
@@ -153,7 +251,7 @@ class SimpleSearchAgent:
             list[dict]: List of child state dictionaries
         """
         # Reset browser and get live URL
-        live_browser_url = await self._reset_browser()
+        live_browser_url = await self._reset_browser(websocket)
         
         # Send browser URL update if websocket is provided
         if websocket and live_browser_url:
@@ -466,7 +564,7 @@ class SimpleSearchAgent:
         best_path = None
         
         # Get the live browser URL during initial setup
-        live_browser_url = await self._reset_browser()
+        live_browser_url = await self._reset_browser(websocket)
         
         # Send initial status if websocket is provided
         if websocket:
@@ -659,7 +757,7 @@ class SimpleSearchAgent:
         visited = set()  # Track visited nodes to avoid cycles
         
         # Get the live browser URL during initial setup
-        live_browser_url = await self._reset_browser()
+        live_browser_url = await self._reset_browser(websocket)
         
         # Send initial status if websocket is provided
         if websocket:
@@ -858,3 +956,22 @@ class SimpleSearchAgent:
             tree_data.append(node_data)
         
         return tree_data
+
+    async def reset_account(self):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.reset_url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data:  # Just check if we got any response data
+                            print("Account reset successful")
+                            return True
+                        else:
+                            print("Empty response from reset endpoint")
+                            return False
+                    else:
+                        print(f"Account reset failed with status {response.status}")
+                        return False
+        except Exception as e:
+            print(f"Error resetting account: {e}")
+            return False
