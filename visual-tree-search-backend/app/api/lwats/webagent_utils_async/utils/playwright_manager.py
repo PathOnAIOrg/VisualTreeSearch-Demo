@@ -1,8 +1,9 @@
 import os
 import asyncio
 import json
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 from dotenv import load_dotenv
+from browserbase import Browserbase
 import aiohttp
 
 # Load environment variables from .env file
@@ -10,6 +11,9 @@ load_dotenv()
 
 API_KEY = os.environ["BROWSERBASE_API_KEY"]
 PROJECT_ID = os.environ["BROWSERBASE_PROJECT_ID"]
+
+SITE_URL = "http://128.105.145.205:7770"
+SITE_LOGIN_URL = f"{SITE_URL}/customer/account/login/"
 
 async def debug_browser_state(browser):
     """
@@ -67,141 +71,157 @@ async def create_session() -> str:
             return data["id"]
 
 
-async def get_browser_url(session_id: str) -> str:
-    """
-    Get the URL to show the live view for the current browser session.
 
-    :returns: URL
-    """
-    session_url = f"https://www.browserbase.com/v1/sessions/{session_id}/debug"
-    headers = {
-        "Content-Type": "application/json",
-        "x-bb-api-key": API_KEY,
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.get(session_url, headers=headers) as response:
-            response.raise_for_status()
-            data = await response.json()
-            return data["debuggerUrl"]
 
-async def read_account_credentials(storage_state_path):
-    """
-    Read account credentials from the storage state file.
-    
-    Args:
-        storage_state_path: Path to the storage state file (e.g., shopping.json)
-    Returns:
-        dict: Dictionary containing account credentials if found, None otherwise
-    """
+async def store_cookies(browser_tab: Page, cookie_file_path: str):
+    """Retrieve all the cookies for SITE_URL and store them to a file, then print them in markdown."""
+    all_cookies = await browser_tab.context.cookies(SITE_URL)
+    with open(cookie_file_path, "w") as cookie_file:
+        json.dump(all_cookies, cookie_file, indent=4)
+
+    print(f"Saved {len(all_cookies)} cookie(s) from the browser context")
+
+
+async def restore_cookies(browser_tab: Page, cookie_file_path: str):
+    """Load cookies from our local file into the current browser context, if present."""
     try:
-        with open(storage_state_path, 'r') as f:
-            data = json.load(f)
-            # Look for credentials in the root of the JSON file
-            if 'credentials' in data:
-                return data['credentials']
-            # Also check if the file contains cookies (indicating it's a storage state file)
-            if 'cookies' in data:
-                print(f"Found storage state file with cookies at {storage_state_path}")
-                return None
-    except Exception as e:
-        print(f"Error reading credentials from {storage_state_path}: {e}")
-    return None
-
-async def auto_login(page, credentials):
-    """
-    Perform auto-login based on the website and credentials provided.
-    
-    Args:
-        page: Playwright page object
-        credentials: Dictionary containing login credentials and website info
-    """
-    print(f"=== Starting auto_login process ===")
-    
-    if not credentials:
-        print("No credentials provided, aborting login")
+        with open(cookie_file_path) as cookie_file:
+            cookies = json.load(cookie_file)
+    except FileNotFoundError:
+        print("No cookie file found. Will need to authenticate.")
         return False
-    
-    print(f"Credentials contain keys: {', '.join(credentials.keys())}")
-    
-    try:
-        # Navigate to login page if specified
-        if 'login_url' in credentials:
-            print(f"Navigating to login page: {credentials['login_url']}")
-            await page.goto(credentials['login_url'])
-            print(f"Navigation complete, current URL: {page.url}")
-        else:
-            print("No login_url provided, assuming we're already on the login page")
-        
-        # Click the Sign In button if we're on the main page
-        print("Looking for Sign In button...")
-        sign_in_button = page.get_by_role("link", name="Sign In")
-        if sign_in_button:
-            print("Sign In button found, clicking...")
-            await sign_in_button.click()
-            print("Waiting for page to load after clicking Sign In button")
-            await page.wait_for_load_state('networkidle')
-            print(f"Page loaded, current URL: {page.url}")
-        else:
-            print("No Sign In button found, assuming we're already on the login form")
-        
-        # Wait for login form to be ready
-        print("Waiting for page to be ready for login form interaction")
-        await page.wait_for_load_state('networkidle')
-        print("Page ready for login form interaction")
-        
-        # Fill in username/email
-        if 'username_field' in credentials and 'username' in credentials:
-            print(f"Found username field selector: {credentials['username_field']}")
-            print(f"Filling username field with: {credentials['username']}")
-            await page.fill(credentials['username_field'], credentials['username'])
-            print("Username filled successfully")
-        else:
-            print("Missing username_field or username in credentials")
-        
-        # Fill in password
-        if 'password_field' in credentials and 'password' in credentials:
-            print(f"Found password field selector: {credentials['password_field']}")
-            print(f"Filling password field with: {credentials['password']}")
-            await page.fill(credentials['password_field'], credentials['password'])
-            print("Password filled successfully")
-        else:
-            print("Missing password_field or password in credentials")
-        
-        # Click the Sign In button in the login form
-        print("Looking for Sign In button in login form...")
-        login_form_button = page.get_by_role("button", name="Sign In")
-        if login_form_button:
-            print("Sign In button in login form found, clicking...")
-            await login_form_button.click()
-            print("Waiting for page to load after clicking login button")
-            await page.wait_for_load_state('networkidle')
-            print(f"Page loaded, current URL: {page.url}")
-        else:
-            print("No Sign In button found in login form, login may have failed")
-        
-        # Wait for login to complete
-        print("Waiting for final page load after login attempt")
-        await page.wait_for_load_state('networkidle')
-        print(f"Final page after login attempt loaded, current URL: {page.url}")
-        
-        # Check if login was successful
-        if 'success_indicator' in credentials and len(credentials['success_indicator']) > 0:
-            print(f"Waiting for success indicator: {credentials['success_indicator']}")
-            await page.wait_for_selector(credentials['success_indicator'])
-            print("Success indicator found, login confirmed successful")
-        else:
-            print("No success_indicator provided, unable to confirm login success")
-        
-        print("=== Auto-login process completed successfully ===")
+
+    await browser_tab.context.add_cookies(cookies)
+    print(f"Restored {len(cookies)} cookie(s) to the browser context")
+    return True
+
+
+async def authenticate(browser_tab: Page, cookie_file_path: str):
+    """Authenticate to Magento using Playwright form submission, then show a detailed cookie table."""
+    print("Attempting login with Playwright form submission")
+    username = "emma.lopez@gmail.com"
+    password = "Password.123"
+
+    # Start fresh without cookies
+    await browser_tab.context.clear_cookies()
+    print("Cleared cookies before login.\n")
+
+    # Optional: set a test cookie
+    await browser_tab.context.add_cookies([{
+        "name": "test_cookie",
+        "value": "1",
+        "domain": "128.105.145.205",
+        "path": "/",
+    }])
+
+    # Navigate to login page
+    await browser_tab.goto(SITE_LOGIN_URL)
+    await browser_tab.wait_for_load_state("networkidle")
+
+    print("Current URL:", browser_tab.url)
+    print("Filling in login form...\n")
+
+    # Fill the username
+    email_field = await browser_tab.query_selector("#email")
+    if email_field:
+        await email_field.fill(username)
+        print("Filled email field")
+    else:
+        print("⚠️ Could not find email field")
+
+    # Fill the password
+    password_field = await browser_tab.query_selector("#pass")
+    if password_field:
+        await password_field.fill(password)
+        print("Filled password field")
+    else:
+        print("⚠️ Could not find password field")
+
+    print("Examining form elements...\n")
+    form_elements = await browser_tab.query_selector_all("form.form-login input, form#login-form input")
+    for element in form_elements:
+        name = await element.get_attribute("name")
+        value = await element.get_attribute("value")
+        input_type = await element.get_attribute("type")
+        if name:
+            print(f"  Form input: {name} = {value if value else '[empty]'} (type: {input_type})")
+
+    print("\nClicking login button...")
+    login_button = (
+        await browser_tab.query_selector(".action.login.primary")
+        or await browser_tab.query_selector("#send2")
+        or await browser_tab.query_selector("button[type='submit']")
+    )
+
+    if login_button:
+        print(f"Found login button: id={await login_button.get_attribute('id')} type={await login_button.get_attribute('type')}")
+        try:
+            async with browser_tab.expect_navigation(wait_until="networkidle", timeout=15000):
+                await login_button.click()
+            print("Clicked login button and waited for navigation.\n")
+        except Exception as e:
+            print(f"Navigation timeout or error after clicking login: {e}")
+    else:
+        print("⚠️ Could not find login button!")
+
+    # Save the cookies regardless of success
+    await store_cookies(browser_tab, cookie_file_path)
+
+    # Check if login succeeded
+    print("Checking if login succeeded...\n")
+
+    cookies = await browser_tab.context.cookies()
+    print(f"Cookies after login attempt ({len(cookies)}) (Markdown Table):\n")
+    print()
+
+    # Check for Magento 2's typical session cookie (PHPSESSID) or Magento 1's (frontend)
+    magento_session_cookies = [c for c in cookies if c["name"] in ("frontend", "frontend_cid", "PHPSESSID")]
+    if magento_session_cookies:
+        print(f"✅ Found {len(magento_session_cookies)} potential Magento session cookie(s): {', '.join(c['name'] for c in magento_session_cookies)}")
+    else:
+        print("❌ No Magento 'frontend' or 'PHPSESSID' cookie found - likely not authenticated.\n")
+
+    # Navigate to account page to confirm
+    await browser_tab.goto(f"{SITE_URL}/customer/account/")
+    await browser_tab.wait_for_load_state("networkidle")
+
+    # Check if we're truly logged in by searching for My Account or a welcome message
+    is_logged_in = False
+    welcome_msg = await browser_tab.query_selector(".box-information .box-content p") or await browser_tab.query_selector(".welcome-msg")
+    if welcome_msg:
+        welcome_text = await welcome_msg.text_content()
+        if "Emma" in welcome_text:
+            is_logged_in = True
+            print(f"✅ Found welcome message containing 'Emma': {welcome_text.strip()}")
+
+    page_title = await browser_tab.title()
+    if "My Account" in page_title and "Login" not in page_title:
+        is_logged_in = True
+        print(f"✅ Page title indicates logged in: {page_title}")
+
+    if is_logged_in:
+        print("✅ Successfully logged in!\n")
         return True
-    
-    except Exception as e:
-        print(f"=== Error during auto-login process ===")
-        print(f"Error type: {type(e).__name__}")
-        print(f"Error message: {str(e)}")
-        print(f"Current URL when error occurred: {page.url if page else 'Unknown'}")
-        print("=== Auto-login process failed ===")
+    else:
+        current_title = await browser_tab.title()
+        print(f"❌ Login verification failed. Current page: {browser_tab.url} | Title: {current_title}\n")
+        content = await browser_tab.content()
+        snippet = content[:500].replace("\n", " ")
+        print(f"Page content snippet:\n{snippet}...\n")
         return False
+
+async def check_login_status(browser_tab: Page) -> bool:
+    """Check if we're on the customer account page rather than the login page."""
+    await browser_tab.goto(f"{SITE_URL}/customer/account/")
+    await browser_tab.wait_for_load_state("networkidle")
+
+    title = await browser_tab.title()
+    if "Login" in title:
+        print("User is not logged in (title contains 'Login')")
+        return False
+    else:
+        print("User is already logged in (account page). Title:", title)
+        return True
 
 class AsyncPlaywrightManager:
     def __init__(self, storage_state=None, headless=False, mode="chromium", session_id=None):
@@ -216,92 +236,88 @@ class AsyncPlaywrightManager:
         self.session_id = session_id
         self.live_browser_url = None
         self.credentials = None
-    
-    async def setup_context_and_page(self, context_options=None):
-        """Common function to handle context and page setup"""
-        if context_options is None:
-            context_options = {
-                "viewport": {"width": 1920, "height": 1080},
-                "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            }
+        self.bb = None if mode != "browserbase" else Browserbase(api_key=API_KEY)
 
-        if self.storage_state:
-            context_options["storage_state"] = self.storage_state
-            print(f"Using storage state from: {self.storage_state}")
-            # Read credentials if storage state file exists
-            self.credentials = await read_account_credentials(self.storage_state)
-
-        contexts = self.browser.contexts
-        if contexts:
-            print("Found existing contexts, using the first one")
-            self.context = contexts[0]
-            if self.context.pages:
-                print(f"Found existing page at URL: {self.context.pages[0].url}")
-                self.page = self.context.pages[0]
-            else:
-                print("No pages in existing context, creating new page")
-                self.page = await self.context.new_page()
-        else:
-            print("No existing contexts found, creating new one")
-            self.context = await self.browser.new_context(**context_options)
-            self.page = await self.context.new_page()
-            
-        # Attempt auto-login if credentials are available
-        if self.credentials:
-            print("Attempting auto-login...")
-            success = await auto_login(self.page, self.credentials)
-            if success:
-                print("Auto-login successful")
-            else:
-                print("Auto-login failed")
 
     async def initialize(self):
         async with self.lock:
             if self.playwright is None:
                 self.playwright = await async_playwright().start()
                 
-                if self.mode == "cdp":
-                    chrome_url = "http://localhost:9222"
-                    self.browser = await self.playwright.chromium.connect_over_cdp(chrome_url)
-                    print('debug mode entered')
-                    await debug_browser_state(self.browser)
-                    
-                    # Get non-extension context and page
-                    self.context, self.page = await get_non_extension_context_and_page(self.browser)
-                    if not self.context or not self.page:
-                        raise ValueError("No non-extension context and page found in CDP browser")
-                    
-                    await debug_browser_state(self.browser)
-                
-                elif self.mode == "browserbase":
+                if self.mode == "browserbase":
+                    # Create or use existing Browserbase session
                     if self.session_id is None:
-                        self.session_id = await create_session()
+                        session = self.bb.sessions.create(
+                            project_id=PROJECT_ID,
+                            proxies=False,
+                            browser_settings={
+                                "fingerprint": {
+                                    "browsers": ["chrome", "firefox", "edge", "safari"],
+                                    "devices": ["mobile", "desktop"],
+                                    "locales": ["en-US"],
+                                    "operatingSystems": ["linux", "macos", "windows"],
+                                    "screen": {
+                                        "maxHeight": 1080,
+                                        "maxWidth": 1920,
+                                        "minHeight": 1080,
+                                        "minWidth": 1920,
+                                    },
+                                    "viewport": {
+                                        "width": 1920,
+                                        "height": 1080,
+                                    },
+                                },
+                                "solveCaptchas": True,
+                            },
+                        )
+                        self.session_id = session.id
+                        self.browser = await self.playwright.chromium.connect_over_cdp(session.connectUrl)
+                    else:
+                        # Connect to existing session
+                        session = self.bb.sessions.get(self.session_id)
+                        self.browser = await self.playwright.chromium.connect_over_cdp(session.connectUrl)
                     
-                    self.live_browser_url = await get_browser_url(self.session_id)
-                    
-                    self.browser = await self.playwright.chromium.connect_over_cdp(
-                        f"wss://connect.browserbase.com?apiKey={API_KEY}&sessionId={self.session_id}"
-                    )
-                    
+                    print(f"Connected to Browserbase. {self.browser.browser_type.name} v{self.browser.version}")
                     await debug_browser_state(self.browser)
                     
                     # Use the common setup method
-                    await self.setup_context_and_page()
+                    # First try to restore cookies
+                    self.context = self.browser.contexts[0]
+                    self.page = self.context.pages[0]
+                    cookies_restored = await restore_cookies(self.page, self.storage_state)
+                    
+                    if cookies_restored and await check_login_status(self.page):
+                        print("Using existing session cookies\n")
+                    else:
+                        print("Need to authenticate\n")
+                        success = await authenticate(self.page)
+                        if not success:
+                            print("❌ Authentication didn't succeed fully.\n")
+
                     
                     await debug_browser_state(self.browser)
                 
                 elif self.mode == "chromium":
                     self.browser = await self.playwright.chromium.launch(headless=self.headless)
-                    
-                    # Use the common setup method
-                    await self.setup_context_and_page()
+                    self.context = await self.browser.new_context()
+                    self.page = await self.context.new_page()
+                    cookies_restored = await restore_cookies(self.page, self.storage_state)
+
+                    if cookies_restored and await check_login_status(self.page):
+                        print("Using existing session cookies\n")
+                    else:
+                        print("Need to authenticate\n")
+                        success = await authenticate(self.page, self.storage_state)
+                        if not success:
+                            print("❌ Authentication didn't succeed fully.\n")
                     
                 else:
                     raise ValueError(f"Invalid mode: {self.mode}. Expected 'cdp', 'browserbase', or 'chromium'")
     
     async def get_live_browser_url(self):
         if self.mode == "browserbase":
-            self.live_browser_url = await get_browser_url(self.session_id)
+            debug_info = self.bb.sessions.debug(self.session_id)
+            self.live_browser_url = debug_info.debugger_url
         return self.live_browser_url
     
     def get_session_id(self):
@@ -353,7 +369,6 @@ async def test_chromium_mode():
     
     try:
         page = await manager.get_page()
-        print(f"Navigating to example.com...")
         await page.goto("http://128.105.145.205:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         await asyncio.sleep(3)  # Wait to see the page
@@ -370,7 +385,11 @@ async def test_browserbase_mode():
         page = await manager.get_page()
         print(f"Session ID: {manager.get_session_id()}")
         print(f"Live Browser URL: {await manager.get_live_browser_url()}")
-        print(f"Navigating to example.com...")
+        import webbrowser
+        print("Opening debugger URL in your default browser...")
+        webbrowser.open(await manager.get_live_browser_url())
+        await page.pause()
+        await page.goto("http://128.105.145.205:7770/")
         await page.goto("http://128.105.145.205:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         print(f"You can view the browser at: {await manager.get_live_browser_url()}")
@@ -382,7 +401,7 @@ async def test_browserbase_mode():
 async def main():
     """Main function to test different browser modes"""
     # Test Chromium mode
-    #await test_chromium_mode()
+    await test_chromium_mode()
     
     # Test Browserbase mode
     await test_browserbase_mode()

@@ -76,7 +76,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         goal = message.get("goal", "search running shoes, click on the first result")
         search_algorithm = message.get("search_algorithm", "bfs")
         max_depth = message.get("max_depth", 3)
-        storage_state = message.get("storage_state", "shopping.json")
+        storage_state = message.get("storage_state", "app/api/shopping.json")
         
         # Send status update
         await websocket.send_json({
