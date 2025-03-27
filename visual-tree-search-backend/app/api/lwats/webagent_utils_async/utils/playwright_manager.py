@@ -285,7 +285,8 @@ class AsyncPlaywrightManager:
                         print("Using existing session cookies\n")
                     else:
                         print("Need to authenticate\n")
-                        success = await authenticate(self.page)
+                        # TODO: implement the authenticate function for browserbase
+                        success = await authenticate(self.page, self.storage_state)
                         if not success:
                             print("❌ Authentication didn't succeed fully.\n")
 
@@ -378,7 +379,7 @@ async def test_browserbase_mode():
     
     try:
         page = await manager.get_page()
-        print(f"Session ID: {manager.get_session_id()}")
+        print(f"Session ID: {await manager.get_session_id()}")
         print(f"Live Browser URL: {await manager.get_live_browser_url()}")
         import webbrowser
         print("Opening debugger URL in your default browser...")
