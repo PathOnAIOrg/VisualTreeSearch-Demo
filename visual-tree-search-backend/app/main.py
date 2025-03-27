@@ -41,7 +41,7 @@ from app.api.routes.websocket import router as ws_router
 from app.api.routes.tree_websocket import router as tree_ws_router
 from app.api.routes.tree_search import router as tree_search_router
 from app.api.routes.tree_search_websocket import router as tree_search_ws_router
-
+from app.api.routes.terminate_session import router as terminate_session_router
 # Include routers from different modules
 app.include_router(hello_router, prefix="/api/hello", tags=["hello"])
 app.include_router(sse_router, prefix="/api/sse", tags=["sse"])
@@ -49,7 +49,7 @@ app.include_router(ws_router, prefix="/api/ws", tags=["websocket"])
 app.include_router(tree_ws_router, prefix="/api/tree", tags=["tree"])
 app.include_router(tree_search_router, prefix="/api/tree-search", tags=["tree-search"])
 app.include_router(tree_search_ws_router, prefix="/api/tree-search-ws", tags=["tree-search-ws"])
-
+app.include_router(terminate_session_router, prefix="/api/terminate-session", tags=["terminate-session"])
 # Import the WebSocket endpoint handlers
 from app.api.routes.websocket import websocket_endpoint
 from app.api.routes.tree_websocket import tree_websocket_endpoint

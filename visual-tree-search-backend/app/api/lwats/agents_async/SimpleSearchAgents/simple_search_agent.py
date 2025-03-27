@@ -163,6 +163,7 @@ class SimpleSearchAgent:
             live_browser_url = None
             if self.config.browser_mode == "browserbase":
                 live_browser_url = await self.playwright_manager.get_live_browser_url()
+                session_id = await self.playwright_manager.get_session_id()
             await page.goto(self.starting_url, wait_until="networkidle")
             
             # Send success message if websocket is provided
@@ -173,6 +174,7 @@ class SimpleSearchAgent:
                         "status": "success",
                         "message": f"Browser successfully initialized with storage state file: {self.config.storage_state}",
                         "live_browser_url": live_browser_url,
+                        "session_id": session_id,
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 else:
@@ -181,10 +183,11 @@ class SimpleSearchAgent:
                         "status": "success",
                         "message": "Browser successfully initialized",
                         "live_browser_url": live_browser_url,
+                        "session_id": session_id,
                         "timestamp": datetime.utcnow().isoformat()
                     })
             
-            return live_browser_url
+            return live_browser_url, session_id
         except Exception as e:
             print(f"Error setting up browser: {e}")
             if websocket:
@@ -194,7 +197,7 @@ class SimpleSearchAgent:
                     "reason": str(e),
                     "timestamp": datetime.utcnow().isoformat()
                 })
-            return None
+            return None, None
 
     async def expand(self, node: LATSNode, websocket=None) -> None:
         """
@@ -239,17 +242,7 @@ class SimpleSearchAgent:
             list[dict]: List of child state dictionaries
         """
         # Reset browser and get live URL
-        live_browser_url = await self._reset_browser(websocket)
-        
-        # Send browser URL update if websocket is provided
-        if websocket and live_browser_url:
-            await websocket.send_json({
-                "type": "browser_url_update",
-                "live_browser_url": live_browser_url,
-                "node_id": id(node),
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        
+        live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
         
         # Execute path

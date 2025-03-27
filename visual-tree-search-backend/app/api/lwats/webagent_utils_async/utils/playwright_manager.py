@@ -246,37 +246,32 @@ class AsyncPlaywrightManager:
                 
                 if self.mode == "browserbase":
                     # Create or use existing Browserbase session
-                    if self.session_id is None:
-                        session = self.bb.sessions.create(
-                            project_id=PROJECT_ID,
-                            proxies=False,
-                            browser_settings={
-                                "fingerprint": {
-                                    "browsers": ["chrome", "firefox", "edge", "safari"],
-                                    "devices": ["mobile", "desktop"],
-                                    "locales": ["en-US"],
-                                    "operatingSystems": ["linux", "macos", "windows"],
-                                    "screen": {
-                                        "maxHeight": 1080,
-                                        "maxWidth": 1920,
-                                        "minHeight": 1080,
-                                        "minWidth": 1920,
-                                    },
-                                    "viewport": {
-                                        "width": 1920,
-                                        "height": 1080,
-                                    },
+                    session = self.bb.sessions.create(
+                        project_id=PROJECT_ID,
+                        proxies=False,
+                        browser_settings={
+                            "fingerprint": {
+                                "browsers": ["chrome", "firefox", "edge", "safari"],
+                                "devices": ["mobile", "desktop"],
+                                "locales": ["en-US"],
+                                "operatingSystems": ["linux", "macos", "windows"],
+                                "screen": {
+                                    "maxHeight": 1080,
+                                    "maxWidth": 1920,
+                                    "minHeight": 1080,
+                                    "minWidth": 1920,
                                 },
-                                "solveCaptchas": True,
+                                "viewport": {
+                                    "width": 1920,
+                                    "height": 1080,
+                                },
                             },
-                        )
-                        self.session_id = session.id
-                        self.browser = await self.playwright.chromium.connect_over_cdp(session.connectUrl)
-                    else:
-                        # Connect to existing session
-                        session = self.bb.sessions.get(self.session_id)
-                        self.browser = await self.playwright.chromium.connect_over_cdp(session.connectUrl)
-                    
+                            "solveCaptchas": True,
+                        },
+                    )
+                    self.session_id = session.id
+                    self.browser = await self.playwright.chromium.connect_over_cdp(session.connectUrl)
+                
                     print(f"Connected to Browserbase. {self.browser.browser_type.name} v{self.browser.version}")
                     await debug_browser_state(self.browser)
                     
@@ -320,7 +315,7 @@ class AsyncPlaywrightManager:
             self.live_browser_url = debug_info.debugger_url
         return self.live_browser_url
     
-    def get_session_id(self):
+    async def get_session_id(self):
         return self.session_id
     
     async def get_browser(self):

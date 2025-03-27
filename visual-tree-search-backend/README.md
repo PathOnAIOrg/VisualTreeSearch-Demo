@@ -51,3 +51,10 @@ then go to http://localhost:3001/tree-search-playground
 to test the message passing from the backend to the frontend
 ```
 
+
+
+## 5. terminate session from backend
+```
+curl -X POST http://localhost:3000/api/terminate-session/647f4021-2402-4733-84a3-255f0d20c151
+{"status":"success","message":"Session 647f4021-2402-4733-84a3-255f0d20c151 termination requested"}
+```
