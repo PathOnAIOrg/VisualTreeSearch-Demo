@@ -89,6 +89,9 @@ const TreeSearchPlayground = () => {
     maxDepth: 3
   });
 
+  // Add sessionId state
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   // Initialize backend URL from env variable
   useEffect(() => {
     const envBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
@@ -222,6 +225,12 @@ const TreeSearchPlayground = () => {
           const data = JSON.parse(event.data);
           logMessage(data);
 
+          // Extract session ID if present in the message
+          if (data.type === 'browser_setup' && data.status === 'success' && data.session_id) {
+            setSessionId(data.session_id);
+            console.log('Session ID set:', data.session_id);
+          }
+
           // Process message for tree visualization
           processTreeMessage(data);
         } catch {
@@ -246,10 +255,30 @@ const TreeSearchPlayground = () => {
   };
 
   // Disconnect from WebSocket
-  const disconnect = () => {
+  const disconnect = async () => {
+    if (sessionId) {
+      try {
+        const response = await fetch(`${backendUrl}/api/terminate-session/${sessionId}`, {
+          method: 'POST',
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to terminate session: ${response.statusText}`);
+        }
+        logMessage(`Session ${sessionId} terminated successfully`);
+      } catch (error) {
+        logMessage(`Failed to terminate session: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    // Close WebSocket connection
     if (wsRef.current) {
       wsRef.current.close();
     }
+
+    // Reset states
+    setSessionId(null);
+    setLiveBrowserUrl(null);
   };
 
   // Start search
