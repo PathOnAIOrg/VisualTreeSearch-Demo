@@ -117,43 +117,31 @@ class SimpleSearchAgent:
                 })
             
             try:
-                # Run the exact curl command that we know works
-                result = subprocess.run(
-                    ['curl', '-N', 'http://128.105.145.205:8000/api/sql/restore'],
-                    capture_output=True,
-                    text=True
-                )
-                
-                if result.returncode == 0:
-                    try:
-                        data = json.loads(result.stdout)
-                        print(f"Account reset successful: {data}")
-                        if websocket:
-                            await websocket.send_json({
-                                "type": "account_reset",
-                                "status": "success",
-                                "data": data,
-                                "timestamp": datetime.utcnow().isoformat()
-                            })
-                    except json.JSONDecodeError:
-                        print(f"Invalid JSON response: {result.stdout}")
-                        if websocket:
-                            await websocket.send_json({
-                                "type": "account_reset",
-                                "status": "failed",
-                                "reason": "invalid_json_response",
-                                "timestamp": datetime.utcnow().isoformat()
-                            })
-                else:
-                    print(f"Curl command failed: {result.stderr}")
-                    if websocket:
-                        await websocket.send_json({
-                            "type": "account_reset",
-                            "status": "failed",
-                            "reason": f"curl_error: {result.stderr}",
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-                
+                # Use aiohttp instead of curl
+                async with aiohttp.ClientSession() as session:
+                    headers = {'Connection': 'close'}  # Similar to curl -N
+                    async with session.get(self.reset_url, headers=headers) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            print(f"Account reset successful: {data}")
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "account_reset",
+                                    "status": "success",
+                                    "data": data,
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                        else:
+                            error_msg = f"Account reset failed with status {response.status}"
+                            print(error_msg)
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "account_reset",
+                                    "status": "failed",
+                                    "reason": error_msg,
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                            
             except Exception as e:
                 print(f"Error during account reset: {e}")
                 if websocket:
@@ -432,7 +420,7 @@ class SimpleSearchAgent:
             prompt = create_llm_prompt(trajectory, self.goal)
             result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
 
-            score = result["score"]
+            score = result["overall_score"]
             
             # Update best path if this score is better
             if score > best_score:
@@ -442,7 +430,7 @@ class SimpleSearchAgent:
             logger.info(f"Node score: {score}")
             
             # If we've found a satisfactory solution, return it
-            if score >= 9:
+            if score >= 0.75:
                 logger.info("Found satisfactory solution")
                 return [{"action": node.action} for node in path[1:]]
             
@@ -493,11 +481,11 @@ class SimpleSearchAgent:
             prompt = create_llm_prompt(trajectory, self.goal)
             result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
 
-            score = result["score"]
+            score = result["overall_score"]
             
             logger.info(f"Node score: {score}")
             
-            return score, score >= 9
+            return score, score >= 0.75
         
         while stack:
             current_node = stack.pop()
@@ -652,7 +640,7 @@ class SimpleSearchAgent:
             prompt = create_llm_prompt(trajectory, self.goal)
             result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
 
-            score = result["score"]
+            score = result["overall_score"]
             
             # Send score update if websocket is provided
             if websocket:
@@ -680,7 +668,7 @@ class SimpleSearchAgent:
             logger.info(f"Node score: {score}")
             
             # If we've found a satisfactory solution, return it
-            if score >= 9:
+            if score >= 0.75:
                 logger.info("Found satisfactory solution")
                 
                 # Send completion update if websocket is provided
@@ -851,7 +839,7 @@ class SimpleSearchAgent:
             prompt = create_llm_prompt(trajectory, self.goal)
             result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
 
-            score = result["score"]
+            score = result["overall_score"]
             
             # Send score update if websocket is provided
             if websocket:
@@ -879,7 +867,7 @@ class SimpleSearchAgent:
             logger.info(f"Node score: {score}")
             
             # If we've found a satisfactory solution, return it
-            if score >= 9:
+            if score >= 0.75:
                 logger.info("Found satisfactory solution")
                 
                 # Send completion update if websocket is provided
@@ -957,21 +945,3 @@ class SimpleSearchAgent:
         
         return tree_data
 
-    async def reset_account(self):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.reset_url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data:  # Just check if we got any response data
-                            print("Account reset successful")
-                            return True
-                        else:
-                            print("Empty response from reset endpoint")
-                            return False
-                    else:
-                        print(f"Account reset failed with status {response.status}")
-                        return False
-        except Exception as e:
-            print(f"Error resetting account: {e}")
-            return False
