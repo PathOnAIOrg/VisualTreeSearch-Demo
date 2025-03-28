@@ -379,68 +379,112 @@ class SimpleSearchAgent:
             List[Dict[str, Any]]: List of actions in the best path found
         """
         queue = deque([self.root_node])
+        queue_set = {self.root_node}  # Track nodes in queue
         best_score = float('-inf')
         best_path = None
+        visited = set()  # Track visited nodes to avoid cycles
+        current_level = 0  # Track current level for BFS
         
-        while queue:
-            current_node = queue.popleft()
-            print("print the trajectory")
-            print_trajectory(current_node)
-            print("print the entire tree")
-            print_entire_tree(self.root_node)
-            
-            # Skip terminal nodes
-            if current_node.is_terminal:
-                continue
+        try:
+            while queue:
+                # Process all nodes at current level
+                level_size = len(queue)
+                current_level += 1
+                level_nodes = []  # Store nodes at current level for later processing
                 
-            # Expand current node if it hasn't been expanded yet
-            if not current_node.children:
-                await self.expand(current_node)
-                
-            # Get the path from root to this node
-            path = self.get_path_to_root(current_node)
-            
-            # Create trajectory for scoring
-            trajectory = []
-            for node in path[1:]:  # Skip root node
-                trajectory.append({
-                    "natural_language_description": node.natural_language_description,
-                    "action": node.action,
-                    "feedback": node.feedback
-                })
-            
-            # Score the trajectory
-            prompt = create_llm_prompt(trajectory, self.goal)
-            result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
-
-            score = result["overall_score"]
-            
-            # Update best path if this score is better
-            if score > best_score:
-                best_score = score
-                best_path = path
+                # First, expand all nodes at current level
+                for _ in range(level_size):
+                    current_node = queue.popleft()
+                    queue_set.remove(current_node)  # Remove from queue tracking
                     
-            logger.info(f"Node score: {score}")
+                    # Skip if we've already visited this node
+                    if current_node in visited:
+                        continue
+                        
+                    visited.add(current_node)
+                    
+                    # Skip terminal nodes
+                    if current_node.is_terminal:
+                        logger.info(f"Node {id(current_node)} is terminal")
+                        continue
+                    
+                    # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
+                    if not current_node.children and current_node.depth < self.config.max_depth:
+                        try:
+                            await self.expand(current_node)
+                        except Exception as e:
+                            error_msg = f"Error expanding node {id(current_node)}: {str(e)}"
+                            logger.error(error_msg)
+                            current_node.is_terminal = True
+                            continue
+                    
+                    # Store node for later processing
+                    level_nodes.append(current_node)
+                    
+                    # Add non-terminal children to queue for next level if they haven't reached max_depth
+                    for child in current_node.children:
+                        if not child.is_terminal and child not in visited and child not in queue_set and child.depth < self.config.max_depth:
+                            queue.append(child)
+                            queue_set.add(child)  # Add to queue tracking
+                
+                # Now process all nodes at current level
+                for current_node in level_nodes:
+                    print("print the trajectory")
+                    print_trajectory(current_node)
+                    print("print the entire tree")
+                    print_entire_tree(self.root_node)
+                    
+                    # Get the path from root to this node
+                    path = self.get_path_to_root(current_node)
+                    
+                    # Create trajectory for scoring
+                    trajectory = []
+                    for node in path[1:]:  # Skip root node
+                        trajectory.append({
+                            "natural_language_description": node.natural_language_description,
+                            "action": node.action,
+                            "feedback": node.feedback
+                        })
+                    
+                    try:
+                        # Score the trajectory
+                        prompt = create_llm_prompt(trajectory, self.goal)
+                        result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
+                        score = result["overall_score"]
+                    except Exception as e:
+                        error_msg = f"Error scoring node {id(current_node)}: {str(e)}"
+                        logger.error(error_msg)
+                        score = float('-inf')
+                    
+                    # Update best path if this score is better
+                    if score > best_score:
+                        best_score = score
+                        best_path = path
+                            
+                    logger.info(f"Node {id(current_node)} score: {score}")
+                    
+                    # If we've found a satisfactory solution, return it
+                    if score >= 0.75:
+                        logger.info(f"Found satisfactory solution with score {score}")
+                        return [{"action": node.action} for node in path[1:]]
             
-            # If we've found a satisfactory solution, return it
-            if score >= 0.75:
-                logger.info("Found satisfactory solution")
-                return [{"action": node.action} for node in path[1:]]
+            # If we've exhausted all nodes and haven't found a perfect solution,
+            # return the best path we found
+            if best_path:
+                logger.info(f"Returning best path found with score {best_score}")
+                return [{"action": node.action} for node in best_path[1:]]
             
-            # Add non-terminal children to queue
-            for child in current_node.children:
-                if not child.is_terminal and child not in queue:
-                    queue.append(child)
-        
-        # If we've exhausted all nodes and haven't found a perfect solution,
-        # return the best path we found
-        if best_path:
-            logger.info(f"Returning best path found with score {best_score}")
-            return [{"action": node.action} for node in best_path[1:]]
-        
-        # If no path was found at all
-        logger.warning("No valid path found")
-        return []
+            # If no path was found at all
+            logger.warning("No valid path found")
+            return []
+            
+        except Exception as e:
+            error_msg = f"Error in BFS search: {str(e)}"
+            logger.error(error_msg)
+            if best_path:
+                logger.info(f"Returning best path found before error with score {best_score}")
+                return [{"action": node.action} for node in best_path[1:]]
+            return []
 
     async def dfs(self) -> List[Dict[str, Any]]:
         """
@@ -451,83 +495,119 @@ class SimpleSearchAgent:
             List[Dict[str, Any]]: List of actions in the best path found
         """
         stack = [self.root_node]
+        stack_set = {self.root_node}  # Track nodes in stack
         best_score = float('-inf')
         best_path = None
         visited = set()  # Track visited nodes to avoid cycles
+        current_path = []  # Track current path for DFS
         
-        def evaluate_node(node: LATSNode) -> tuple[float, bool]:
-            """
-            Evaluate a node's trajectory.
-            
-            Returns:
-                tuple[float, bool]: (score, should_terminate)
-            """
-            path = self.get_path_to_root(node)
-            trajectory = []
-            for n in path[1:]:  # Skip root node
-                trajectory.append({
-                    "natural_language_description": n.natural_language_description,
-                    "action": n.action,
-                    "feedback": n.feedback
-                })
-            
-            prompt = create_llm_prompt(trajectory, self.goal)
-            result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
-
-            score = result["overall_score"]
-            
-            logger.info(f"Node score: {score}")
-            
-            return score, score >= 0.75
-        
-        while stack:
-            current_node = stack.pop()
-            print("print the trajectory")
-            print_trajectory(current_node)
-            print("print the entire tree")
-            print_entire_tree(self.root_node)
-            
-            # Skip if we've already visited this node or if it's terminal
-            if current_node in visited or current_node.is_terminal:
-                continue
+        try:
+            while stack:
+                current_node = stack[-1]  # Peek at the top node without removing it
                 
-            visited.add(current_node)
-            
-            # Expand current node if it hasn't been expanded yet
-            if not current_node.children:
-                await self.expand(current_node)
+                # Skip if we've already visited this node
+                if current_node in visited:
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    if current_path:
+                        current_path.pop()  # Remove from current path
+                    continue
+                    
+                visited.add(current_node)
+                current_path.append(current_node)  # Add to current path
                 
-            score, should_terminate = evaluate_node(current_node)
-            
-            # Update best path if this score is better
-            if score > best_score:
-                best_score = score
-                best_path = self.get_path_to_root(current_node)
+                # Skip terminal nodes
+                if current_node.is_terminal:
+                    logger.info(f"Node {id(current_node)} is terminal")
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    current_path.pop()  # Remove from current path
+                    continue
+                    
+                # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
+                if not current_node.children and current_node.depth < self.config.max_depth:
+                    try:
+                        await self.expand(current_node)
+                    except Exception as e:
+                        error_msg = f"Error expanding node {id(current_node)}: {str(e)}"
+                        logger.error(error_msg)
+                        current_node.is_terminal = True
+                        stack.pop()
+                        stack_set.remove(current_node)
+                        current_path.pop()  # Remove from current path
+                        continue
+                    
+                print("print the trajectory")
+                print_trajectory(current_node)
+                print("print the entire tree")
+                print_entire_tree(self.root_node)
                 
-            # If we've found a satisfactory solution, return it
-            if should_terminate:
-                logger.info("Found satisfactory solution")
+                # Get the path from root to this node
+                path = self.get_path_to_root(current_node)
+                
+                # Create trajectory for scoring
+                trajectory = []
+                for node in path[1:]:  # Skip root node
+                    trajectory.append({
+                        "natural_language_description": node.natural_language_description,
+                        "action": node.action,
+                        "feedback": node.feedback
+                    })
+                
+                try:
+                    # Score the trajectory
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
+                    score = result["overall_score"]
+                except Exception as e:
+                    error_msg = f"Error scoring node {id(current_node)}: {str(e)}"
+                    logger.error(error_msg)
+                    score = float('-inf')
+                
+                # Update best path if this score is better
+                if score > best_score:
+                    best_score = score
+                    best_path = path
+                        
+                logger.info(f"Node {id(current_node)} score: {score}")
+                
+                # If we've found a satisfactory solution, return it
+                if score >= 0.75:
+                    logger.info(f"Found satisfactory solution with score {score}")
+                    return [{"action": node.action} for node in path[1:]]
+                
+                # Add non-terminal children to stack in reverse order if they haven't reached max_depth
+                has_unvisited_children = False
+                for child in reversed(current_node.children):
+                    if not child.is_terminal and child not in visited and child not in stack_set and child.depth < self.config.max_depth:
+                        stack.append(child)
+                        stack_set.add(child)  # Add to stack tracking
+                        has_unvisited_children = True
+                        break  # Only add one child at a time for DFS
+                
+                # If no unvisited children, remove current node from stack
+                if not has_unvisited_children:
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    current_path.pop()  # Remove from current path
+            
+            # If we've exhausted all nodes and haven't found a perfect solution,
+            # return the best path we found
+            if best_path:
+                logger.info(f"Returning best path found with score {best_score}")
                 return [{"action": node.action} for node in best_path[1:]]
             
-            # Add non-terminal children to stack in reverse order
-            for child in reversed(current_node.children):
-                if not child.is_terminal and child not in visited:
-                    stack.append(child)
-                    
-            # Optional: Add depth-based cutoff
-            if current_node.depth >= self.config.max_depth:
-                logger.info(f"Reached maximum depth {self.config.max_depth}")
-                continue
-        
-        # If we've exhausted all nodes and haven't found a perfect solution,
-        # return the best path we found
-        if best_path:
-            logger.info(f"Returning best path found with score {best_score}")
-            return [{"action": node.action} for node in best_path[1:]]
-        
-        # If no path was found at all
-        logger.warning("No valid path found")
-        return []
+            # If no path was found at all
+            logger.warning("No valid path found")
+            return []
+            
+        except Exception as e:
+            error_msg = f"Error in DFS search: {str(e)}"
+            logger.error(error_msg)
+            if best_path:
+                logger.info(f"Returning best path found before error with score {best_score}")
+                return [{"action": node.action} for node in best_path[1:]]
+            return []
 
     async def bfs_with_websocket(self, websocket=None) -> List[Dict[str, Any]]:
         """
@@ -541,185 +621,258 @@ class SimpleSearchAgent:
             List[Dict[str, Any]]: List of actions in the best path found
         """
         queue = deque([self.root_node])
+        queue_set = {self.root_node}  # Track nodes in queue
         best_score = float('-inf')
         best_path = None
+        visited = set()  # Track visited nodes to avoid cycles
+        current_level = 0  # Track current level for BFS
         
-        # Get the live browser URL during initial setup
-        live_browser_url = await self._reset_browser(websocket)
-        
-        # Send initial status if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "BFS search started",
-                "timestamp": datetime.utcnow().isoformat(),
-                "live_browser_url": live_browser_url  # Include the live browser URL
-            })
-        
-        while queue:
-            current_node = queue.popleft()
+        try:
+            # Get the live browser URL during initial setup
+            live_browser_url, session_id = await self._reset_browser(websocket)
             
-            # Check if we've reached the maximum depth
-            if current_node.depth >= self.config.max_depth:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_terminal",
-                        "node_id": id(current_node),
-                        "reason": "depth_limit",
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                continue
-            
-            # Send node processing update if websocket is provided
+            # Send initial status if websocket is provided
             if websocket:
                 await websocket.send_json({
-                    "type": "node_processing",
-                    "node_id": id(current_node),
-                    "depth": current_node.depth,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "type": "search_status",
+                    "status": "started",
+                    "message": "BFS search started",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "live_browser_url": live_browser_url,
+                    "session_id": session_id
                 })
             
-            # Print debug info
-            print("print the trajectory")
-            print_trajectory(current_node)
-            print("print the entire tree")
-            print_entire_tree(self.root_node)
-            
-            # Skip terminal nodes
-            if current_node.is_terminal:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_terminal",
-                        "node_id": id(current_node),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                continue
+            while queue:
+                # Process all nodes at current level
+                level_size = len(queue)
+                current_level += 1
+                level_nodes = []  # Store nodes at current level for later processing
                 
-            # Expand current node if it hasn't been expanded yet
-            if not current_node.children:
                 if websocket:
                     await websocket.send_json({
-                        "type": "node_expanding",
-                        "node_id": id(current_node),
+                        "type": "level_start",
+                        "level": current_level,
+                        "nodes_in_level": level_size,
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
-                # Pass the websocket to expand method
-                await self.expand(current_node, websocket)
+                # First, expand all nodes at current level
+                for _ in range(level_size):
+                    current_node = queue.popleft()
+                    queue_set.remove(current_node)  # Remove from queue tracking
+                    
+                    # Skip if we've already visited this node
+                    if current_node in visited:
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_skipped",
+                                "node_id": id(current_node),
+                                "reason": "already_visited",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        continue
+                        
+                    visited.add(current_node)
+                    
+                    # Skip terminal nodes
+                    if current_node.is_terminal:
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_terminal",
+                                "node_id": id(current_node),
+                                "reason": "terminal_node",
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        continue
+                    
+                    # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
+                    if not current_node.children and current_node.depth < self.config.max_depth:
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_expanding",
+                                "node_id": id(current_node),
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        
+                        try:
+                            await self.expand(current_node, websocket)
+                        except Exception as e:
+                            error_msg = f"Error expanding node {id(current_node)}: {str(e)}"
+                            logger.error(error_msg)
+                            current_node.is_terminal = True
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "node_error",
+                                    "node_id": id(current_node),
+                                    "error": error_msg,
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                            continue
+                        
+                        # Send tree update after expansion
+                        if websocket:
+                            tree_data = self._get_tree_data()
+                            await websocket.send_json({
+                                "type": "tree_update",
+                                "tree": tree_data,
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                    
+                    # Store node for later processing
+                    level_nodes.append(current_node)
+                    
+                    # Add non-terminal children to queue for next level if they haven't reached max_depth
+                    for child in current_node.children:
+                        if not child.is_terminal and child not in visited and child not in queue_set and child.depth < self.config.max_depth:
+                            queue.append(child)
+                            queue_set.add(child)  # Add to queue tracking
+                            
+                            # Send queue update if websocket is provided
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "node_queued",
+                                    "node_id": id(child),
+                                    "parent_id": id(current_node),
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
                 
-                # Send tree update after expansion
+                # Now process all nodes at current level
+                for current_node in level_nodes:
+                    # Send node processing update if websocket is provided
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_processing",
+                            "node_id": id(current_node),
+                            "depth": current_node.depth,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                    print("print the trajectory")
+                    print_trajectory(current_node)
+                    print("print the entire tree")
+                    print_entire_tree(self.root_node)
+                    
+                    # Get the path from root to this node
+                    path = self.get_path_to_root(current_node)
+                    
+                    # Create trajectory for scoring
+                    trajectory = []
+                    for node in path[1:]:  # Skip root node
+                        trajectory.append({
+                            "natural_language_description": node.natural_language_description,
+                            "action": node.action,
+                            "feedback": node.feedback
+                        })
+                    
+                    try:
+                        # Score the trajectory
+                        prompt = create_llm_prompt(trajectory, self.goal)
+                        result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
+                        score = result["overall_score"]
+                    except Exception as e:
+                        error_msg = f"Error scoring node {id(current_node)}: {str(e)}"
+                        logger.error(error_msg)
+                        score = float('-inf')
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_error",
+                                "node_id": id(current_node),
+                                "error": error_msg,
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                    
+                    # Send score update if websocket is provided
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_scored",
+                            "node_id": id(current_node),
+                            "score": score,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                    # Update best path if this score is better
+                    if score > best_score:
+                        best_score = score
+                        best_path = path
+                        
+                        # Send best path update if websocket is provided
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "best_path_update",
+                                "score": best_score,
+                                "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        
+                    logger.info(f"Node {id(current_node)} score: {score}")
+                    
+                    # If we've found a satisfactory solution, return it
+                    if score >= 0.75:
+                        logger.info(f"Found satisfactory solution with score {score}")
+                        
+                        # Send completion update if websocket is provided
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "search_complete",
+                                "status": "success",
+                                "score": score,
+                                "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        
+                        return [{"action": node.action} for node in path[1:]]
+                
                 if websocket:
-                    tree_data = self._get_tree_data()
                     await websocket.send_json({
-                        "type": "tree_update",
-                        "tree": tree_data,
+                        "type": "level_complete",
+                        "level": current_level,
                         "timestamp": datetime.utcnow().isoformat()
                     })
             
-            # Get the path from root to this node
-            path = self.get_path_to_root(current_node)
-            
-            # Create trajectory for scoring
-            trajectory = []
-            for node in path[1:]:  # Skip root node
-                trajectory.append({
-                    "natural_language_description": node.natural_language_description,
-                    "action": node.action,
-                    "feedback": node.feedback
-                })
-            
-            # Score the trajectory
-            prompt = create_llm_prompt(trajectory, self.goal)
-            result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
-
-            score = result["overall_score"]
-            
-            # Send score update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_scored",
-                    "node_id": id(current_node),
-                    "score": score,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Update best path if this score is better
-            if score > best_score:
-                best_score = score
-                best_path = path
-                
-                # Send best path update if websocket is provided
-                if websocket:
-                    await websocket.send_json({
-                        "type": "best_path_update",
-                        "score": best_score,
-                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                
-            logger.info(f"Node score: {score}")
-            
-            # If we've found a satisfactory solution, return it
-            if score >= 0.75:
-                logger.info("Found satisfactory solution")
+            # If we've exhausted all nodes and haven't found a perfect solution,
+            # return the best path we found
+            if best_path:
+                logger.info(f"Returning best path found with score {best_score}")
                 
                 # Send completion update if websocket is provided
                 if websocket:
                     await websocket.send_json({
                         "type": "search_complete",
-                        "status": "success",
-                        "score": score,
-                        "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                        "status": "partial_success",
+                        "score": best_score,
+                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
-                return [{"action": node.action} for node in path[1:]]
+                return [{"action": node.action} for node in best_path[1:]]
             
-            # Add non-terminal children to queue
-            for child in current_node.children:
-                if not child.is_terminal and child not in queue:
-                    queue.append(child)
-                    
-                    # Send queue update if websocket is provided
-                    if websocket:
-                        await websocket.send_json({
-                            "type": "node_queued",
-                            "node_id": id(child),
-                            "parent_id": id(current_node),
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-        
-        # If we've exhausted all nodes and haven't found a perfect solution,
-        # return the best path we found
-        if best_path:
-            logger.info(f"Returning best path found with score {best_score}")
+            # If no path was found at all
+            logger.warning("No valid path found")
             
-            # Send completion update if websocket is provided
+            # Send failure update if websocket is provided
             if websocket:
                 await websocket.send_json({
                     "type": "search_complete",
-                    "status": "partial_success",
-                    "score": best_score,
-                    "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                    "status": "failure",
+                    "message": "No valid path found",
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return [{"action": node.action} for node in best_path[1:]]
-        
-        # If no path was found at all
-        logger.warning("No valid path found")
-        
-        # Send failure update if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_complete",
-                "status": "failure",
-                "message": "No valid path found",
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        
-        return []
+            return []
+            
+        except Exception as e:
+            error_msg = f"Error in BFS search: {str(e)}"
+            logger.error(error_msg)
+            if websocket:
+                await websocket.send_json({
+                    "type": "search_error",
+                    "error": error_msg,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            if best_path:
+                logger.info(f"Returning best path found before error with score {best_score}")
+                return [{"action": node.action} for node in best_path[1:]]
+            return []
 
     async def dfs_with_websocket(self, websocket=None) -> List[Dict[str, Any]]:
         """
@@ -733,192 +886,245 @@ class SimpleSearchAgent:
             List[Dict[str, Any]]: List of actions in the best path found
         """
         stack = [self.root_node]
+        stack_set = {self.root_node}  # Track nodes in stack
         best_score = float('-inf')
         best_path = None
         visited = set()  # Track visited nodes to avoid cycles
+        current_path = []  # Track current path for DFS
         
-        # Get the live browser URL during initial setup
-        live_browser_url = await self._reset_browser(websocket)
-        
-        # Send initial status if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "DFS search started",
-                "timestamp": datetime.utcnow().isoformat(),
-                "live_browser_url": live_browser_url
-            })
-        
-        while stack:
-            current_node = stack.pop()
+        try:
+            # Get the live browser URL during initial setup
+            live_browser_url, session_id = await self._reset_browser(websocket)
             
-            # Skip if we've already visited this node
-            if current_node in visited:
-                continue
-                
-            visited.add(current_node)
-            
-            # Check if we've reached the maximum depth
-            if current_node.depth >= self.config.max_depth:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_terminal",
-                        "node_id": id(current_node),
-                        "reason": "depth_limit",
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                continue
-            
-            # Send node processing update if websocket is provided
+            # Send initial status if websocket is provided
             if websocket:
                 await websocket.send_json({
-                    "type": "node_processing",
-                    "node_id": id(current_node),
-                    "depth": current_node.depth,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "type": "search_status",
+                    "status": "started",
+                    "message": "DFS search started",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "live_browser_url": live_browser_url,
+                    "session_id": session_id
                 })
             
-            # Print debug info
-            print("print the trajectory")
-            print_trajectory(current_node)
-            print("print the entire tree")
-            print_entire_tree(self.root_node)
-            
-            # Skip terminal nodes
-            if current_node.is_terminal:
+            while stack:
+                current_node = stack[-1]  # Peek at the top node without removing it
+                
+                # Skip if we've already visited this node
+                if current_node in visited:
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    if current_path:
+                        current_path.pop()  # Remove from current path
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_backtrack",
+                            "node_id": id(current_node),
+                            "reason": "already_visited",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    continue
+                    
+                visited.add(current_node)
+                current_path.append(current_node)  # Add to current path
+                
+                # Skip terminal nodes
+                if current_node.is_terminal:
+                    logger.info(f"Node {id(current_node)} is terminal")
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    current_path.pop()  # Remove from current path
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_backtrack",
+                            "node_id": id(current_node),
+                            "reason": "terminal_node",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    continue
+                    
+                # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
+                if not current_node.children and current_node.depth < self.config.max_depth:
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_expanding",
+                            "node_id": id(current_node),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                    try:
+                        await self.expand(current_node, websocket)
+                    except Exception as e:
+                        error_msg = f"Error expanding node {id(current_node)}: {str(e)}"
+                        logger.error(error_msg)
+                        current_node.is_terminal = True
+                        stack.pop()
+                        stack_set.remove(current_node)
+                        current_path.pop()  # Remove from current path
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_backtrack",
+                                "node_id": id(current_node),
+                                "reason": "expansion_error",
+                                "error": error_msg,
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        continue
+                    
+                    # Send tree update after expansion
+                    if websocket:
+                        tree_data = self._get_tree_data()
+                        await websocket.send_json({
+                            "type": "tree_update",
+                            "tree": tree_data,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                
+                # Get the path from root to this node
+                path = self.get_path_to_root(current_node)
+                
+                # Create trajectory for scoring
+                trajectory = []
+                for node in path[1:]:  # Skip root node
+                    trajectory.append({
+                        "natural_language_description": node.natural_language_description,
+                        "action": node.action,
+                        "feedback": node.feedback
+                    })
+                
+                try:
+                    # Score the trajectory
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
+                    score = result["overall_score"]
+                except Exception as e:
+                    error_msg = f"Error scoring node {id(current_node)}: {str(e)}"
+                    logger.error(error_msg)
+                    score = float('-inf')
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_error",
+                            "node_id": id(current_node),
+                            "error": error_msg,
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                
+                # Send score update if websocket is provided
                 if websocket:
                     await websocket.send_json({
-                        "type": "node_terminal",
+                        "type": "node_scored",
                         "node_id": id(current_node),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                continue
-                
-            # Expand current node if it hasn't been expanded yet
-            if not current_node.children:
-                if websocket:
-                    await websocket.send_json({
-                        "type": "node_expanding",
-                        "node_id": id(current_node),
+                        "score": score,
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
-                # Pass the websocket to expand method
-                await self.expand(current_node, websocket)
+                # Update best path if this score is better
+                if score > best_score:
+                    best_score = score
+                    best_path = path
+                    
+                    # Send best path update if websocket is provided
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "best_path_update",
+                            "score": best_score,
+                            "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                logger.info(f"Node {id(current_node)} score: {score}")
                 
-                # Send tree update after expansion
-                if websocket:
-                    tree_data = self._get_tree_data()
-                    await websocket.send_json({
-                        "type": "tree_update",
-                        "tree": tree_data,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-            
-            # Get the path from root to this node
-            path = self.get_path_to_root(current_node)
-            
-            # Create trajectory for scoring
-            trajectory = []
-            for node in path[1:]:  # Skip root node
-                trajectory.append({
-                    "natural_language_description": node.natural_language_description,
-                    "action": node.action,
-                    "feedback": node.feedback
-                })
-            
-            # Score the trajectory
-            prompt = create_llm_prompt(trajectory, self.goal)
-            result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
-
-            score = result["overall_score"]
-            
-            # Send score update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_scored",
-                    "node_id": id(current_node),
-                    "score": score,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            # Update best path if this score is better
-            if score > best_score:
-                best_score = score
-                best_path = path
+                # If we've found a satisfactory solution, return it
+                if score >= 0.75:
+                    logger.info(f"Found satisfactory solution with score {score}")
+                    
+                    # Send completion update if websocket is provided
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "search_complete",
+                            "status": "success",
+                            "score": score,
+                            "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                    return [{"action": node.action} for node in path[1:]]
                 
-                # Send best path update if websocket is provided
-                if websocket:
-                    await websocket.send_json({
-                        "type": "best_path_update",
-                        "score": best_score,
-                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
+                # Add non-terminal children to stack in reverse order
+                has_unvisited_children = False
+                for child in reversed(current_node.children):
+                    if not child.is_terminal and child not in visited and child not in stack_set:
+                        stack.append(child)
+                        stack_set.add(child)  # Add to stack tracking
+                        has_unvisited_children = True
+                        
+                        # Send stack update if websocket is provided
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "node_stacked",
+                                "node_id": id(child),
+                                "parent_id": id(current_node),
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        break  # Only add one child at a time for DFS
                 
-            logger.info(f"Node score: {score}")
+                # If no unvisited children, remove current node from stack
+                if not has_unvisited_children:
+                    stack.pop()
+                    stack_set.remove(current_node)
+                    current_path.pop()  # Remove from current path
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_backtrack",
+                            "node_id": id(current_node),
+                            "reason": "no_unvisited_children",
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
             
-            # If we've found a satisfactory solution, return it
-            if score >= 0.75:
-                logger.info("Found satisfactory solution")
+            # If we've exhausted all nodes and haven't found a perfect solution,
+            # return the best path we found
+            if best_path:
+                logger.info(f"Returning best path found with score {best_score}")
                 
                 # Send completion update if websocket is provided
                 if websocket:
                     await websocket.send_json({
                         "type": "search_complete",
-                        "status": "success",
-                        "score": score,
-                        "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                        "status": "partial_success",
+                        "score": best_score,
+                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
-                return [{"action": node.action} for node in path[1:]]
+                return [{"action": node.action} for node in best_path[1:]]
             
-            # Add non-terminal children to stack in reverse order
-            for child in reversed(current_node.children):
-                if not child.is_terminal and child not in visited:
-                    stack.append(child)
-                    
-                    # Send stack update if websocket is provided
-                    if websocket:
-                        await websocket.send_json({
-                            "type": "node_stacked",
-                            "node_id": id(child),
-                            "parent_id": id(current_node),
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-        
-        # If we've exhausted all nodes and haven't found a perfect solution,
-        # return the best path we found
-        if best_path:
-            logger.info(f"Returning best path found with score {best_score}")
+            # If no path was found at all
+            logger.warning("No valid path found")
             
-            # Send completion update if websocket is provided
+            # Send failure update if websocket is provided
             if websocket:
                 await websocket.send_json({
                     "type": "search_complete",
-                    "status": "partial_success",
-                    "score": best_score,
-                    "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                    "status": "failure",
+                    "message": "No valid path found",
                     "timestamp": datetime.utcnow().isoformat()
                 })
             
-            return [{"action": node.action} for node in best_path[1:]]
-        
-        # If no path was found at all
-        logger.warning("No valid path found")
-        
-        # Send failure update if websocket is provided
-        if websocket:
-            await websocket.send_json({
-                "type": "search_complete",
-                "status": "failure",
-                "message": "No valid path found",
-                "timestamp": datetime.utcnow().isoformat()
-            })
-        
-        return []
+            return []
+            
+        except Exception as e:
+            error_msg = f"Error in DFS search: {str(e)}"
+            logger.error(error_msg)
+            if websocket:
+                await websocket.send_json({
+                    "type": "search_error",
+                    "error": error_msg,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            if best_path:
+                logger.info(f"Returning best path found before error with score {best_score}")
+                return [{"action": node.action} for node in best_path[1:]]
+            return []
 
     def _get_tree_data(self):
         """Get tree data in a format suitable for visualization"""
