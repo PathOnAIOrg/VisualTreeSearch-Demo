@@ -24,8 +24,8 @@ async def main():
     #await test_browserbase_mode()
 
 if __name__ == "__main__":
-    # runcmd("git restore ../../../shopping.json")
-    # runcmd("git pull ")
+    runcmd("git restore ../../../shopping.json")
+    runcmd("git pull ")
     
     try:
         asyncio.run(main())
