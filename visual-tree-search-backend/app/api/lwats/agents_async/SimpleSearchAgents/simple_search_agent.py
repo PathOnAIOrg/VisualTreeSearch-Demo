@@ -92,6 +92,9 @@ class SimpleSearchAgent:
                 return await self.dfs_with_websocket(websocket)
             else:
                 return await self.dfs()
+        elif algorithm == "rmcts":
+            logger.info("Starting Reflective MCTS algorithm")
+            return await self.rmcts()
         else:
             error_msg = f"Unsupported algorithm: {algorithm}"
             logger.error(error_msg)
@@ -1146,4 +1149,226 @@ class SimpleSearchAgent:
             tree_data.append(node_data)
         
         return tree_data
+
+    async def rmcts(self) -> List[Dict[str, Any]]:
+        """
+        Performs Monte Carlo Tree Search starting from the root node.
+        Uses GPT-4 for node selection and reflection-based backpropagation.
+        
+        Returns:
+            List[Dict[str, Any]]: List of actions in the best path found
+        """
+        best_score = float('-inf')
+        best_path = None
+        visited = set()  # Track visited nodes to avoid cycles
+        max_iterations = self.config.iterations  # Use configured number of iterations
+        
+        try:
+            # Initial browser setup
+            live_browser_url, session_id = await self._reset_browser()
+            if not live_browser_url:
+                logger.error("Failed to initialize browser")
+                return []
+                
+            for iteration in range(max_iterations):
+                logger.info(f"\n{'='*50}")
+                logger.info(f"RMCTS Iteration {iteration + 1}/{max_iterations}")
+                logger.info(f"{'='*50}\n")
+                
+                # Selection: Use GPT-4 to select a promising path
+                current_node = self.root_node
+                path = [current_node]
+                selection_depth = 0
+                
+                while current_node.children and not current_node.is_terminal:
+                    logger.info(f"\nSelection Step {selection_depth + 1}:")
+                    logger.info(f"Current node action: {current_node.action}")
+                    logger.info(f"Number of children: {len(current_node.children)}")
+                    
+                    # Get trajectory for GPT-4 to evaluate
+                    trajectory = []
+                    for node in path[1:]:  # Skip root node
+                        trajectory.append({
+                            "natural_language_description": node.natural_language_description,
+                            "action": node.action,
+                            "feedback": node.feedback
+                        })
+                    
+                    # Create prompt for GPT-4 to select next node
+                    prompt = f"""Given the current trajectory and goal, select the most promising child node to explore next.
+                    Consider the overall progress, efficiency, and likelihood of success.
+                    
+                    Goal: {self.goal}
+                    
+                    Current Trajectory:
+                    {json.dumps(trajectory, indent=2)}
+                    
+                    Available Children:
+                    {json.dumps([{
+                        'action': child.action,
+                        'description': child.natural_language_description,
+                        'visits': child.visits,
+                        'value': child.value
+                    } for child in current_node.children], indent=2)}
+                    
+                    Return a JSON response with:
+                    {{
+                        "selected_child_index": int,  # Index of the selected child
+                        "explanation": str  # Brief explanation of the selection
+                    }}"""
+                    
+                    try:
+                        response = openai_client.chat.completions.create(
+                            model=self.config.evaluation_model,
+                            messages=[
+                                {"role": "system", "content": "You are an expert at selecting promising paths in a search tree."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                        
+                        selection = json.loads(response.choices[0].message.content)
+                        selected_index = selection["selected_child_index"]
+                        
+                        if 0 <= selected_index < len(current_node.children):
+                            current_node = current_node.children[selected_index]
+                            path.append(current_node)
+                            logger.info(f"Selected child {selected_index + 1}: {current_node.action}")
+                            logger.info(f"Selection explanation: {selection['explanation']}")
+                        else:
+                            logger.warning(f"Invalid child index {selected_index}, breaking selection")
+                            break
+                            
+                    except Exception as e:
+                        logger.error(f"Error in node selection: {str(e)}")
+                        break
+                    
+                    selection_depth += 1
+                
+                # Expansion: Expand the selected node if possible
+                if not current_node.is_terminal and current_node.depth < self.config.max_depth:
+                    logger.info(f"\nExpansion Step:")
+                    logger.info(f"Expanding node: {current_node.action}")
+                    try:
+                        await self.expand(current_node)
+                        logger.info(f"Successfully expanded node with {len(current_node.children)} children")
+                    except Exception as e:
+                        logger.error(f"Error expanding node: {str(e)}")
+                        current_node.is_terminal = True
+                
+                # Simulation: Evaluate the current path
+                logger.info(f"\nSimulation Step:")
+                logger.info(f"Evaluating path of length {len(path) - 1}")
+                try:
+                    trajectory = []
+                    for node in path[1:]:  # Skip root node
+                        trajectory.append({
+                            "natural_language_description": node.natural_language_description,
+                            "action": node.action,
+                            "feedback": node.feedback
+                        })
+                    
+                    # Score the trajectory
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    result = score_trajectory_with_openai(prompt, openai_client, model=self.config.evaluation_model)
+                    score = result["overall_score"]
+                    
+                    logger.info(f"Simulation Results:")
+                    logger.info(f"Overall Score: {score:.3f}")
+                    logger.info(f"Efficiency Score: {result['efficiency_score']:.3f}")
+                    logger.info(f"Accuracy Score: {result['accuracy_score']:.3f}")
+                    logger.info(f"Robustness Score: {result['robustness_score']:.3f}")
+                    
+                    # Update best path if this score is better
+                    if score > best_score:
+                        best_score = score
+                        best_path = path
+                        logger.info(f"\nNew best path found!")
+                        logger.info(f"Previous best score: {best_score:.3f}")
+                        logger.info(f"New best score: {score:.3f}")
+                    
+                    # Reflection-based backpropagation
+                    if score < 0.75:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
+                        # Generate reflection prompt
+                        reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
+                        
+                        Goal: {self.goal}
+                        
+                        Current Trajectory:
+                        {json.dumps(trajectory, indent=2)}
+                        
+                        Score: {score}
+                        
+                        Return a JSON response with:
+                        {{
+                            "backtrack_to_step": int,  # Which step to backtrack to (0-based index)
+                            "reason": str,  # Why backtrack to this step
+                            "suggested_improvements": [str]  # List of suggested improvements
+                        }}"""
+                        
+                        try:
+                            reflection = openai_client.chat.completions.create(
+                                model=self.config.evaluation_model,
+                                messages=[
+                                    {"role": "system", "content": "You are an expert at analyzing and improving search trajectories."},
+                                    {"role": "user", "content": reflection_prompt}
+                                ],
+                                response_format={"type": "json_object"}
+                            )
+                            
+                            reflection_result = json.loads(reflection.choices[0].message.content)
+                            backtrack_step = reflection_result["backtrack_to_step"]
+                            
+                            # Backtrack to the suggested step
+                            if 0 <= backtrack_step < len(path):
+                                current_node = path[backtrack_step]
+                                # Remove nodes after the backtrack point
+                                while len(path) > backtrack_step + 1:
+                                    path.pop()
+                                logger.info(f"Backtracking to step {backtrack_step}")
+                                logger.info(f"Reason: {reflection_result['reason']}")
+                                logger.info("Suggested improvements:")
+                                for improvement in reflection_result["suggested_improvements"]:
+                                    logger.info(f"- {improvement}")
+                                
+                        except Exception as e:
+                            logger.error(f"Error in reflection: {str(e)}")
+                    
+                    # If we've found a satisfactory solution, return it
+                    if score >= 0.75:
+                        logger.info(f"\nFound satisfactory solution with score {score:.3f}")
+                        return [{"action": node.action} for node in path[1:]]
+                    
+                except Exception as e:
+                    logger.error(f"Error in simulation: {str(e)}")
+                    continue
+                
+                # Update node statistics
+                logger.info(f"\nBackpropagation Step:")
+                for node in path:
+                    old_value = node.value
+                    node.visits += 1
+                    node.value = (node.value * (node.visits - 1) + score) / node.visits
+                    logger.info(f"Node {node.action}:")
+                    logger.info(f"  Visits: {node.visits}")
+                    logger.info(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+            
+            # If we've exhausted all iterations and haven't found a perfect solution,
+            # return the best path we found
+            if best_path:
+                logger.info(f"\nSearch complete. Returning best path found with score {best_score:.3f}")
+                return [{"action": node.action} for node in best_path[1:]]
+            
+            # If no path was found at all
+            logger.warning("\nNo valid path found")
+            return []
+            
+        except Exception as e:
+            error_msg = f"Error in RMCTS search: {str(e)}"
+            logger.error(error_msg)
+            if best_path:
+                logger.info(f"\nReturning best path found before error with score {best_score:.3f}")
+                return [{"action": node.action} for node in best_path[1:]]
+            return []
 
