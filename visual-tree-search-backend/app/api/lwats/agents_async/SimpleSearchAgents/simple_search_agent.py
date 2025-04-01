@@ -164,6 +164,9 @@ class SimpleSearchAgent:
             if self.config.browser_mode == "browserbase":
                 live_browser_url = await self.playwright_manager.get_live_browser_url()
                 session_id = await self.playwright_manager.get_session_id()
+            else:
+                session_id = None
+                live_browser_url = None
             await page.goto(self.starting_url, wait_until="networkidle")
             
             # Send success message if websocket is provided
