@@ -427,7 +427,7 @@ const TreeSearchPlayground = () => {
               <div className="p-4 border-t border-sky-200 dark:border-sky-800 bg-white/90 dark:bg-slate-800/90">
                 <div className="mb-4 ml-1 text-sm text-slate-700 dark:text-slate-300">
                   <ol className="list-decimal list-inside space-y-1">
-                    <li>Click the "Start" button above to connect and begin the search.</li>
+                    <li>Click the &quot;Start&quot; button above to connect and begin the search.</li>
                     <li>Configure your search parameters below.</li>
                     <li>The tree of possible actions will appear on the right, while the resulting web page will display on the left.</li>
                     <li>You can drag the divider to resize the panels as needed.</li>
