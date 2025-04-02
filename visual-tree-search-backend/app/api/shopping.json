@@ -1,40 +1,10 @@
 [
     {
-        "name": "test_cookie",
-        "value": "1",
-        "domain": "128.105.145.205",
-        "path": "/",
-        "expires": -1,
-        "httpOnly": false,
-        "secure": false,
-        "sameSite": "Lax"
-    },
-    {
-        "name": "PHPSESSID",
-        "value": "a4b3619e458d899519d83b16fd5a0e2e",
-        "domain": "128.105.145.205",
-        "path": "/",
-        "expires": 1775112451.726664,
-        "httpOnly": true,
-        "secure": false,
-        "sameSite": "Lax"
-    },
-    {
-        "name": "form_key",
-        "value": "mSsyEuoNV6CB0esX",
-        "domain": "128.105.145.205",
-        "path": "/",
-        "expires": 1775112451.726782,
-        "httpOnly": false,
-        "secure": false,
-        "sameSite": "Lax"
-    },
-    {
         "name": "mage-cache-storage",
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -44,17 +14,7 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
-        "httpOnly": false,
-        "secure": false,
-        "sameSite": "Lax"
-    },
-    {
-        "name": "mage-cache-sessid",
-        "value": "true",
-        "domain": "128.105.145.205",
-        "path": "/",
-        "expires": 1775112451,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -64,7 +24,7 @@
         "value": "",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112451,
+        "expires": 1775110735,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Strict"
@@ -74,7 +34,7 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -84,7 +44,7 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -94,7 +54,7 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -104,7 +64,7 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
@@ -114,17 +74,67 @@
         "value": "{}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112434,
+        "expires": 1775110732,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "private_content_version",
+        "value": "843052e37c1703f047c79850de356543",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1778134733.861287,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "PHPSESSID",
+        "value": "e60e354f4484dbe490e863a6e3c5b4b9",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1775110737.116277,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "X-Magento-Vary",
+        "value": "9bf9a599123e6402b85cde67144717a08b817412",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1775110737.116485,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "form_key",
+        "value": "M0iOyk8VTBOyKC1q",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1775110737.116428,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mage-cache-sessid",
+        "value": "true",
+        "domain": "128.105.145.205",
+        "path": "/",
+        "expires": 1775110735,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
     },
     {
         "name": "section_data_ids",
-        "value": "{%22messages%22:1743576451%2C%22customer%22:1743576451%2C%22compare-products%22:1743576451%2C%22last-ordered-items%22:1743576451%2C%22cart%22:1743576451%2C%22directory-data%22:1743576451%2C%22captcha%22:1743576451%2C%22instant-purchase%22:1743576451%2C%22loggedAsCustomer%22:1743576451%2C%22persistent%22:1743576451%2C%22review%22:1743576451%2C%22wishlist%22:1743576451%2C%22recently_viewed_product%22:1743576451%2C%22recently_compared_product%22:1743576451%2C%22product_data_storage%22:1743576451%2C%22paypal-billing-agreement%22:1743576451}",
+        "value": "{%22messages%22:1743574735%2C%22customer%22:1743574735%2C%22compare-products%22:1743574735%2C%22last-ordered-items%22:1743574735%2C%22cart%22:1743574735%2C%22directory-data%22:1743574735%2C%22captcha%22:1743574735%2C%22instant-purchase%22:1743574735%2C%22loggedAsCustomer%22:1743574735%2C%22persistent%22:1743574735%2C%22review%22:1743574735%2C%22wishlist%22:1743574735%2C%22recently_viewed_product%22:1743574735%2C%22recently_compared_product%22:1743574735%2C%22product_data_storage%22:1743574735%2C%22paypal-billing-agreement%22:1743574735}",
         "domain": "128.105.145.205",
         "path": "/",
-        "expires": 1775112451,
+        "expires": 1775110735,
         "httpOnly": false,
         "secure": false,
         "sameSite": "Lax"
