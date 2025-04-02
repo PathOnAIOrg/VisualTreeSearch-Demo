@@ -5,6 +5,7 @@ from playwright.async_api import async_playwright, Page
 from dotenv import load_dotenv
 from browserbase import Browserbase
 import aiohttp
+import boto3
 
 # Load environment variables from .env file
 load_dotenv()
@@ -97,117 +98,46 @@ async def restore_cookies(browser_tab: Page, cookie_file_path: str):
 
 
 async def authenticate(browser_tab: Page, cookie_file_path: str):
-    """Authenticate to Magento using Playwright form submission, then show a detailed cookie table."""
-    print("Attempting login with Playwright form submission")
-    username = "emma.lopez@gmail.com"
-    password = "Password.123"
-
-    # Start fresh without cookies
-    await browser_tab.context.clear_cookies()
-    print("Cleared cookies before login.\n")
-
-    # Optional: set a test cookie
-    await browser_tab.context.add_cookies([{
-        "name": "test_cookie",
-        "value": "1",
-        "domain": "128.105.145.205",
-        "path": "/",
-    }])
-
-    # Navigate to login page
-    await browser_tab.goto(SITE_LOGIN_URL)
-    await browser_tab.wait_for_load_state("networkidle")
-
-    print("Current URL:", browser_tab.url)
-    print("Filling in login form...\n")
-
-    # Fill the username
-    email_field = await browser_tab.query_selector("#email")
-    if email_field:
-        await email_field.fill(username)
-        print("Filled email field")
-    else:
-        print("⚠️ Could not find email field")
-
-    # Fill the password
-    password_field = await browser_tab.query_selector("#pass")
-    if password_field:
-        await password_field.fill(password)
-        print("Filled password field")
-    else:
-        print("⚠️ Could not find password field")
-
-    print("Examining form elements...\n")
-    form_elements = await browser_tab.query_selector_all("form.form-login input, form#login-form input")
-    for element in form_elements:
-        name = await element.get_attribute("name")
-        value = await element.get_attribute("value")
-        input_type = await element.get_attribute("type")
-        if name:
-            print(f"  Form input: {name} = {value if value else '[empty]'} (type: {input_type})")
-
-    print("\nClicking login button...")
-    login_button = (
-        await browser_tab.query_selector(".action.login.primary")
-        or await browser_tab.query_selector("#send2")
-        or await browser_tab.query_selector("button[type='submit']")
-    )
-
-    if login_button:
-        print(f"Found login button: id={await login_button.get_attribute('id')} type={await login_button.get_attribute('type')}")
-        try:
-            async with browser_tab.expect_navigation(wait_until="networkidle", timeout=15000):
-                await login_button.click()
-            print("Clicked login button and waited for navigation.\n")
-        except Exception as e:
-            print(f"Navigation timeout or error after clicking login: {e}")
-    else:
-        print("⚠️ Could not find login button!")
-
-    # Save the cookies regardless of success
-    await store_cookies(browser_tab, cookie_file_path)
-
-    # Check if login succeeded
-    print("Checking if login succeeded...\n")
-
-    cookies = await browser_tab.context.cookies()
-    print(f"Cookies after login attempt ({len(cookies)}) (Markdown Table):\n")
-    print()
-
-    # Check for Magento 2's typical session cookie (PHPSESSID) or Magento 1's (frontend)
-    magento_session_cookies = [c for c in cookies if c["name"] in ("frontend", "frontend_cid", "PHPSESSID")]
-    if magento_session_cookies:
-        print(f"✅ Found {len(magento_session_cookies)} potential Magento session cookie(s): {', '.join(c['name'] for c in magento_session_cookies)}")
-    else:
-        print("❌ No Magento 'frontend' or 'PHPSESSID' cookie found - likely not authenticated.\n")
-
-    # Navigate to account page to confirm
-    await browser_tab.goto(f"{SITE_URL}/customer/account/")
-    await browser_tab.wait_for_load_state("networkidle")
-
-    # Check if we're truly logged in by searching for My Account or a welcome message
-    is_logged_in = False
-    welcome_msg = await browser_tab.query_selector(".box-information .box-content p") or await browser_tab.query_selector(".welcome-msg")
-    if welcome_msg:
-        welcome_text = await welcome_msg.text_content()
-        if "Emma" in welcome_text:
-            is_logged_in = True
-            print(f"✅ Found welcome message containing 'Emma': {welcome_text.strip()}")
-
-    page_title = await browser_tab.title()
-    if "My Account" in page_title and "Login" not in page_title:
-        is_logged_in = True
-        print(f"✅ Page title indicates logged in: {page_title}")
-
-    if is_logged_in:
-        print("✅ Successfully logged in!\n")
-        return True
-    else:
-        current_title = await browser_tab.title()
-        print(f"❌ Login verification failed. Current page: {browser_tab.url} | Title: {current_title}\n")
-        content = await browser_tab.content()
-        snippet = content[:500].replace("\n", " ")
-        print(f"Page content snippet:\n{snippet}...\n")
+    """Authenticate using remote API call and store cookies if successful"""
+    print("Attempting authentication via remote API")
+    
+    auth_url = os.environ["AUTHENTICATE_URL"]
+    auth_data = {
+        "username": "emma.lopez@gmail.com",
+        "password": "Password.123",
+        "site_url": SITE_URL
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'Content-Type': 'application/json',
+                'Connection': 'close'
+            }
+            async with session.post(auth_url, json=auth_data, headers=headers) as response:
+                result = await response.json()
+                
+                if response.status == 200 and result.get('status') == 'success':
+                    print("✅ Remote authentication successful")
+                    
+                    # Navigate to account page to verify
+                    s3_client = boto3.client('s3')
+                    s3_client.download_file('test-litewebagent', 'shopping.json', cookie_file_path)
+                    print("✅ downloaded cookies from s3")
+                    cookies_restored = await restore_cookies(browser_tab, cookie_file_path)
+                    print("✅ restored cookies")
+                    await browser_tab.goto(f"{SITE_URL}/customer/account/")
+                    await browser_tab.wait_for_load_state("networkidle")
+                    
+                    # Store cookies if login succeeded
+                    # await store_cookies(browser_tab, cookie_file_path)
+                    return True
+                else:
+                    print(f"❌ Remote authentication failed: {result.get('message', 'Unknown error')}")
+                    return False
+                    
+    except Exception as e:
+        print(f"❌ Remote authentication error: {str(e)}")
         return False
 
 async def check_login_status(browser_tab: Page) -> bool:
