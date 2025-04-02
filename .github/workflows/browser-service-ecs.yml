@@ -1,17 +1,17 @@
-name: Backend Service Deploy to Amazon ECS
+name: Browser Service Deploy to Amazon ECS
 
 on:
   push:
     branches: [ "main" ] 
     paths:
-      - 'visual-tree-search-backend/**' 
+      - 'visual-tree-search-browser-service/**' 
   workflow_dispatch:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: visual-tree-search-backend
+  ECR_REPOSITORY: visual-tree-search-browser-service
   ECS_CLUSTER: fargate-cluster
-  ECS_SERVICE: visual-tree-search-backend-service
+  ECS_SERVICE: visual-tree-search-browser-service
   
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
         # Build a docker container for ARM64 and push it to ECR
         docker buildx build --platform linux/arm64 \
           --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-          --push ./visual-tree-search-backend
+          --push ./visual-tree-search-browser-service
 
     - name: Force new deployment of ECS service
       run: |
