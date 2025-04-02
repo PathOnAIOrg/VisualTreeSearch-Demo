@@ -22,6 +22,7 @@ async def main(args):
     
     agent_config = AgentConfig(**filter_valid_config_args(args.__dict__))
     print(agent_config)
+
     agent, playwright_manager = await setup_search_agent(
         agent_type=args.agent_type,
         starting_url=args.starting_url,
@@ -29,7 +30,6 @@ async def main(args):
         images=args.images,
         agent_config=agent_config
     )
-    print(agent_config)
     
     # Run the search
     results = await agent.run()

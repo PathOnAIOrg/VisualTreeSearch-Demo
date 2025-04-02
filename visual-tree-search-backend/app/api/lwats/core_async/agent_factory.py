@@ -6,6 +6,8 @@ from openai import OpenAI
 
 from .config import AgentConfig
 from ..agents_async.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
+from ..agents_async.SimpleSearchAgents.lats_agent import LATSAgent
+from ..agents_async.SimpleSearchAgents.mcts_agent import MCTSAgent
 from ..webagent_utils_async.utils.utils import setup_logger
 from ..webagent_utils_async.utils.playwright_manager import setup_playwright
 
@@ -70,8 +72,29 @@ async def setup_search_agent(
         "content": SEARCH_AGENT_SYSTEM_PROMPT,
     }]
 
-    if agent_type == "SimpleSearchAgent":
+    if agent_type == "SimpleSearchAgent": 
+        print("SimpleSearchAgent")
         agent = SimpleSearchAgent(
+            starting_url=starting_url,
+            messages=messages,
+            goal=goal,
+            images = images,
+            playwright_manager=playwright_manager,
+            config=agent_config,
+        )
+    elif agent_type == "LATSAgent":
+        print("LATSAgent")
+        agent = LATSAgent(
+            starting_url=starting_url,
+            messages=messages,
+            goal=goal,
+            images = images,
+            playwright_manager=playwright_manager,
+            config=agent_config,
+        )
+    elif agent_type == "MCTSAgent":
+        print("MCTSAgent")
+        agent = MCTSAgent(
             starting_url=starting_url,
             messages=messages,
             goal=goal,
