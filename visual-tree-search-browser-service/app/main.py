@@ -11,6 +11,7 @@ import time
 import uvicorn
 from dotenv import load_dotenv
 import json
+import boto3
 
 # Configure logging
 logging.basicConfig(
@@ -57,8 +58,6 @@ class AuthenticationRequest(BaseModel):
 class AuthenticationResponse(BaseModel):
     status: str
     message: str
-    cookies: list = None
-    screenshot_path: str = None
 
 @app.get("/")
 async def root():
@@ -67,17 +66,6 @@ async def root():
 @app.get("/hello")
 async def hello():
     return {"message": "Hello World!"}
-
-@app.get("/health")
-async def health_check():
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "status": "healthy",
-            "uptime": time.time(),
-            "service": "web-automation-api"
-        }
-    )
 
 @app.post("/automate", response_model=WebAutomationResponse)
 async def automate_web(request: WebAutomationRequest, background_tasks: BackgroundTasks):
@@ -90,6 +78,55 @@ async def automate_web(request: WebAutomationRequest, background_tasks: Backgrou
             message=f"Automation failed: {str(e)}"
         )
 
+async def download_cookies_from_s3():
+    """Download cookies from S3 and return them as a list"""
+    s3_client = boto3.client('s3')
+    temp_cookie_path = "/tmp/shopping.json"
+    try:
+        # Check if file exists in S3
+        try:
+            s3_client.head_object(Bucket='test-litewebagent', Key='shopping.json')
+        except s3_client.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                print("No existing cookies file in S3")
+                return None
+            else:
+                # Something else went wrong
+                raise e
+
+        # If we get here, file exists, so download it
+        s3_client.download_file('test-litewebagent', 'shopping.json', temp_cookie_path)
+        with open(temp_cookie_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Failed to download cookies from S3: {str(e)}")
+        return None
+
+async def check_login_status(page, site_url) -> bool:
+    """Check if we're on the customer account page rather than the login page."""
+    await page.goto(f"{site_url}/customer/account/")
+    await page.wait_for_load_state("networkidle")
+
+    title = await page.title()
+    if "Login" in title:
+        print("User is not logged in (title contains 'Login')")
+        return False
+    else:
+        print("User is already logged in (account page). Title:", title)
+        return True
+
+async def restore_cookies(page, cookies):
+    """Restore cookies to the browser"""
+    if not cookies:
+        return False
+    try:
+        await page.context.add_cookies(cookies)
+        print(f"Restored {len(cookies)} cookie(s) to the browser context")
+        return True
+    except Exception as e:
+        print(f"Failed to restore cookies: {str(e)}")
+        return False
+
 @app.post("/authenticate", response_model=AuthenticationResponse)
 async def authenticate_user(request: AuthenticationRequest):
     try:
@@ -97,6 +134,21 @@ async def authenticate_user(request: AuthenticationRequest):
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context()
             page = await context.new_page()
+
+            # First try to restore cookies from S3
+            cookies = await download_cookies_from_s3()
+            if cookies:
+                cookies_restored = await restore_cookies(page, cookies)
+                if cookies_restored and await check_login_status(page, request.site_url):
+                    print("Successfully logged in with existing cookies")
+                    return AuthenticationResponse(
+                        status="success",
+                        message="Successfully authenticated using existing cookies"
+                    )
+
+            # If we get here, either there were no cookies or they didn't work
+            # Proceed with fresh authentication
+            print("Existing cookies failed or not found, proceeding with fresh authentication")
 
             # Navigate to login page
             login_url = f"{request.site_url}/customer/account/login/"
@@ -128,36 +180,39 @@ async def authenticate_user(request: AuthenticationRequest):
             after_login_screenshot = "/tmp/screenshot_after_login.png"
             await page.screenshot(path=after_login_screenshot)
 
-            cookies = await page.context.cookies()
-
-            # Check for Magento 2's typical session cookie (PHPSESSID) or Magento 1's (frontend)
-            magento_session_cookies = [c for c in cookies if c["name"] in ("frontend", "frontend_cid", "PHPSESSID")]
-            if magento_session_cookies:
-                print(f"✅ Found {len(magento_session_cookies)} potential Magento session cookie(s): {', '.join(c['name'] for c in magento_session_cookies)}")
-            else:
-                print("❌ No Magento 'frontend' or 'PHPSESSID' cookie found - likely not authenticated.\n")
-
             # Check login status
             await page.goto(f"{request.site_url}/customer/account/")
             page_title = await page.title()
-            print(page_title)
             
-            # Get cookies
-            cookies = await context.cookies()
-
+            # Get new cookies
+            new_cookies = await context.cookies()
+            
             # Check if login was successful
             if "Login" not in page_title:
+                # Save and upload new cookies
+                temp_cookie_path = "/tmp/shopping.json"
+                with open(temp_cookie_path, 'w') as f:
+                    json.dump(new_cookies, f, indent=4)
+                
+                try:
+                    s3_client = boto3.client('s3')
+                    s3_client.upload_file(
+                        temp_cookie_path,
+                        'test-litewebagent',
+                        'shopping.json'
+                    )
+                    print("Successfully uploaded new cookies to S3")
+                except Exception as e:
+                    print(f"Failed to upload new cookies to S3: {str(e)}")
+
                 return AuthenticationResponse(
                     status="success",
-                    message="Successfully authenticated",
-                    cookies=cookies,
-                    screenshot_path=after_login_screenshot
+                    message="Successfully authenticated with fresh login"
                 )
             else:
                 return AuthenticationResponse(
                     status="error",
-                    message="Authentication failed - still on login page",
-                    screenshot_path=after_login_screenshot
+                    message="Authentication failed - still on login page"
                 )
 
             await browser.close()
