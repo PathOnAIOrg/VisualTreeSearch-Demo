@@ -48,7 +48,7 @@ async def connect_and_test_search(
         # Send search request
         request = {
             "type": "start_search",
-            "agent_type": "LATSAgent",
+            "agent_type": "SimpleSearchAgent",
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
@@ -105,7 +105,6 @@ async def connect_and_test_search(
                 
                 else:
                     logger.info(f"Received message of type {msg_type}")
-                    logger.info(f"Message: {data}")
                     
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("WebSocket connection closed")
@@ -129,8 +128,8 @@ def parse_arguments():
     parser.add_argument("--goal", type=str, default=DEFAULT_GOAL,
                         help=f"Goal to achieve (default: {DEFAULT_GOAL})")
     
-    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats"], default="lats",
-                        help="Search algorithm to use (default: lats)")
+    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs"], default="bfs",
+                        help="Search algorithm to use (default: bfs)")
     
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")

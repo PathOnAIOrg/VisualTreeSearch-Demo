@@ -8,6 +8,9 @@ from .config import AgentConfig
 from ..agents_async.SimpleSearchAgents.simple_search_agent import SimpleSearchAgent
 from ..agents_async.SimpleSearchAgents.lats_agent import LATSAgent
 from ..agents_async.SimpleSearchAgents.mcts_agent import MCTSAgent
+from ..agents_async.SearchAgents.simple_search_agent import SimpleSearchAgent as NewSimpleSearchAgent
+from ..agents_async.SearchAgents.lats_agent import LATSAgent as NewLATSAgent
+from ..agents_async.SearchAgents.mcts_agent import MCTSAgent as NewMCTSAgent
 from ..webagent_utils_async.utils.utils import setup_logger
 from ..webagent_utils_async.utils.playwright_manager import setup_playwright
 
@@ -95,6 +98,75 @@ async def setup_search_agent(
     elif agent_type == "MCTSAgent":
         print("MCTSAgent")
         agent = MCTSAgent(
+            starting_url=starting_url,
+            messages=messages,
+            goal=goal,
+            images = images,
+            playwright_manager=playwright_manager,
+            config=agent_config,
+        )
+    else:
+        error_message = f"Unsupported agent type: {agent_type}. Please use 'FunctionCallingAgent', 'HighLevelPlanningAgent', 'ContextAwarePlanningAgent', 'PromptAgent' or 'PromptSearchAgent' ."
+        logger.error(error_message)
+        return {"error": error_message}
+    return agent, playwright_manager
+
+
+async def new_setup_search_agent(
+    agent_type,
+    starting_url,
+    goal,
+    images,
+    agent_config: AgentConfig
+):
+    logger = setup_logger()
+
+    file_path = os.path.join(agent_config.log_folder, 'flow', 'steps.json')
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as file:
+        file.write(goal + '\n')
+        file.write(starting_url + '\n')
+
+    playwright_manager = await setup_playwright(
+        headless=agent_config.headless, 
+        mode=agent_config.browser_mode,
+        storage_state=agent_config.storage_state
+    )
+    # storage_state='state.json', headless=False, mode="chromium"
+
+    page = await playwright_manager.get_page()
+    await page.goto(starting_url)
+    # Maximize the window on macOS
+    # await page.set_viewport_size({"width": 1440, "height": 900})
+
+    messages = [{
+        "role": "system",
+        "content": SEARCH_AGENT_SYSTEM_PROMPT,
+    }]
+
+    if agent_type == "SimpleSearchAgent": 
+        print("SimpleSearchAgent")
+        agent = NewSimpleSearchAgent(
+            starting_url=starting_url,
+            messages=messages,
+            goal=goal,
+            images = images,
+            playwright_manager=playwright_manager,
+            config=agent_config,
+        )
+    elif agent_type == "LATSAgent":
+        print("LATSAgent")
+        agent = NewLATSAgent(
+            starting_url=starting_url,
+            messages=messages,
+            goal=goal,
+            images = images,
+            playwright_manager=playwright_manager,
+            config=agent_config,
+        )
+    elif agent_type == "MCTSAgent":
+        print("MCTSAgent")
+        agent = NewMCTSAgent(
             starting_url=starting_url,
             messages=messages,
             goal=goal,
