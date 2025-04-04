@@ -863,6 +863,7 @@ class LATSAgent:
                 "is_terminal": node.is_terminal,
                 "value": node.value,
                 "visits": node.visits,
+                "feedback": node.feedback,
                 "reward": node.reward
             }
             tree_data.append(node_data)
