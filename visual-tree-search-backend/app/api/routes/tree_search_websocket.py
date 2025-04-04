@@ -127,7 +127,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             # Use the agent's built-in WebSocket-enabled DFS method
             await agent.dfs_with_websocket(websocket)
         elif search_algorithm.lower() == "lats":
-            await agent.lats_search(websocket)
+            await agent.run(websocket)
         else:
             await websocket.send_json({
                 "type": "error",

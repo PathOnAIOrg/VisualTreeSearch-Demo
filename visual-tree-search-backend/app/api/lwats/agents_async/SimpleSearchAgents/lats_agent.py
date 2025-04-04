@@ -121,7 +121,7 @@ class LATSAgent:
                 "type": "search_complete",
                 "status": "success" if best_node.reward == 1 else "partial_success",
                 "score": best_node.reward,
-                "path": [{"id": id(node), "action": node.action} for node in best_node.get_trajectory()],
+                "path": best_node.get_trajectory(),
                 "timestamp": datetime.utcnow().isoformat()
             })
         
