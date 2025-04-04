@@ -37,6 +37,8 @@ from ...webagent_utils_async.evaluation.feedback import capture_post_action_feed
 
 openai_client = OpenAI()
 
+## TODO: add best_path_update
+
 class LATSAgent:
     """
     Language-based Action Tree Search Agent implementation.
@@ -117,6 +119,7 @@ class LATSAgent:
         print_trajectory(best_node)
         
         if websocket:
+            # TODO: use score instead of reward to determine success
             await websocket.send_json({
                 "type": "search_complete",
                 "status": "success" if best_node.reward == 1 else "partial_success",
@@ -158,7 +161,8 @@ class LATSAgent:
             if websocket:
                 await websocket.send_json({
                     "type": "step_start",
-                    "step": "selection",
+                    "step": 1,
+                    "step_name": "selection",
                     "iteration": i + 1,
                     "timestamp": datetime.utcnow().isoformat()
                 })
@@ -177,7 +181,8 @@ class LATSAgent:
             if websocket:
                 await websocket.send_json({
                     "type": "step_start",
-                    "step": "expansion",
+                    "step": 2,
+                    "step_name": "expansion",
                     "iteration": i + 1,
                     "timestamp": datetime.utcnow().isoformat()
                 })
@@ -206,6 +211,14 @@ class LATSAgent:
             # Step 3: Evaluation
             print(f"")
             print(f"{GREEN}Step 3: evaluation{RESET}")
+            if websocket:
+                await websocket.send_json({
+                    "type": "step_start",
+                    "step": 3,
+                    "step_name": "evaluation",
+                    "iteration": i + 1,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             await self.evaluate_node(node)
 
             print(f"{GREEN}Tree:{RESET}")
@@ -214,7 +227,14 @@ class LATSAgent:
 
             # Step 4: Simulation
             print(f"{GREEN}Step 4: simulation{RESET}")
-            # # Find the child with the highest value
+            if websocket:   
+                await websocket.send_json({
+                    "type": "step_start",
+                    "step": 4,
+                    "step_name": "simulation",
+                    "iteration": i + 1,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             ## always = 1
             reward, terminal_node = await self.simulate(max(node.children, key=lambda child: child.value), max_depth=self.config.max_depth, num_simulations=1)
             terminal_nodes.append(terminal_node)
@@ -224,6 +244,13 @@ class LATSAgent:
 
             # Step 5: Backpropagation
             print(f"{GREEN}Step 5: backpropagation{RESET}")
+            if websocket:
+                await websocket.send_json({
+                    "type": "step_start",
+                    "step": 5,
+                    "step_name": "backpropagation",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             self.backpropagate(terminal_node, reward)
             print(f"{GREEN}Tree:{RESET}")
             better_print(self.root_node)

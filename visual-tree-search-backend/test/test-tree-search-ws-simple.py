@@ -83,15 +83,14 @@ async def connect_and_test_search(
                     logger.info(f"Tree update received with {len(data.get('nodes', []))} nodes")
                 
                 elif msg_type == "best_path_update":
-                    logger.info(f"Best path update: score={data.get('score')}, path length={len(data.get('path', []))}")
+                    logger.info(f"Best path update: score={data.get('score')}, path={data.get('path')}")
                 
                 elif msg_type == "search_complete":
                     status = data.get("status")
                     score = data.get("score", "N/A")
-                    path_length = len(data.get("path", []))
+                    path = data.get("path")
                     
-                    logger.info(f"Search complete: {status}, score={score}, path length={path_length}")
-                    logger.info("Path actions:")
+                    logger.info(f"Search complete: {status}, score={score}, path={path}")
                     
                     for i, node in enumerate(data.get("path", [])):
                         logger.info(f"  {i+1}. {node.get('action')}")

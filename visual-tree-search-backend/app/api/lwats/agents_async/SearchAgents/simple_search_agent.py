@@ -627,6 +627,7 @@ class SimpleSearchAgent:
         queue_set = {self.root_node}  # Track nodes in queue
         best_score = float('-inf')
         best_path = None
+        best_node = None
         visited = set()  # Track visited nodes to avoid cycles
         current_level = 0  # Track current level for BFS
         
@@ -797,13 +798,14 @@ class SimpleSearchAgent:
                     if score > best_score:
                         best_score = score
                         best_path = path
-                        
+                        best_node = current_node
+
                         # Send best path update if websocket is provided
                         if websocket:
                             await websocket.send_json({
                                 "type": "best_path_update",
                                 "score": best_score,
-                                "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                                "path": best_node.get_trajectory(),
                                 "timestamp": datetime.utcnow().isoformat()
                             })
                         
@@ -819,7 +821,7 @@ class SimpleSearchAgent:
                                 "type": "search_complete",
                                 "status": "success",
                                 "score": score,
-                                "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                                "path":best_node.get_trajectory(),
                                 "timestamp": datetime.utcnow().isoformat()
                             })
                         
@@ -843,7 +845,7 @@ class SimpleSearchAgent:
                         "type": "search_complete",
                         "status": "partial_success",
                         "score": best_score,
-                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                        "path": best_node.get_trajectory(),
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 
@@ -892,6 +894,7 @@ class SimpleSearchAgent:
         stack_set = {self.root_node}  # Track nodes in stack
         best_score = float('-inf')
         best_path = None
+        best_node = None
         visited = set()  # Track visited nodes to avoid cycles
         current_path = []  # Track current path for DFS
         
@@ -1025,13 +1028,14 @@ class SimpleSearchAgent:
                 if score > best_score:
                     best_score = score
                     best_path = path
+                    best_node = current_node
                     
                     # Send best path update if websocket is provided
                     if websocket:
                         await websocket.send_json({
                             "type": "best_path_update",
                             "score": best_score,
-                            "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                            "path": best_node.get_trajectory(),
                             "timestamp": datetime.utcnow().isoformat()
                         })
                     
@@ -1047,7 +1051,7 @@ class SimpleSearchAgent:
                             "type": "search_complete",
                             "status": "success",
                             "score": score,
-                            "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                            "path": best_node.get_trajectory(),
                             "timestamp": datetime.utcnow().isoformat()
                         })
                     
@@ -1095,7 +1099,7 @@ class SimpleSearchAgent:
                         "type": "search_complete",
                         "status": "partial_success",
                         "score": best_score,
-                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                        "path": best_node.get_trajectory(),
                         "timestamp": datetime.utcnow().isoformat()
                     })
                 

@@ -70,6 +70,12 @@ async def connect_and_test_search(
                 if msg_type == "status_update":
                     logger.info(f"Status update: {data.get('status')} - {data.get('message')}")
                 
+                elif msg_type == "iteration_start":
+                    logger.info(f"Iteration start: {data.get('iteration')}")
+
+                elif msg_type == "step_start":
+                    logger.info(f"Step start: {data.get('step')} - {data.get('step_name')}")
+                
                 elif msg_type == "node_update":
                     node_id = data.get("node_id")
                     status = data.get("status")
