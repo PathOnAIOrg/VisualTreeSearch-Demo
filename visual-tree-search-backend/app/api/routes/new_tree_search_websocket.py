@@ -16,7 +16,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 # Import necessary components for the search agent
 from ..lwats.webagent_utils_async.utils.playwright_manager import setup_playwright
 from ..lwats.core_async.config import AgentConfig
-from ..lwats.core_async.agent_factory import setup_search_agent
+from ..lwats.core_async.agent_factory import new_setup_search_agent
 from ..lwats.agents_async.SimpleSearchAgents.tree_vis import collect_all_nodes
 from ..lwats.agents_async.SimpleSearchAgents.trajectory_score import create_llm_prompt, score_trajectory_with_openai
 
@@ -26,7 +26,7 @@ router = APIRouter()
 active_connections: Dict[str, WebSocket] = {}
 
 # This is the function that will be called from main.py
-async def tree_search_websocket_endpoint(websocket: WebSocket):
+async def new_tree_search_websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for tree search visualization and control"""
     await websocket.accept()
     connection_id = str(id(websocket))
@@ -103,7 +103,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         })
         
         # Setup playwright and agent
-        agent, playwright_manager = await setup_search_agent(
+        agent, playwright_manager = await new_setup_search_agent(
             agent_type=agent_type,
             starting_url=starting_url,
             goal=goal,

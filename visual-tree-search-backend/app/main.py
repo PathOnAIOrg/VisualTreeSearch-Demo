@@ -54,6 +54,7 @@ app.include_router(terminate_session_router, prefix="/api/terminate-session", ta
 from app.api.routes.websocket import websocket_endpoint
 from app.api.routes.tree_websocket import tree_websocket_endpoint
 from app.api.routes.tree_search_websocket import tree_search_websocket_endpoint
+from app.api.routes.new_tree_search_websocket import new_tree_search_websocket_endpoint
 # Register the WebSocket endpoints
 @app.websocket("/ws")
 async def websocket_route(websocket: WebSocket):
@@ -66,6 +67,10 @@ async def tree_websocket_route(websocket: WebSocket):
 @app.websocket("/tree-search-ws")
 async def tree_search_websocket_route(websocket: WebSocket):
     await tree_search_websocket_endpoint(websocket)
+
+@app.websocket("/new-tree-search-ws")
+async def new_tree_search_websocket_route(websocket: WebSocket):
+    await new_tree_search_websocket_endpoint(websocket)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 3000))

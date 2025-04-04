@@ -17,6 +17,8 @@ import re
 import base64
 import asyncio
 from datetime import datetime
+from .obs import flatten_axtree_to_str, flatten_dom_to_str
+from .extract_elements import flatten_interactive_elements_to_str
 
 MARK_FRAMES_MAX_TRIES = 3
 
@@ -481,3 +483,47 @@ async def extract_focused_element_bid(page: playwright.async_api.Page):
             frame = None
 
     return focused_bid
+
+
+ACCESSIBILITY_FEATURE_TEMPLATE = \
+"""# Current Accessibility Tree:
+{axtree_str}
+"""
+
+INTERACTIVE_ELEMENTS_TEMPLATE = \
+"""# Interactive elements:
+{interactive_elements_str}
+"""
+
+DOM_FEATURE_TEMPLATE = \
+"""# Current DOM:
+{dom_str}
+"""
+
+async def observe_features(page_info, features, elements_filter, log_folder, fullpage=True):
+    filter_som_only = False if fullpage else elements_filter == "som"
+    filter_visible_only = elements_filter == "visibility"
+
+    feature_texts = []
+    if "axtree" in features:
+        axtree_str = flatten_axtree_to_str(page_info.get('axtree', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
+        feature_texts.append(ACCESSIBILITY_FEATURE_TEMPLATE.format(axtree_str=axtree_str))
+
+    if "interactive_elements" in features:
+        interactive_elements_str = flatten_interactive_elements_to_str(page_info.get('interactive_elements', ''))
+        feature_texts.append(INTERACTIVE_ELEMENTS_TEMPLATE.format(interactive_elements_str=interactive_elements_str))
+
+    if "dom" in features:
+        dom_str = flatten_dom_to_str(page_info.get('dom', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
+        feature_texts.append(DOM_FEATURE_TEMPLATE.format(dom_str=dom_str))
+
+    feature_text = "\n".join(feature_texts)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"feature_{timestamp}.txt"
+    file_path = os.path.join(log_folder, 'prompt', filename)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w', encoding='utf8') as file:
+        file.write(feature_text)
+
+    return feature_text
