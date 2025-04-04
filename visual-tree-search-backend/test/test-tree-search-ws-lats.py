@@ -85,8 +85,11 @@ async def connect_and_test_search(
                     if status == "scored":
                         logger.info(f"Node score: {data.get('score')}")
                 
+                elif msg_type == "trajectory_update":
+                    logger.info(f"Trajectory update received with {data.get('trajectory')}")
+                
                 elif msg_type == "tree_update":
-                    logger.info(f"Tree update received with {len(data.get('nodes', []))} nodes")
+                    logger.info(f"Tree update received with {data.get('tree')}")
                 
                 elif msg_type == "best_path_update":
                     logger.info(f"Best path update: score={data.get('score')}, path length={len(data.get('path', []))}")
