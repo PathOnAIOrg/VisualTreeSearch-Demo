@@ -2,8 +2,12 @@
 
 import time
 from typing import Any, Optional, Tuple, List
-
+import os
 from openai import OpenAI
+from datetime import datetime
+import aiohttp
+from dotenv import load_dotenv
+load_dotenv()
 
 from .lats_node import LATSNode, Observation
 from ...core_async.config import AgentConfig
@@ -12,7 +16,6 @@ from ...webagent_utils_async.action.highlevel import HighLevelActionSet
 from ...webagent_utils_async.utils.playwright_manager import AsyncPlaywrightManager, setup_playwright
 from .tree_vis import RED, better_print, print_trajectory, collect_all_nodes, GREEN, RESET, print_entire_tree
 from .trajectory_score import create_llm_prompt, score_trajectory_with_openai
-# from ...replay import locate_element_from_action, step_execution
 from ...replay_async import generate_feedback, playwright_step_execution, locate_element_from_action
 from ...webagent_utils_async.browser_env.observation import extract_page_info, observe_features
 from ...webagent_utils_async.action.prompt_functions import generate_actions_with_observation
@@ -22,7 +25,6 @@ from ...webagent_utils_async.utils.utils import urls_to_images
 
 from ...webagent_utils_async.utils.utils import parse_function_args, locate_element
 from ...evaluation_async.evaluators import goal_finished_evaluator
-# from ...replay import playwright_step_execution, generate_feedback
 from ...webagent_utils_async.action.prompt_functions import extract_top_actions
 from ...webagent_utils_async.browser_env.observation import extract_page_info
 from .lats_node import LATSNode
@@ -91,22 +93,47 @@ class LATSAgent:
         )
         self.goal_finished = False
         self.result_node = None
+        self.reset_url = os.environ["ACCOUNT_RESET_URL"]
 
-    async def run(self) -> list[LATSNode]:
+    async def run(self, websocket=None) -> list[LATSNode]:
         """
         Run the LATS search and return the best path found.
         
+        Args:
+            websocket: Optional WebSocket connection for sending updates
+            
         Returns:
             list[LATSNode]: Best path from root to terminal node
         """
-        best_node = await self.lats_search()
+        if websocket:
+            await websocket.send_json({
+                "type": "search_status",
+                "status": "started",
+                "message": "Starting LATS search",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        best_node = await self.lats_search(websocket)
         print_trajectory(best_node)
+        
+        if websocket:
+            await websocket.send_json({
+                "type": "search_complete",
+                "status": "success" if best_node.reward == 1 else "partial_success",
+                "score": best_node.reward,
+                "path": [{"id": id(node), "action": node.action} for node in best_node.get_trajectory()],
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
         return best_node.get_trajectory()
 
-    async def lats_search(self) -> LATSNode:
+    async def lats_search(self, websocket=None) -> LATSNode:
         """
         Perform the main LATS search algorithm.
         
+        Args:
+            websocket: Optional WebSocket connection for sending updates
+            
         Returns:
             LATSNode: Best terminal node found
         """        
@@ -116,13 +143,26 @@ class LATSAgent:
         terminal_nodes = []
 
         for i in range(self.config.iterations):
+            if websocket:
+                await websocket.send_json({
+                    "type": "iteration_start",
+                    "iteration": i + 1,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
             print(f"")
             print(f"")
             print(f"Iteration {i + 1}...")
             
-            # Step 1: Selection
-            print(f"")
-            print(f"{GREEN}Step 1: selection{RESET}")
+            # Step 1: Selection with websocket update
+            if websocket:
+                await websocket.send_json({
+                    "type": "step_start",
+                    "step": "selection",
+                    "iteration": i + 1,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
             node = self.select_node(self.root_node)
 
             if node is None:
@@ -133,16 +173,22 @@ class LATSAgent:
             better_print(node=self.root_node, selected_node=node)
             print(f"")
 
-            # Step 2: Expansion
-            print(f"")
-            print(f"{GREEN}Step 2: expansion{RESET}")
-            await self.expand_node(node)
+            # Step 2: Expansion with websocket update
+            if websocket:
+                await websocket.send_json({
+                    "type": "step_start",
+                    "step": "expansion",
+                    "iteration": i + 1,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
+            await self.expand_node(node, websocket)
 
             while node is not None and node.is_terminal and not self.goal_finished:
                 print(f"Depth limit node found at iteration {i + 1}, reselecting...")
                 node = self.select_node(self.root_node)
                 if node is not None:
-                    await self.expand_node(node)
+                    await self.expand_node(node, websocket)
 
             if node is None:
                 # all the nodes are terminal, stop the search
@@ -183,6 +229,15 @@ class LATSAgent:
             better_print(self.root_node)
             print(f"")
 
+            # Send tree update after each iteration
+            if websocket:
+                tree_data = self._get_tree_data()
+                await websocket.send_json({
+                    "type": "tree_update",
+                    "tree": tree_data,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+
         # Find best node
         all_nodes_list = collect_all_nodes(self.root_node)
         all_nodes_list.extend(terminal_nodes)
@@ -212,20 +267,43 @@ class LATSAgent:
             return None
         return node.get_best_leaf()
 
-    async def expand_node(self, node: LATSNode) -> None:
+    async def expand_node(self, node: LATSNode, websocket=None) -> None:
         """
         Expand a node by generating its children.
         
         Args:
             node: Node to expand
+            websocket: Optional WebSocket connection for sending updates
         """
-        children = await self.generate_children(node)
+        if websocket:
+            await websocket.send_json({
+                "type": "node_expanding",
+                "node_id": id(node),
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        children = await self.generate_children(node, websocket)
 
         for child in children:
             node.add_child(child)
+            if websocket:
+                await websocket.send_json({
+                    "type": "node_created",
+                    "node_id": id(child),
+                    "parent_id": id(node),
+                    "action": child.action,
+                    "description": child.natural_language_description,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
 
         if children and children[0].goal_finish_feedback.is_done:
             self.set_goal_finished(children[0])
+            if websocket:
+                await websocket.send_json({
+                    "type": "goal_finished",
+                    "node_id": id(children[0]),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             return
         
         node.check_terminal()
@@ -424,17 +502,104 @@ class LATSAgent:
             node.value = (node.value * (node.visits - 1) + value) / node.visits
             node = node.parent
 
-    async def _reset_browser(self) -> None:
-        """Reset the browser to initial state."""
+    async def _reset_browser(self, websocket=None) -> Optional[str]:
+        """Reset the browser to initial state and return the live browser URL if available."""
         await self.playwright_manager.close()
-        self.playwright_manager = await setup_playwright(
-            headless=self.config.headless,
-            mode=self.config.browser_mode,
-            storage_state=self.config.storage_state,
-            # log_folder=self.config.log_folder,
-        )
-        page = await self.playwright_manager.get_page()
-        await page.goto(self.starting_url, wait_until="networkidle")
+        
+        ## reset account using api-based account reset
+        if self.config.account_reset:
+            if websocket:
+                await websocket.send_json({
+                    "type": "account_reset",
+                    "status": "started",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
+            try:
+                # Use aiohttp instead of curl
+                async with aiohttp.ClientSession() as session:
+                    headers = {'Connection': 'close'}  # Similar to curl -N
+                    async with session.get(self.reset_url, headers=headers) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            print(f"Account reset successful: {data}")
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "account_reset",
+                                    "status": "success",
+                                    "data": data,
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                        else:
+                            error_msg = f"Account reset failed with status {response.status}"
+                            print(error_msg)
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "account_reset",
+                                    "status": "failed",
+                                    "reason": error_msg,
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
+                            
+            except Exception as e:
+                print(f"Error during account reset: {e}")
+                if websocket:
+                    await websocket.send_json({
+                        "type": "account_reset",
+                        "status": "failed",
+                        "reason": str(e),
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+
+        try:
+            # Create new playwright manager
+            self.playwright_manager = await setup_playwright(
+                storage_state=self.config.storage_state,
+                headless=self.config.headless,
+                mode=self.config.browser_mode
+            )
+            page = await self.playwright_manager.get_page()
+            live_browser_url = None
+            if self.config.browser_mode == "browserbase":
+                live_browser_url = await self.playwright_manager.get_live_browser_url()
+                session_id = await self.playwright_manager.get_session_id()
+            else:
+                session_id = None
+                live_browser_url = None
+            await page.goto(self.starting_url, wait_until="networkidle")
+            
+            # Send success message if websocket is provided
+            if websocket:
+                if self.config.storage_state:
+                    await websocket.send_json({
+                        "type": "browser_setup",
+                        "status": "success",
+                        "message": f"Browser successfully initialized with storage state file: {self.config.storage_state}",
+                        "live_browser_url": live_browser_url,
+                        "session_id": session_id,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "browser_setup",
+                        "status": "success",
+                        "message": "Browser successfully initialized",
+                        "live_browser_url": live_browser_url,
+                        "session_id": session_id,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+            
+            return live_browser_url, session_id
+        except Exception as e:
+            print(f"Error setting up browser: {e}")
+            if websocket:
+                await websocket.send_json({
+                    "type": "browser_setup",
+                    "status": "failed",
+                    "reason": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            return None, None
 
     async def observe(self) -> None:
         page = await self.playwright_manager.get_page()
@@ -520,7 +685,7 @@ class LATSAgent:
             valid_actions.append(action_data)
         return valid_actions
 
-    async def generate_children(self, node: LATSNode) -> list[LATSNode]:
+    async def generate_children(self, node: LATSNode, websocket=None) -> list[LATSNode]:
         print(f"{GREEN}-- generating candidate actions...{RESET}")
 
         children = []
@@ -588,3 +753,24 @@ class LATSAgent:
             path.append(current)
             current = current.parent
         return list(reversed(path))
+
+    def _get_tree_data(self):
+        """Get tree data in a format suitable for visualization"""
+        nodes = collect_all_nodes(self.root_node)
+        tree_data = []
+        
+        for node in nodes:
+            node_data = {
+                "id": id(node),
+                "parent_id": id(node.parent) if node.parent else None,
+                "action": node.action if node.action else "ROOT",
+                "description": node.natural_language_description,
+                "depth": node.depth,
+                "is_terminal": node.is_terminal,
+                "value": node.value,
+                "visits": node.visits,
+                "reward": node.reward
+            }
+            tree_data.append(node_data)
+        
+        return tree_data

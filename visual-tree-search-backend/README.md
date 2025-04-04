@@ -83,3 +83,11 @@ python run_demo_treesearch_async.py \
     --iterations 3 \
     --max_depth 3
 ```
+
+## 7. Add LATS agent
+* test run_demo_treesearch_async.py
+* test web socket
+```
+uvicorn app.main:app --host 0.0.0.0 --port 3000
+python test/test-tree-search-ws-lats.py
+```
