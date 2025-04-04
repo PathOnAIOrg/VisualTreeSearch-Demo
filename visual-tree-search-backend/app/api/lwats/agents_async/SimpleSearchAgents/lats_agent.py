@@ -275,7 +275,7 @@ class LATSAgent:
         print_entire_tree(self.root_node)
         return await self.rollout(node, max_depth=max_depth)
     
-    def send_completion_request(self, plan, depth, node, trajectory=[]):
+    async def send_completion_request(self, plan, depth, node, trajectory=[]):
         print("print the trajectory")
         print_trajectory(node)
         print("print the entire tree")
@@ -284,12 +284,12 @@ class LATSAgent:
         if depth >= self.config.max_depth:
             return trajectory, node
 
-        context = self.playwright_manager.get_context()
-        page = self.playwright_manager.get_page()
+        context = await self.playwright_manager.get_context()
+        page = await self.playwright_manager.get_page()
         # Extract page information
         time.sleep(3)
-        page_info = extract_page_info(page, fullpage=True, log_folder=self.config.log_folder)
-        updated_actions = extract_top_actions(
+        page_info = await extract_page_info(page, fullpage=True, log_folder=self.config.log_folder)
+        updated_actions = await extract_top_actions(
             trajectory, self.goal, self.images, page_info, self.action_set, openai_client,
             features=["axtree"], elements_filter="som", branching_factor=self.config.branching_factor,
             log_folder=self.config.log_folder, fullpage=True,
@@ -297,7 +297,7 @@ class LATSAgent:
             action_grounding_model=self.config.action_grounding_model
         )
         next_action = updated_actions[0]
-        retry_count = self.config.retry_count if hasattr(self.config, 'retry_count') else 3  # Default retries if not set
+        retry_count = self.config.retry_count if hasattr(self.config, 'retry_count') else 1  # Default retries if not set
         
         for attempt in range(retry_count):
             try:
@@ -308,13 +308,13 @@ class LATSAgent:
                 if len(function_calls) == 1:
                     for function_name, function_args in function_calls:
                         extracted_number = parse_function_args(function_args)
-                        element = locate_element(page, extracted_number)
+                        element = await locate_element(page, extracted_number)
                         next_action["element"] = element
                 
                 # Execute action
-                execute_action(next_action, self.action_set, page, context, self.goal, page_info['interactive_elements'],
+                await execute_action(next_action, self.action_set, page, context, self.goal, page_info['interactive_elements'],
                             self.config.log_folder)
-                feedback = capture_post_action_feedback(page, next_action, self.goal, self.config.log_folder)
+                feedback = await capture_post_action_feedback(page, next_action, self.goal, self.config.log_folder)
                 trajectory.append({'action': next_action['action'], 'feedback': feedback})
                 action_str = next_action["action"]
 
@@ -328,7 +328,7 @@ class LATSAgent:
                     messages.append({"role": "user", "content": 'action is: {}'.format(action)})
                     messages.append({"role": "user", "content": 'action feedback is: {}'.format(feedback)})
 
-                goal_finished = is_goal_finished(messages, openai_client)
+                goal_finished = await is_goal_finished(messages, openai_client)
 
                 new_node = LATSNode(
                     natural_language_description=next_action["natural_language_description"],
@@ -342,22 +342,22 @@ class LATSAgent:
                 if goal_finished:
                     return trajectory, new_node
 
-                return self.send_completion_request(plan, depth + 1, new_node, trajectory)
+                return await self.send_completion_request(plan, depth + 1, new_node, trajectory)
 
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed with error: {e}")
                 if attempt + 1 == retry_count:
                     print("Max retries reached. Skipping this step and retrying the whole request.")
                     # Retry the entire request from the same state
-                    return self.send_completion_request(plan, depth, node, trajectory)
+                    return await self.send_completion_request(plan, depth, node, trajectory)
 
         # If all retries and retries of retries fail, return the current trajectory and node
         return trajectory, node
 
     
-    def rollout(self, node: LATSNode, max_depth: int = 2)-> tuple[float, LATSNode]:
+    async def rollout(self, node: LATSNode, max_depth: int = 2)-> tuple[float, LATSNode]:
         # Reset browser state
-        self._reset_browser()
+        await self._reset_browser()
         path = self.get_path_to_root(node)
         
         print("execute path")
@@ -367,7 +367,7 @@ class LATSAgent:
         trajectory = []
   
         for n in path[1:]:  # Skip root node
-            success = playwright_step_execution(
+            success = await playwright_step_execution(
                 n, 
                 self.goal, 
                 self.playwright_manager, 
@@ -377,7 +377,7 @@ class LATSAgent:
             if not success:
                 return 0, n
             if not n.feedback:
-                n.feedback = generate_feedback(
+                n.feedback = await generate_feedback(
                     self.goal,
                     n.natural_language_description,
                     self.playwright_manager,
@@ -389,14 +389,14 @@ class LATSAgent:
         ## call the prompt agent
         print("current depth: ", len(path) - 1)
         print("max depth: ", self.config.max_depth)
-        trajectory, node = self.send_completion_request(self.goal, len(path) - 1, node=n, trajectory=trajectory)
+        trajectory, node = await self.send_completion_request(self.goal, len(path) - 1, node=n, trajectory=trajectory)
         print("print the trajectory")
         print_trajectory(node)
         print("print the entire tree")
         print_entire_tree(self.root_node)
 
-        page = self.playwright_manager.get_page()
-        page_info = extract_page_info(page, self.config.fullpage, self.config.log_folder)
+        page = await self.playwright_manager.get_page()
+        page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
         goal_finished, confidence_score = goal_finished_evaluator(
@@ -467,7 +467,7 @@ class LATSAgent:
             temp_node = LATSNode(
                 natural_language_description=action_data["natural_language_description"],
                 action=action_data["action"],
-                prob=action_data["prob"],
+                prob=0,
                 element=action_data["element"],
                 goal=self.goal,
                 parent=None  # No parent needed for temporary node
