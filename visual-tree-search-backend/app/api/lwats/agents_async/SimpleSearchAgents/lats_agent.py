@@ -1,6 +1,5 @@
 """Language-based Action Tree Search (LATS) Agent implementation."""
 
-import logging
 import time
 from typing import Any, Optional, Tuple, List
 
@@ -34,7 +33,6 @@ from ...webagent_utils_async.action.prompt_functions import extract_top_actions,
 from ...webagent_utils_async.browser_env.observation import extract_page_info
 from ...webagent_utils_async.evaluation.feedback import capture_post_action_feedback
 
-logger = logging.getLogger(__name__)
 openai_client = OpenAI()
 
 class LATSAgent:
@@ -101,35 +99,34 @@ class LATSAgent:
         Returns:
             list[LATSNode]: Best path from root to terminal node
         """
-        pass
-        # best_node = self.lats_search()
-        # print_trajectory(best_node)
-        # return best_node.get_trajectory()
+        best_node = await self.lats_search()
+        print_trajectory(best_node)
+        return best_node.get_trajectory()
 
-    def lats_search(self) -> LATSNode:
+    async def lats_search(self) -> LATSNode:
         """
         Perform the main LATS search algorithm.
         
         Returns:
             LATSNode: Best terminal node found
         """        
-        logger.info(f"")
-        logger.info(f"{GREEN}START SEARCH{RESET}")
+        print(f"")
+        print(f"{GREEN}START SEARCH{RESET}")
 
         terminal_nodes = []
 
         for i in range(self.config.iterations):
-            logger.info(f"")
-            logger.info(f"")
-            logger.info(f"Iteration {i + 1}...")
+            print(f"")
+            print(f"")
+            print(f"Iteration {i + 1}...")
             
             # Step 1: Selection
-            logger.info(f"")
-            logger.info(f"{GREEN}Step 1: selection{RESET}")
+            print(f"")
+            print(f"{GREEN}Step 1: selection{RESET}")
             node = self.select_node(self.root_node)
 
             if node is None:
-                logger.info("All paths lead to terminal nodes with reward 0. Ending search.")
+                print("All paths lead to terminal nodes with reward 0. Ending search.")
                 break
 
             print(f"{GREEN}Tree:{RESET}")
@@ -137,23 +134,23 @@ class LATSAgent:
             print(f"")
 
             # Step 2: Expansion
-            logger.info(f"")
-            logger.info(f"{GREEN}Step 2: expansion{RESET}")
-            self.expand_node(node)
+            print(f"")
+            print(f"{GREEN}Step 2: expansion{RESET}")
+            await self.expand_node(node)
 
             while node is not None and node.is_terminal and not self.goal_finished:
-                logger.info(f"Depth limit node found at iteration {i + 1}, reselecting...")
+                print(f"Depth limit node found at iteration {i + 1}, reselecting...")
                 node = self.select_node(self.root_node)
                 if node is not None:
-                    self.expand_node(node)
+                    await self.expand_node(node)
 
             if node is None:
                 # all the nodes are terminal, stop the search
-                logger.info(f"{RED}All nodes are terminal, stopping search{RESET}")
+                print(f"{RED}All nodes are terminal, stopping search{RESET}")
                 break
 
             if self.goal_finished:
-                logger.info(f"{RED}Goal finished, stopping search{RESET}")
+                print(f"{RED}Goal finished, stopping search{RESET}")
                 break
             
             print(f"{GREEN}Tree:{RESET}")
@@ -161,35 +158,26 @@ class LATSAgent:
             print(f"")
 
             # Step 3: Evaluation
-            logger.info(f"")
-            logger.info(f"{GREEN}Step 3: evaluation{RESET}")
-            self.evaluate_node(node)
+            print(f"")
+            print(f"{GREEN}Step 3: evaluation{RESET}")
+            await self.evaluate_node(node)
 
             print(f"{GREEN}Tree:{RESET}")
             better_print(self.root_node)
             print(f"")
 
             # Step 4: Simulation
-            logger.info(f"{GREEN}Step 4: simulation{RESET}")
+            print(f"{GREEN}Step 4: simulation{RESET}")
             # # Find the child with the highest value
             ## always = 1
-            reward, terminal_node = self.simulate(max(node.children, key=lambda child: child.value), max_depth=self.config.max_depth, num_simulations=1)
+            reward, terminal_node = await self.simulate(max(node.children, key=lambda child: child.value), max_depth=self.config.max_depth, num_simulations=1)
             terminal_nodes.append(terminal_node)
 
             if reward == 1:
                 return terminal_node
 
-
-            # print(f"{GREEN}Tree:{RESET}")
-            # better_print(self.root_node, selected_node=terminal_node)
-            # print(f"")
-
-            # if self.goal_finished:
-            #     logger.info(f"{RED}Goal finished, stopping search{RESET}")
-            #     break
-
             # Step 5: Backpropagation
-            logger.info(f"{GREEN}Step 5: backpropagation{RESET}")
+            print(f"{GREEN}Step 5: backpropagation{RESET}")
             self.backpropagate(terminal_node, reward)
             print(f"{GREEN}Tree:{RESET}")
             better_print(self.root_node)
@@ -203,10 +191,10 @@ class LATSAgent:
         best_child = max(all_nodes_list, key=lambda x: (x.reward, x.depth))
         
         if best_child.reward == 1:
-            logger.info("Successful trajectory found")
+            print("Successful trajectory found")
         else:
-            logger.info("Unsuccessful trajectory found")
-        self.playwright_manager.close()
+            print("Unsuccessful trajectory found")
+        await self.playwright_manager.close()
             
         return best_child if best_child is not None else self.root_node
 
@@ -224,14 +212,14 @@ class LATSAgent:
             return None
         return node.get_best_leaf()
 
-    def expand_node(self, node: LATSNode) -> None:
+    async def expand_node(self, node: LATSNode) -> None:
         """
         Expand a node by generating its children.
         
         Args:
             node: Node to expand
         """
-        children = self.generate_children(node)
+        children = await self.generate_children(node)
 
         for child in children:
             node.add_child(child)
@@ -242,7 +230,7 @@ class LATSAgent:
         
         node.check_terminal()
 
-    def evaluate_node(self, node: LATSNode) -> None:
+    async def evaluate_node(self, node: LATSNode) -> None:
         """
         Evaluate a node using LLM scoring.
         
@@ -253,23 +241,23 @@ class LATSAgent:
             float: Evaluation score
         """
         scores = []
-        logger.info(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
+        print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
         for i, child in enumerate(node.children):
-            logger.info(f"{GREEN}--- evaluating child {i+1}...{RESET}")
+            print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
             if child.is_terminal:
                 score = 0
             else:
                 trajectory = child.get_trajectory()
                 prompt = create_llm_prompt(trajectory, self.goal)
                 result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model, child.observation.image)
-                score = result["score"]/10
+                score = result["overall_score"]
             scores.append(score)
 
         for child, score in zip(node.children, scores):
             child.value = score
             child.reward = score
 
-    def simulate(self, node: LATSNode, max_depth: int = 2, num_simulations=1) -> tuple[float, LATSNode]:
+    async def simulate(self, node: LATSNode, max_depth: int = 2, num_simulations=1) -> tuple[float, LATSNode]:
         """
         Perform a rollout simulation from a node.
         
@@ -285,7 +273,7 @@ class LATSAgent:
         print_trajectory(node)
         print("print the entire tree")
         print_entire_tree(self.root_node)
-        return self.rollout(node, max_depth=max_depth)
+        return await self.rollout(node, max_depth=max_depth)
     
     def send_completion_request(self, plan, depth, node, trajectory=[]):
         print("print the trajectory")
@@ -436,22 +424,22 @@ class LATSAgent:
             node.value = (node.value * (node.visits - 1) + value) / node.visits
             node = node.parent
 
-    def _reset_browser(self) -> None:
+    async def _reset_browser(self) -> None:
         """Reset the browser to initial state."""
-        self.playwright_manager.close()
-        self.playwright_manager = setup_playwright(
+        await self.playwright_manager.close()
+        self.playwright_manager = await setup_playwright(
             headless=self.config.headless,
             mode=self.config.browser_mode,
             storage_state=self.config.storage_state,
-            log_folder=self.config.log_folder,
+            # log_folder=self.config.log_folder,
         )
-        page = self.playwright_manager.get_page()
-        page.goto(self.starting_url, wait_until="networkidle")
+        page = await self.playwright_manager.get_page()
+        await page.goto(self.starting_url, wait_until="networkidle")
 
-    def observe(self) -> None:
-        page = self.playwright_manager.get_page()
-        page_info = extract_page_info(page, self.config.fullpage, self.config.log_folder)
-        feature_text = observe_features(
+    async def observe(self) -> None:
+        page = await self.playwright_manager.get_page()
+        page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
+        feature_text = await observe_features(
             page_info, 
             features=self.config.features,
             elements_filter=self.config.elements_filter,
@@ -465,26 +453,47 @@ class LATSAgent:
         )
         return observation
 
-    def execute_action_trajectory(self, action_trajectory: list[dict]) -> None:
+    async def execute_action_trajectory(self, action_trajectory: list[dict]) -> None:
         if not action_trajectory:
             return True
 
-        self._reset_browser()
+        await self._reset_browser()
+        print("taking action trajectory")
         for action_data in action_trajectory:
-            success = step_execution(action_data, self.playwright_manager, self.config.log_folder)
+            print("action_data")
+            print(action_data)
+            
+            # Convert action_data dict to LATSNode
+            temp_node = LATSNode(
+                natural_language_description=action_data["natural_language_description"],
+                action=action_data["action"],
+                prob=action_data["prob"],
+                element=action_data["element"],
+                goal=self.goal,
+                parent=None  # No parent needed for temporary node
+            )
+            
+            success = await playwright_step_execution(
+                temp_node,  # Pass the node instead of raw action_data
+                self.goal,
+                self.playwright_manager,
+                is_replay=False,
+                log_folder=self.config.log_folder
+            )
+            
             if not success:
                 return False
         return True
 
-    def generate_candidate_actions(self, node: LATSNode) -> list[dict]:
+    async def generate_candidate_actions(self, node: LATSNode) -> list[dict]:
         trajectory = node.get_trajectory()
         action_trajectory = node.get_action_trajectory()
-        self.execute_action_trajectory(action_trajectory)
-        observation = self.observe()
+        await self.execute_action_trajectory(action_trajectory)
+        observation = await self.observe()
         # only root node has no observation at this point
         if node.observation is None:
             node.observation = observation
-        actions = generate_actions_with_observation(
+        actions = await generate_actions_with_observation(
             trajectory,
             self.goal,
             self.images,
@@ -497,13 +506,13 @@ class LATSAgent:
             action_generation_model=self.config.action_generation_model,
         )
 
-        page = self.playwright_manager.get_page()
+        page = await self.playwright_manager.get_page()
         valid_actions = []
         for action_data in actions:
             if action_data["action"] == "FINISH":
                 continue
 
-            is_bid_action, element_data = locate_element_from_action(page, action_data["action"])
+            is_bid_action, element_data = await locate_element_from_action(page, action_data["action"])
             if is_bid_action and not element_data:
                 continue
 
@@ -511,42 +520,42 @@ class LATSAgent:
             valid_actions.append(action_data)
         return valid_actions
 
-    def generate_children(self, node: LATSNode) -> list[LATSNode]:
-        logger.info(f"{GREEN}-- generating candidate actions...{RESET}")
+    async def generate_children(self, node: LATSNode) -> list[LATSNode]:
+        print(f"{GREEN}-- generating candidate actions...{RESET}")
 
         children = []
         
         action_trajectory = node.get_action_trajectory()
-        candidate_actions = self.generate_candidate_actions(node)
-        logger.info(f"{GREEN}-- generated {len(candidate_actions)} actions{RESET}")
+        candidate_actions = await self.generate_candidate_actions(node)
+        print(f"{GREEN}-- generated {len(candidate_actions)} actions{RESET}")
         for action_data in candidate_actions:
-            logger.info(f"{GREEN}--- {action_data['action']}{RESET}")
-            logger.info(f"{GREEN}--- {action_data['natural_language_description']}{RESET}")
+            print(f"{GREEN}--- {action_data['action']}{RESET}")
+            print(f"{GREEN}--- {action_data['natural_language_description']}{RESET}")
 
-        logger.info(f"")
-        logger.info(f"{GREEN}-- executing candidate trajectories{RESET}")
+        print(f"")
+        print(f"{GREEN}-- executing candidate trajectories{RESET}")
         for i, action_data in enumerate(candidate_actions):
 
             candidate_action_trajectory = action_trajectory + [action_data]
-            logger.info(f"{GREEN}--- trajectory {i+1}:{RESET}")
+            print(f"{GREEN}--- trajectory {i+1}:{RESET}")
             for action in candidate_action_trajectory:
-                logger.info(f"{GREEN}---- {action['action']}{RESET}")
-                logger.info(f"{GREEN}---- {action['natural_language_description']}{RESET}")
-            executed_successfully = self.execute_action_trajectory(candidate_action_trajectory)
+                print(f"{GREEN}---- {action['action']}{RESET}")
+                print(f"{GREEN}---- {action['natural_language_description']}{RESET}")
+            executed_successfully = await self.execute_action_trajectory(candidate_action_trajectory)
             if not executed_successfully:
                 # not executed successfully, give up this candidate
-                logger.info(f"{RED}--- failed to execute action trajectory{RESET}")
+                print(f"{RED}--- failed to execute action trajectory{RESET}")
                 continue
 
-            observation = self.observe()
-            logger.info(f"{GREEN}--- generate feedback...{RESET}")
-            feedback = generate_feedback_with_screenshot(
+            observation = await self.observe()
+            print(f"{GREEN}--- generate feedback...{RESET}")
+            feedback = await generate_feedback_with_screenshot(
                 self.goal,
                 action_data["natural_language_description"],
                 observation.image,
                 model=self.config.feedback_model,
             )
-            logger.info(f"feedback: is_done: {feedback.is_done}, explanation: {feedback.explanation}")
+            print(f"feedback: is_done: {feedback.is_done}, explanation: {feedback.explanation}")
 
             child = LATSNode(
                 natural_language_description=action_data["natural_language_description"],

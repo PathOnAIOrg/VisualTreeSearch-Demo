@@ -506,7 +506,7 @@ async def observe_features(page_info, features, elements_filter, log_folder, ful
 
     feature_texts = []
     if "axtree" in features:
-        axtree_str = await flatten_axtree_to_str(page_info.get('axtree', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
+        axtree_str = flatten_axtree_to_str(page_info.get('axtree', ''), extra_properties=page_info['extra_properties'], filter_som_only=filter_som_only, filter_visible_only=filter_visible_only)
         feature_texts.append(ACCESSIBILITY_FEATURE_TEMPLATE.format(axtree_str=axtree_str))
 
     if "interactive_elements" in features:
