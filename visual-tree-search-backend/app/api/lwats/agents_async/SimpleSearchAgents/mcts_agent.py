@@ -27,6 +27,7 @@ from .trajectory_score import create_llm_prompt, score_trajectory_with_openai
 from ...webagent_utils_async.utils.utils import urls_to_images
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO) 
 openai_client = OpenAI()
 
 class MCTSAgent:
@@ -183,6 +184,23 @@ class MCTSAgent:
                     except Exception as e:
                         logger.error(f"Error expanding node: {str(e)}")
                         current_node.is_terminal = True
+                # Expansion Step: Expand the selected node if possible
+                if not current_node.is_terminal and current_node.depth < self.config.max_depth:
+                    logger.info(f"\nExpansion Step:")
+                logger.info(f"Expanding node: {current_node.action}")
+                
+                expansion_success = await self.expand(current_node, None)
+                if not expansion_success:
+                    # No children were generated; backtrack if possible.
+                    if len(path) > 1:
+                        logger.info("Backtracking due to expansion failure (no children generated).")
+                        path.pop()          # Remove the current dead-end node.
+                        current_node = path[-1]  # Set current_node to its parent.
+                    else:
+                        logger.warning("Expansion failed at root; no further backtracking possible.")
+                        break
+                else:
+                    logger.info(f"Successfully expanded node with {len(current_node.children)} children")
                 
                 # Simulation: Evaluate the current path
                 logger.info(f"\nSimulation Step:")
@@ -217,8 +235,8 @@ class MCTSAgent:
                         logger.info(f"New best score: {score:.3f}")
                     
                     # Reflection-based backpropagation
-                    if score < 0.25:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.25):")
+                    if score < 0.75:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
                         
                         # Generate reflection prompt
                         reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
@@ -265,10 +283,10 @@ class MCTSAgent:
                         except Exception as e:
                             logger.error(f"Error in reflection: {str(e)}")
                     
-                    # # If we've found a satisfactory solution, return it
-                    # if score >= 0.75:
-                    #     logger.info(f"\nFound satisfactory solution with score {score:.3f}")
-                    #     return [{"action": node.action} for node in path[1:]]
+                    # If we've found a satisfactory solution, return it
+                    if score >= 0.75:
+                        logger.info(f"\nFound satisfactory solution with score {score:.3f}")
+                        return [{"action": node.action} for node in path[1:]]
                     
                 except Exception as e:
                     logger.error(f"Error in simulation: {str(e)}")
@@ -286,13 +304,13 @@ class MCTSAgent:
             
             # If we've exhausted all iterations and haven't found a perfect solution,
             # return the best path we found
-            if best_path:
+            if best_path and len(best_path) > 1:
                 logger.info(f"\nSearch complete. Returning best path found with score {best_score:.3f}")
                 return [{"action": node.action} for node in best_path[1:]]
-            
-            # If no path was found at all
-            logger.warning("\nNo valid path found")
-            return []
+
+            # If no valid path was found or path was just the root, return a default action
+            logger.warning("\nNo valid path found, returning fallback action")
+            return [{"action": "refresh()", "description": "Fallback action - no valid path found"}]
             
         except Exception as e:
             error_msg = f"Error in RMCTS search: {str(e)}"
@@ -500,8 +518,8 @@ class MCTSAgent:
                         })
                     
                     # Reflection-based backpropagation
-                    if score < 0.25:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.25):")
+                    if score < 0.75:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
                         
                         await websocket.send_json({
                             "type": "reflection_start",
@@ -568,20 +586,20 @@ class MCTSAgent:
                                 "timestamp": datetime.utcnow().isoformat()
                             })
                     
-                    # # If we've found a satisfactory solution, return it
-                    # if score >= 0.75:
-                    #     logger.info(f"\nFound satisfactory solution with score {score:.3f}")
+                    # If we've found a satisfactory solution, return it
+                    if score >= 0.75:
+                        logger.info(f"\nFound satisfactory solution with score {score:.3f}")
                         
-                    #     # Send completion update if websocket is provided
-                    #     await websocket.send_json({
-                    #         "type": "search_complete",
-                    #         "status": "success",
-                    #         "score": score,
-                    #         "path": [{"id": id(node), "action": node.action} for node in path[1:]],
-                    #         "timestamp": datetime.utcnow().isoformat()
-                    #     })
+                        # Send completion update if websocket is provided
+                        await websocket.send_json({
+                            "type": "search_complete",
+                            "status": "success",
+                            "score": score,
+                            "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                         
-                    #     return [{"action": node.action} for node in path[1:]]
+                        return [{"action": node.action} for node in path[1:]]
                     
                 except Exception as e:
                     logger.error(f"Error in simulation: {str(e)}")
@@ -611,7 +629,7 @@ class MCTSAgent:
             
             # If we've exhausted all iterations and haven't found a perfect solution,
             # return the best path we found
-            if best_path:
+            if best_path and len(best_path) > 1:
                 logger.info(f"\nSearch complete. Returning best path found with score {best_score:.3f}")
                 
                 # Send completion update if websocket is provided
@@ -635,8 +653,10 @@ class MCTSAgent:
                 "message": "No valid path found",
                 "timestamp": datetime.utcnow().isoformat()
             })
-            
-            return []
+                        
+            # If no valid path was found or path was just the root, return a default action
+            logger.warning("\nNo valid path found, returning fallback action")
+            return [{"action": "refresh()", "description": "Fallback action - no valid path found"}]
             
         except Exception as e:
             error_msg = f"Error in RMCTS search: {str(e)}"
@@ -753,48 +773,29 @@ class MCTSAgent:
                 })
             return None, None
             
-    async def expand(self, node: LATSNode, websocket=None) -> None:
+    async def expand(self, node: LATSNode, websocket=None) -> bool:
         """
-        Expand a node by generating its children.
+        Expand a node by generating its children. If no children are generated,
+        mark the node as terminal and return False to trigger backtracking.
         
         Args:
-            node: Node to expand
-            websocket: Optional WebSocket connection to send updates to
+            node: Node to expand.
+            websocket: Optional WebSocket connection to send updates.
+        
+        Returns:
+            bool: True if expansion succeeded (children generated), False otherwise.
         """
         try:
             children_state = await self.generate_children(node, websocket)
-            logger.info(f"Generated {len(children_state)} children for node: {node.action}")
         except Exception as e:
             logger.error(f"Exception during generation of children for node {node.action}: {e}")
             children_state = []
-                
-        # if not children_state:
-        #     logger.warning(f"No valid children found for node: {node.action}")
-        #     # Mark the node as terminal but don't halt the entire search
-        #     node.is_terminal = True
-        #     return
+
         if not children_state:
-            logger.warning("No valid children returned, creating fallback children")
-            children_state = [
-                {
-                    "natural_language_description": "Navigate back to try a different approach",
-                    "action": "navigate_backward()",
-                    "prob": 0.15,
-                    "element": None
-                },
-                {
-                    "natural_language_description": "Refresh the page to reinitialize search",
-                    "action": "refresh()",
-                    "prob": 0.1,
-                    "element": None
-                },
-                {
-                    "natural_language_description": "Click a random element for exploration",
-                    "action": "click('random')",
-                    "prob": 0.05,
-                    "element": None
-                }
-            ]
+            logger.warning("No children generated. Marking node as terminal and triggering backtracking.")
+            node.is_terminal = True
+            return False  # Indicate that expansion did not generate children.
+
         for child_state in children_state:
             try:
                 child = LATSNode(
@@ -818,6 +819,7 @@ class MCTSAgent:
                     })
             except Exception as e:
                 logger.error(f"Error creating child node from state {child_state}: {e}")
+        return True  # Expansion succeeded (children were generated).
                 
     async def generate_children(self, node: LATSNode, websocket=None) -> list[dict]:
         """
@@ -833,7 +835,7 @@ class MCTSAgent:
         # Reset browser and get live URL
         live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
-        
+        logger.info(f"######### Generating children for path with {len(path)} nodes")
         # Execute path
         for n in path[1:]:  # Skip root node
             if websocket:
@@ -843,23 +845,41 @@ class MCTSAgent:
                     "action": n.action,
                     "timestamp": datetime.utcnow().isoformat()
                 })
-            
-            success = await playwright_step_execution(
-                n,
-                self.goal,
-                self.playwright_manager,
-                is_replay=False,
-                log_folder=self.config.log_folder
-            )
-            if not success:
-                n.is_terminal = True
-                if websocket:
-                    await websocket.send_json({
-                        "type": "replay_failed",
-                        "node_id": id(n),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-                return []
+            try:
+                success = await playwright_step_execution(
+                    n,
+                    self.goal,
+                    self.playwright_manager,
+                    is_replay=False,
+                    log_folder=self.config.log_folder
+                )
+                logger.info(f"#########Success: {success}")
+
+                if not success:
+                    logger.warning(f"Action execution failed: {n.action}")
+                    n.is_terminal = True
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "replay_failed",
+                            "node_id": id(n),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    return [{
+                        "natural_language_description": "Recover from failed action",
+                        "action": "refresh()",
+                        "prob": 0.1,
+                        "element": None
+                    }]
+            except Exception as e:
+                logger.error(f"Error executing action {n.action}: {str(e)}")
+                # Provide fallback actions instead of bubbling up the exception
+                return [{
+                    "natural_language_description": "Recover from action error",
+                    "action": "refresh()",
+                    "prob": 0.1,
+                    "element": None
+                }]
+
             
             if not n.feedback:
                 n.feedback = await generate_feedback(
