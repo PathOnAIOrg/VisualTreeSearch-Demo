@@ -5,6 +5,8 @@ from ..webagent_utils_async.evaluation.evaluators import parse_oai_logprob
 
 import base64
 
+## TODO: move evaluator to webagent utils async, evaluation
+
 class IsGoalFinished(BaseModel):
     goal_finished: bool
 

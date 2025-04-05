@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Home, LayoutDashboard, Network, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState } from 'react';
@@ -14,16 +14,6 @@ const Sidebar = () => {
       name: 'Home',
       href: '/',
       icon: Home
-    },
-    {
-      name: 'Playground',
-      href: '/playground',
-      icon: LayoutDashboard
-    },
-    {
-      name: 'D3 Playground',
-      href: '/d3-playground',
-      icon: Network
     },
     {
       name: 'Tree Search',

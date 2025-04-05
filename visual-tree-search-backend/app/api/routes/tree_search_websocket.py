@@ -17,8 +17,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..lwats.webagent_utils_async.utils.playwright_manager import setup_playwright
 from ..lwats.core_async.config import AgentConfig
 from ..lwats.core_async.agent_factory import setup_search_agent
-from ..lwats.agents_async.SimpleSearchAgents.tree_vis import collect_all_nodes
-from ..lwats.agents_async.SimpleSearchAgents.trajectory_score import create_llm_prompt, score_trajectory_with_openai
+from ..lwats.agents_async.SearchAgents.tree_vis import collect_all_nodes
+from ..lwats.agents_async.SearchAgents.trajectory_score import create_llm_prompt, score_trajectory_with_openai
 
 router = APIRouter()
 

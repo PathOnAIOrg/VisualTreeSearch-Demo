@@ -3,8 +3,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import TreeReconstructor from "../components/TreeReconstructor_d3";
+import TreeReconstructor from "../components/TreeReconstructor";
 import { Info, ChevronDown, ChevronUp } from "lucide-react";
+
+
+// TODO: three windows, left: message log, middle: browser view, right: d3 visualizatin
+// TODO: use shadcn components for message log
+// node selected, node expansion, node evaluation
+// Types: Browser setup, Account Reset, Iteration (LATS), Step Start (LATS, BFS, DFS), Backpropagation = High Level
+// node selected, node expanded, node evaluated, node simulated = Low level details
 
 // Define types for our messages
 interface Message {
@@ -218,7 +225,7 @@ const TreeSearchPlayground = () => {
   const handleStart = () => {
     if (!connected) {
       // Setup websocket connection
-      const wsUrl = `${backendUrl.replace('http', 'ws')}/new-tree-search-ws`;
+      const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
       console.log(`Connecting to Tree Search WebSocket at: ${wsUrl}`);
       
       setIsSearching(true);
