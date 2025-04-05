@@ -217,8 +217,8 @@ class MCTSAgent:
                         logger.info(f"New best score: {score:.3f}")
                     
                     # Reflection-based backpropagation
-                    if score < 0.75:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.5):")
+                    if score < 0.25:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.25):")
                         
                         # Generate reflection prompt
                         reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
@@ -500,8 +500,8 @@ class MCTSAgent:
                         })
                     
                     # Reflection-based backpropagation
-                    if score < 0.75:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
+                    if score < 0.25:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.25):")
                         
                         await websocket.send_json({
                             "type": "reflection_start",
@@ -761,35 +761,63 @@ class MCTSAgent:
             node: Node to expand
             websocket: Optional WebSocket connection to send updates to
         """
-        children_state = await self.generate_children(node, websocket)
-        logger.info(f"Generated {len(children_state)} children for node: {node.action}")
+        try:
+            children_state = await self.generate_children(node, websocket)
+            logger.info(f"Generated {len(children_state)} children for node: {node.action}")
+        except Exception as e:
+            logger.error(f"Exception during generation of children for node {node.action}: {e}")
+            children_state = []
+                
+        # if not children_state:
+        #     logger.warning(f"No valid children found for node: {node.action}")
+        #     # Mark the node as terminal but don't halt the entire search
+        #     node.is_terminal = True
+        #     return
         if not children_state:
-            logger.warning(f"No valid children found for node: {node.action}")
-            # Mark the node as terminal but don't halt the entire search
-            node.is_terminal = True
-            return
-        
+            logger.warning("No valid children returned, creating fallback children")
+            children_state = [
+                {
+                    "natural_language_description": "Navigate back to try a different approach",
+                    "action": "navigate_backward()",
+                    "prob": 0.15,
+                    "element": None
+                },
+                {
+                    "natural_language_description": "Refresh the page to reinitialize search",
+                    "action": "refresh()",
+                    "prob": 0.1,
+                    "element": None
+                },
+                {
+                    "natural_language_description": "Click a random element for exploration",
+                    "action": "click('random')",
+                    "prob": 0.05,
+                    "element": None
+                }
+            ]
         for child_state in children_state:
-            child = LATSNode(
-                natural_language_description=child_state["natural_language_description"],
-                action=child_state["action"],
-                prob=child_state["prob"],
-                element=child_state["element"],
-                goal=node.goal,
-                parent=node
-            )
-            node.children.append(child)
-            
-            # Send child creation update if websocket is provided
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_created",
-                    "node_id": id(child),
-                    "parent_id": id(node),
-                    "action": child.action,
-                    "description": child.natural_language_description,
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+            try:
+                child = LATSNode(
+                    natural_language_description=child_state.get("natural_language_description", ""),
+                    action=child_state.get("action", ""),
+                    prob=child_state.get("prob", 0.0),
+                    element=child_state.get("element", None),
+                    goal=node.goal,
+                    parent=node
+                )
+                node.children.append(child)
+
+                if websocket:
+                    await websocket.send_json({
+                        "type": "node_created",
+                        "node_id": id(child),
+                        "parent_id": id(node),
+                        "action": child.action,
+                        "description": child.natural_language_description,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+            except Exception as e:
+                logger.error(f"Error creating child node from state {child_state}: {e}")
                 
     async def generate_children(self, node: LATSNode, websocket=None) -> list[dict]:
         """
@@ -880,7 +908,7 @@ class MCTSAgent:
         for action in next_actions:
             if action["action"] == "FINISH":
                 logger.info(f"Found FINISH action with probability: {action['prob']}")
-                if action["prob"] > 0.8:
+                if action["prob"] > 0.99:
                     node.is_terminal = True
                     if websocket:
                         await websocket.send_json({
@@ -916,24 +944,38 @@ class MCTSAgent:
                 children.append(action)
 
         if not children:
-            node.is_terminal = True
-            if websocket:
-                await websocket.send_json({
-                    "type": "node_terminal",
-                    "node_id": id(node),
-                    "reason": "no_valid_actions",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            logger.warning("No children generated")
-            # logger.warning("No children generated, creating a dummy 'retry' child to keep search alive")
+            # node.is_terminal = True
+            # if websocket:
+            #     await websocket.send_json({
+            #         "type": "node_terminal",
+            #         "node_id": id(node),
+            #         "reason": "no_valid_actions",
+            #         "timestamp": datetime.utcnow().isoformat()
+            #     })
+            # logger.warning("No children generated")
+            logger.warning("No viable children, creating fallback exploration actions")
 
             # # If empty list would terminate search, create a "fallback" child
-            # children.append({
-            #     "natural_language_description": "Retry with different approach",
-            #     "action": "refresh()",  # Or some other generic action
-            #     "prob": 0.1,
-            #     "element": None
-            # })
+            children.extend([
+                {
+                    "natural_language_description": "Navigate back to try a different approach",
+                    "action": "navigate_backward()",
+                    "prob": 0.15,
+                    "element": None
+                },
+                {
+                    "natural_language_description": "Try refreshing the page",
+                    "action": "refresh()",
+                    "prob": 0.1,
+                    "element": None
+                },
+                {
+                    "natural_language_description": "Try clicking on a random element",
+                    "action": "click('random')",
+                    "prob": 0.05,
+                    "element": None
+                }
+            ])
         print(f"****** Generated children: {children}")
         return children
         
