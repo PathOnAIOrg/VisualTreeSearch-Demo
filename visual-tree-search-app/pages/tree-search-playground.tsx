@@ -218,7 +218,7 @@ const TreeSearchPlayground = () => {
   const handleStart = () => {
     if (!connected) {
       // Setup websocket connection
-      const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
+      const wsUrl = `${backendUrl.replace('http', 'ws')}/new-tree-search-ws`;
       console.log(`Connecting to Tree Search WebSocket at: ${wsUrl}`);
       
       setIsSearching(true);
