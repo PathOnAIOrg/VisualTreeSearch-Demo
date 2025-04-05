@@ -1146,4 +1146,3 @@ class SimpleSearchAgent:
             tree_data.append(node_data)
         
         return tree_data
-

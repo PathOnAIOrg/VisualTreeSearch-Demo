@@ -91,3 +91,11 @@ python run_demo_treesearch_async.py \
 uvicorn app.main:app --host 0.0.0.0 --port 3000
 python test/test-tree-search-ws-lats.py
 ```
+
+## 7. Add MCTS agent
+* test run_demo_treesearch_async.py
+* test web socket
+```
+uvicorn app.main:app --host 0.0.0.0 --port 3000
+python test/test-tree-search-ws-mcts.py
+```
