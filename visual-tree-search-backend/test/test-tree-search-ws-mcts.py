@@ -48,7 +48,7 @@ async def connect_and_test_search(
         # Send search request
         request = {
             "type": "start_search",
-            "agent_type": "LATSAgent",
+            "agent_type": "MCTSAgent",
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
@@ -138,7 +138,7 @@ def parse_arguments():
     parser.add_argument("--goal", type=str, default=DEFAULT_GOAL,
                         help=f"Goal to achieve (default: {DEFAULT_GOAL})")
     
-    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats", "mcts"], default="lats",
+    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats", "mcts"], default="mcts",
                         help="Search algorithm to use (default: lats)")
     
     parser.add_argument("--max-depth", type=int, default=3,

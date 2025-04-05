@@ -128,6 +128,8 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             await agent.dfs_with_websocket(websocket)
         elif search_algorithm.lower() == "lats":
             await agent.run(websocket)
+        elif search_algorithm.lower() == "mcts":
+            await agent.run(websocket)
         else:
             await websocket.send_json({
                 "type": "error",
