@@ -22,7 +22,8 @@ async def connect_and_test_search(
     starting_url: str,
     goal: str,
     search_algorithm: str = "bfs",
-    max_depth: int = 3
+    max_depth: int = 3,    
+    max_iterations: int = 3
 ):
     """
     Connect to the WebSocket endpoint and test the tree search functionality.
@@ -52,7 +53,8 @@ async def connect_and_test_search(
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
-            "max_depth": max_depth
+            "max_depth": max_depth,
+            "max_iterations": max_iterations 
         }
         
         logger.info(f"Sending search request: {request}")
@@ -70,6 +72,11 @@ async def connect_and_test_search(
                 if msg_type == "status_update":
                     logger.info(f"Status update: {data.get('status')} - {data.get('message')}")
                 
+                elif msg_type == "browser_setup":
+                    logger.info(f"Browser setup: {data.get('status')}")
+                    if data.get('live_browser_url'):
+                        logger.info(f"Live browser URL: {data.get('live_browser_url')}")
+                        
                 elif msg_type == "iteration_start":
                     logger.info(f"Iteration start: {data.get('iteration')}")
 
@@ -97,13 +104,28 @@ async def connect_and_test_search(
                 elif msg_type == "search_complete":
                     status = data.get("status")
                     score = data.get("score", "N/A")
-                    path_length = len(data.get("path", []))
+                    path = data.get("path", [])
+                    path_length = len(path)
                     
                     logger.info(f"Search complete: {status}, score={score}, path length={path_length}")
-                    logger.info("Path actions:")
-                    
-                    for i, node in enumerate(data.get("path", [])):
-                        logger.info(f"  {i+1}. {node.get('action')}")
+                    if path_length > 0:
+                        logger.info("Path actions:")
+                        for i, node in enumerate(path):
+                            # Extract action and add fallback if missing
+                            action = node.get('action', 'unknown_action')
+                            logger.info(f"  {i+1}. {action}")
+                    else:
+                        logger.info("No path was returned - search failed to find a valid solution")
+                        
+                        # Add diagnostic info about why the search might have failed
+                        if status == "failure":
+                            reason = data.get("message", "No reason provided")
+                            logger.info(f"Failure reason: {reason}")
+                        
+                        # Check for any fallback actions in the response
+                        fallback = data.get("fallback_action")
+                        if fallback:
+                            logger.info(f"Fallback action provided: {fallback}")                
                     
                     # Exit the loop when search is complete
                     break
@@ -139,10 +161,13 @@ def parse_arguments():
                         help=f"Goal to achieve (default: {DEFAULT_GOAL})")
     
     parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats", "mcts"], default="mcts",
-                        help="Search algorithm to use (default: lats)")
+                        help="Search algorithm to use (default: mcts)")
     
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
+    parser.add_argument("--max-iterations", type=int, default=3,
+                        help="Maximum number of MCTS iterations (default: 3)")
+    
     
     return parser.parse_args()
 
@@ -156,13 +181,15 @@ async def main():
     logger.info(f"Goal: {args.goal}")
     logger.info(f"Algorithm: {args.algorithm}")
     logger.info(f"Max depth: {args.max_depth}")
+    logger.info(f"Max iterations: {args.max_iterations}")
     
     await connect_and_test_search(
         ws_url=args.ws_url,
         starting_url=args.starting_url,
         goal=args.goal,
         search_algorithm=args.algorithm,
-        max_depth=args.max_depth
+        max_depth=args.max_depth,
+        max_iterations=args.max_iterations
     )
 
 if __name__ == "__main__":

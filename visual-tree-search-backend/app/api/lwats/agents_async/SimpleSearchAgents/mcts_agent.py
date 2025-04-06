@@ -64,6 +64,7 @@ class MCTSAgent:
             parent=None
         )
         self.reset_url = os.environ["ACCOUNT_RESET_URL"]
+        self.reflection_score = 0.75
 
     async def run(self, websocket=None) -> List[Dict[str, Any]]:
         """
@@ -91,12 +92,14 @@ class MCTSAgent:
         """
         best_score = float('-inf')
         best_path = None
-        visited = set()  # Track visited nodes to avoid cycles
+        # The current algorithm doesn't need 'visited because:
+        # Each node has a direct reference to its parent
+        # The algorithm uses a structured tree navigation approach
+        # The path selection is controlled by GPT-4's node selection logic
+        # visited = set()  # Track visited nodes to avoid cycles
         max_iterations = self.config.iterations  # Use configured number of iterations
         
-        try:
-            # Initial browser setup
-            live_browser_url, session_id = await self._reset_browser()            
+        try:                    
             
             for iteration in range(max_iterations):
                 logger.info(f"\n{'='*50}")
@@ -235,8 +238,8 @@ class MCTSAgent:
                         logger.info(f"New best score: {score:.3f}")
                     
                     # Reflection-based backpropagation
-                    if score < 0.75:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
+                    if score < self.reflection_score:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < {self.reflection_score}):")
                         
                         # Generate reflection prompt
                         reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
@@ -270,6 +273,11 @@ class MCTSAgent:
                             
                             # Backtrack to the suggested step
                             if 0 <= backtrack_step < len(path):
+                                # Prevent backtracking to root when we have actions
+                                if backtrack_step == 0 and len(path) > 1:
+                                    backtrack_step = 1
+                                    logger.info("Adjusted backtracking to maintain at least one action")
+       
                                 current_node = path[backtrack_step]
                                 # Remove nodes after the backtrack point
                                 while len(path) > backtrack_step + 1:
@@ -284,7 +292,7 @@ class MCTSAgent:
                             logger.error(f"Error in reflection: {str(e)}")
                     
                     # If we've found a satisfactory solution, return it
-                    if score >= 0.75:
+                    if score >= self.reflection_score:
                         logger.info(f"\nFound satisfactory solution with score {score:.3f}")
                         return [{"action": node.action} for node in path[1:]]
                     
@@ -334,7 +342,11 @@ class MCTSAgent:
         """
         best_score = float('-inf')
         best_path = None
-        visited = set()  # Track visited nodes to avoid cycles
+        # The current algorithm doesn't need 'visited because:
+        # Each node has a direct reference to its parent
+        # The algorithm uses a structured tree navigation approach
+        # The path selection is controlled by GPT-4's node selection logic
+        # visited = set()  # Track visited nodes to avoid cycles        
         max_iterations = self.config.iterations  # Use configured number of iterations
         
         try:
@@ -518,8 +530,8 @@ class MCTSAgent:
                         })
                     
                     # Reflection-based backpropagation
-                    if score < 0.75:  # If the path is not satisfactory
-                        logger.info(f"\nReflection Step (Score {score:.3f} < 0.75):")
+                    if score < self.reflection_score:  # If the path is not satisfactory
+                        logger.info(f"\nReflection Step (Score {score:.3f} < {self.reflection_score}):")
                         
                         await websocket.send_json({
                             "type": "reflection_start",
@@ -559,6 +571,10 @@ class MCTSAgent:
                             
                             # Backtrack to the suggested step
                             if 0 <= backtrack_step < len(path):
+                                # Prevent backtracking to root when we have actions
+                                if backtrack_step == 0 and len(path) > 1:
+                                    backtrack_step = 1
+                                    logger.info("Adjusted backtracking to maintain at least one action")
                                 current_node = path[backtrack_step]
                                 # Remove nodes after the backtrack point
                                 while len(path) > backtrack_step + 1:
@@ -587,7 +603,7 @@ class MCTSAgent:
                             })
                     
                     # If we've found a satisfactory solution, return it
-                    if score >= 0.75:
+                    if score >= self.reflection_score:
                         logger.info(f"\nFound satisfactory solution with score {score:.3f}")
                         
                         # Send completion update if websocket is provided
@@ -645,14 +661,16 @@ class MCTSAgent:
             
             # If no path was found at all
             logger.warning("\nNo valid path found")
-            
+
             # Send failure update if websocket is provided
             await websocket.send_json({
-                "type": "search_complete",
+                "type": "search_complete", 
                 "status": "failure",
-                "message": "No valid path found",
+                "message": "Search exhausted without finding valid path",
+                "fallback_action": "refresh()",  # Include the fallback action
                 "timestamp": datetime.utcnow().isoformat()
-            })
+            })            
+
                         
             # If no valid path was found or path was just the root, return a default action
             logger.warning("\nNo valid path found, returning fallback action")
