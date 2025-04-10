@@ -73,7 +73,34 @@ type WebSocketMessage = NodeProcessingMessage | NodeExpandingMessage | NodeQueue
 interface ParsedMessage {
   type: string;
   timestamp: string;
-  [key: string]: any;
+  score?: string | number;
+  status?: string;
+  path?: PathNode[];
+  depth?: number;
+  tree?: TreeNode[];
+  node_id?: number;
+  session_id?: string;
+  reason?: string;
+  message?: string;
+  action?: string;
+  description?: string;
+  level?: number | string;
+  step?: number | string;
+  step_name?: string;
+  feedback?: string;
+  goal?: string;
+  starting_url?: string;
+  agent_type?: string;
+  search_algorithm?: string;
+  max_depth?: number;
+  connection_id?: string;
+  iteration?: number | string;
+}
+
+// Add interfaces for path nodes
+interface PathNode {
+  natural_language_description?: string;
+  action: string;
 }
 
 // Update MessageCard component
@@ -224,9 +251,9 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
   const getTitle = () => {
     switch (message.type) {
       case 'iteration_start':
-        return `Iteration ${message.iteration}`;
+        return `Iteration ${message.iteration || ''}`;
       case 'step_start': 
-        return `Step ${message.step}`;
+        return `Step ${message.step || ''}`;
       case 'search_complete':
         return `Search ${message.status === 'success' ? 'Completed' : 'Partially Completed'}`;
       case 'node_expanding':
@@ -274,7 +301,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
 
   const getContent = () => {
     // Helper function to create parameter tags for short parameters only
-    const createParamTag = (label: string, value: any, color: string = "blue") => {
+    const createParamTag = (label: string, value: string | number | boolean, color: string = "blue") => {
       if (value === undefined || value === null) return null;
       if (typeof value === 'string' && value.length > 50) return null;
       
@@ -337,19 +364,20 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
     
     // Node processing visualization
     if (message.type === 'node_processing') {
+      const depth = message.depth || 0;
       return (
         <div className="w-full">
           <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
-            <span>Depth: {message.depth}</span>
+            <span>Depth: {depth}</span>
           </div>
-          <ProgressBar value={message.depth} maxValue={5} color="cyan" />
+          <ProgressBar value={depth} maxValue={5} color="cyan" />
         </div>
       );
     }
     
     // Node scoring visualization
     if (message.type === 'node_scored') {
-      const score = parseFloat(message.score);
+      const score = message.score !== undefined ? parseFloat(message.score.toString()) : 0;
       const scoreColor = score >= 0.7 ? "green" : score >= 0.4 ? "yellow" : "red";
       
       return (
@@ -395,7 +423,9 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
                 <CheckCircle className="h-4 w-4 mr-1" />
                 <span className="font-medium">Search successful</span>
                 {message.score !== undefined && 
-                  <span className="ml-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full text-xs">{parseFloat(message.score).toFixed(2)}</span>
+                  <span className="ml-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 rounded-full text-xs">
+                    {typeof message.score === 'number' ? message.score.toFixed(2) : parseFloat(message.score).toFixed(2)}
+                  </span>
                 }
               </div>
             ) : (
@@ -403,7 +433,9 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
                 <XCircle className="h-4 w-4 mr-1" />
                 <span className="font-medium">Search partially complete</span>
                 {message.score !== undefined && 
-                  <span className="ml-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-xs">{parseFloat(message.score).toFixed(2)}</span>
+                  <span className="ml-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 rounded-full text-xs">
+                    {typeof message.score === 'number' ? message.score.toFixed(2) : parseFloat(message.score).toFixed(2)}
+                  </span>
                 }
               </div>
             )}
@@ -413,7 +445,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
             <div className="mt-2">
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Path ({message.path.length} steps):</div>
               <div className="text-sm text-slate-600 dark:text-slate-300 p-2 bg-white/80 dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 max-h-[150px] overflow-y-auto">
-                {message.path.map((node: any, index: number) => (
+                {message.path.map((node: PathNode, index: number) => (
                   <div key={index} className="flex items-center mb-1 last:mb-0">
                     <div className="mr-1 text-xs text-slate-500 dark:text-slate-400">{index + 1}.</div>
                     <div className="flex-1 truncate">{node.action}</div>
@@ -548,7 +580,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
 
     // Best Path Update visualization
     if (message.type === 'best_path_update') {
-      const score = parseFloat(message.score || "0");
+      const score = message.score !== undefined ? parseFloat(message.score.toString()) : 0;
       const scoreColor = score >= 0.7 ? "green" : score >= 0.4 ? "yellow" : "red";
       
       return (
@@ -566,7 +598,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
             <div className="mt-2">
               <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Path ({message.path.length} steps):</div>
               <div className="text-sm text-slate-600 dark:text-slate-300 p-2 bg-blue-50/80 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800/50 max-h-[150px] overflow-y-auto">
-                {message.path.map((node: any, index: number) => (
+                {message.path.map((node: PathNode, index: number) => (
                   <div key={index} className="mb-2 last:mb-0">
                     <div className="flex items-center">
                       <div className="mr-2 bg-blue-100 dark:bg-blue-800/50 text-blue-800 dark:text-blue-300 w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium">
@@ -591,6 +623,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
     // Level-related message visualization
     if (message.type === 'level_complete' || message.type === 'level_start') {
       const isComplete = message.type === 'level_complete';
+      const level = message.level || '';
       
       return (
         <div className="flex items-center">
@@ -605,7 +638,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
               </div>
             )}
             <div>
-              <div className="font-medium text-sm">{isComplete ? `Level ${message.level} Completed` : `Level ${message.level} Started`}</div>
+              <div className="font-medium text-sm">{isComplete ? `Level ${level} Completed` : `Level ${level} Started`}</div>
             </div>
           </div>
         </div>
@@ -698,7 +731,7 @@ const MessageCard: React.FC<{ message: ParsedMessage }> = ({ message }) => {
         
         return relevantParams.length > 0 ? (
           <div className="flex flex-wrap">
-            {relevantParams.map(([key, value], idx) => 
+            {relevantParams.map(([key, value]) => 
               <React.Fragment key={key}>
                 {createParamTag(key.replace(/_/g, ' '), value, "gray")}
               </React.Fragment>
