@@ -53,7 +53,7 @@ class WebAutomationResponse(BaseModel):
 class AuthenticationRequest(BaseModel):
     username: str
     password: str
-    site_url: str = "http://128.105.145.205:7770"
+    site_url: str = "http://xwebarena.pathonai.org:7770"
 
 class AuthenticationResponse(BaseModel):
     status: str

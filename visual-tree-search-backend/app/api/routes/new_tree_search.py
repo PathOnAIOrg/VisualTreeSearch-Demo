@@ -91,7 +91,7 @@ def run_search_in_process(search_id: str, args_dict):
 async def start_tree_search(
     background_tasks: BackgroundTasks,
     agent_type: str = "SimpleSearchAgent",
-    starting_url: str = "http://128.105.145.205:7770/",
+    starting_url: str = "http://xwebarena.pathonai.org:7770/",
     goal: str = "search running shoes, click on the first result",
     images: Optional[str] = None,
     search_algorithm: str = "bfs",

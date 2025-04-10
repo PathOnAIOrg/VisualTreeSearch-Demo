@@ -13,7 +13,7 @@ load_dotenv()
 API_KEY = os.environ["BROWSERBASE_API_KEY"]
 PROJECT_ID = os.environ["BROWSERBASE_PROJECT_ID"]
 
-SITE_URL = "http://128.105.145.205:7770"
+SITE_URL = "http://xwebarena.pathonai.org:7770"
 SITE_LOGIN_URL = f"{SITE_URL}/customer/account/login/"
 
 async def debug_browser_state(browser):
@@ -295,7 +295,7 @@ async def test_chromium_mode():
     
     try:
         page = await manager.get_page()
-        await page.goto("http://128.105.145.205:7770/sales/order/history/")
+        await page.goto("http://xwebarena.pathonai.org:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         await asyncio.sleep(3)  # Wait to see the page
     finally:
@@ -315,8 +315,8 @@ async def test_browserbase_mode():
         print("Opening debugger URL in your default browser...")
         webbrowser.open(await manager.get_live_browser_url())
         await page.pause()
-        await page.goto("http://128.105.145.205:7770/")
-        await page.goto("http://128.105.145.205:7770/sales/order/history/")
+        await page.goto("http://xwebarena.pathonai.org:7770/")
+        await page.goto("http://xwebarena.pathonai.org:7770/sales/order/history/")
         print(f"Current URL: {page.url}")
         print(f"You can view the browser at: {await manager.get_live_browser_url()}")
         await asyncio.sleep(10)  # Give more time to check the live URL
@@ -330,7 +330,7 @@ async def main():
     await test_chromium_mode()
     
     # Test Browserbase mode
-    await test_browserbase_mode()
+    #await test_browserbase_mode()
 
 if __name__ == "__main__":
     asyncio.run(main())

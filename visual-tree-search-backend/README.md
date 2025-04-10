@@ -12,7 +12,7 @@ chromium mode
 python run_demo_treesearch_async.py \
     --browser-mode chromium \
     --storage-state shopping.json \
-    --starting-url "http://128.105.145.205:7770/" \
+    --starting-url "http://xwebarena.pathonai.org:7770/" \
     --agent-type "SimpleSearchAgent" \
     --action_generation_model "gpt-4o-mini" \
     --goal "search running shoes, click on the first result" \
@@ -26,7 +26,7 @@ browserbase mode
 python run_demo_treesearch_async.py \
     --browser-mode browserbase \
     --storage-state shopping.json \
-    --starting-url "http://128.105.145.205:7770/" \
+    --starting-url "http://xwebarena.pathonai.org:7770/" \
     --agent-type "SimpleSearchAgent" \
     --action_generation_model "gpt-4o-mini" \
     --goal "search running shoes, click on the first result" \
@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/api/terminate-session/647f4021-2402-4733-84a3
 python run_demo_treesearch_async.py \
     --browser-mode chromium \
     --storage-state shopping.json \
-    --starting-url "http://128.105.145.205:7770/" \
+    --starting-url "http://xwebarena.pathonai.org:7770/" \
     --agent-type "LATSAgent" \
     --action_generation_model "gpt-4o-mini" \
     --goal "search running shoes, click on the first result" \
@@ -76,7 +76,7 @@ python run_demo_treesearch_async.py \
 python run_demo_treesearch_async.py \
     --browser-mode chromium \
     --storage-state shopping.json \
-    --starting-url "http://128.105.145.205:7770/" \
+    --starting-url "http://xwebarena.pathonai.org:7770/" \
     --agent-type "MCTSAgent" \
     --action_generation_model "gpt-4o-mini" \
     --goal "search running shoes, click on the first result" \

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Default values
 DEFAULT_WS_URL = "ws://localhost:3000/new-tree-search-ws"
-DEFAULT_STARTING_URL = "http://128.105.145.205:7770/"
+DEFAULT_STARTING_URL = "http://xwebarena.pathonai.org:7770/"
 DEFAULT_GOAL = "search running shoes, click on the first result"
 
 async def connect_and_test_search(
