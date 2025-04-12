@@ -82,11 +82,14 @@ class MCTSAgent:
         else:
             return await self.rmcts()
         
-    async def rmcts(self) -> List[Dict[str, Any]]:
+    async def rmcts(self, websocket=None) -> List[Dict[str, Any]]:
         """
         Performs Monte Carlo Tree Search starting from the root node.
         Uses GPT-4 for node selection and reflection-based backpropagation.
         
+        Args:
+            websocket: Optional WebSocket connection to send updates to
+            
         Returns:
             List[Dict[str, Any]]: List of actions in the best path found
         """
@@ -105,6 +108,15 @@ class MCTSAgent:
                 logger.info(f"\n{'='*50}")
                 logger.info(f"RMCTS Iteration {iteration + 1}/{max_iterations}")
                 logger.info(f"{'='*50}\n")
+                
+                # Send iteration update if websocket is provided
+                if websocket:
+                    await websocket.send_json({
+                        "type": "rmcts_iteration",
+                        "iteration": iteration + 1,
+                        "max_iterations": max_iterations,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
                 
                 # Selection: Use GPT-4 to select a promising path
                 current_node = self.root_node
@@ -166,12 +178,27 @@ class MCTSAgent:
                             path.append(current_node)
                             logger.info(f"Selected child {selected_index + 1}: {current_node.action}")
                             logger.info(f"Selection explanation: {selection['explanation']}")
+                            
+                            # Send selection update if websocket is provided
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "node_selected",
+                                    "node_id": id(current_node),
+                                    "explanation": selection["explanation"],
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
                         else:
                             logger.warning(f"Invalid child index {selected_index}, breaking selection")
                             break
                             
                     except Exception as e:
                         logger.error(f"Error in node selection: {str(e)}")
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "selection_error",
+                                "error": str(e),
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
                         break
                     
                     selection_depth += 1
@@ -181,33 +208,37 @@ class MCTSAgent:
                     logger.info(f"\nExpansion Step:")
                     logger.info(f"Expanding node: {current_node.action}")
                     
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "node_expanding",
+                            "node_id": id(current_node),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
                     try:
-                        await self.expand(current_node)
+                        await self.expand(current_node, websocket)
                         logger.info(f"Successfully expanded node with {len(current_node.children)} children")
                     except Exception as e:
                         logger.error(f"Error expanding node: {str(e)}")
                         current_node.is_terminal = True
-                # Expansion Step: Expand the selected node if possible
-                if not current_node.is_terminal and current_node.depth < self.config.max_depth:
-                    logger.info(f"\nExpansion Step:")
-                logger.info(f"Expanding node: {current_node.action}")
-                
-                expansion_success = await self.expand(current_node, None)
-                if not expansion_success:
-                    # No children were generated; backtrack if possible.
-                    if len(path) > 1:
-                        logger.info("Backtracking due to expansion failure (no children generated).")
-                        path.pop()          # Remove the current dead-end node.
-                        current_node = path[-1]  # Set current_node to its parent.
-                    else:
-                        logger.warning("Expansion failed at root; no further backtracking possible.")
-                        break
-                else:
-                    logger.info(f"Successfully expanded node with {len(current_node.children)} children")
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "expansion_error",
+                                "node_id": id(current_node),
+                                "error": str(e),
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
                 
                 # Simulation: Evaluate the current path
                 logger.info(f"\nSimulation Step:")
                 logger.info(f"Evaluating path of length {len(path) - 1}")
+                
+                if websocket:
+                    await websocket.send_json({
+                        "type": "simulation_start",
+                        "path_length": len(path) - 1,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
                 
                 try:
                     trajectory = []
@@ -229,6 +260,17 @@ class MCTSAgent:
                     logger.info(f"Accuracy Score: {result['accuracy_score']:.3f}")
                     logger.info(f"Robustness Score: {result['robustness_score']:.3f}")
                     
+                    # Send simulation results if websocket is provided
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "simulation_results",
+                            "score": score,
+                            "efficiency_score": result["efficiency_score"],
+                            "accuracy_score": result["accuracy_score"],
+                            "robustness_score": result["robustness_score"],
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
                     # Update best path if this score is better
                     if score > best_score:
                         best_score = score
@@ -236,10 +278,26 @@ class MCTSAgent:
                         logger.info(f"\nNew best path found!")
                         logger.info(f"Previous best score: {best_score:.3f}")
                         logger.info(f"New best score: {score:.3f}")
+                        
+                        # Send best path update if websocket is provided
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "best_path_update",
+                                "score": best_score,
+                                "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
                     
                     # Reflection-based backpropagation
                     if score < self.reflection_score:  # If the path is not satisfactory
                         logger.info(f"\nReflection Step (Score {score:.3f} < {self.reflection_score}):")
+                        
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "reflection_start",
+                                "score": score,
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
                         
                         # Generate reflection prompt
                         reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
@@ -277,7 +335,6 @@ class MCTSAgent:
                                 if backtrack_step == 0 and len(path) > 1:
                                     backtrack_step = 1
                                     logger.info("Adjusted backtracking to maintain at least one action")
-       
                                 current_node = path[backtrack_step]
                                 # Remove nodes after the backtrack point
                                 while len(path) > backtrack_step + 1:
@@ -288,16 +345,49 @@ class MCTSAgent:
                                 for improvement in reflection_result["suggested_improvements"]:
                                     logger.info(f"- {improvement}")
                                 
+                                # Send backtracking update if websocket is provided
+                                if websocket:
+                                    await websocket.send_json({
+                                        "type": "backtracking",
+                                        "step": backtrack_step,
+                                        "reason": reflection_result["reason"],
+                                        "suggested_improvements": reflection_result["suggested_improvements"],
+                                        "timestamp": datetime.utcnow().isoformat()
+                                    })
+                                
                         except Exception as e:
                             logger.error(f"Error in reflection: {str(e)}")
+                            if websocket:
+                                await websocket.send_json({
+                                    "type": "reflection_error",
+                                    "error": str(e),
+                                    "timestamp": datetime.utcnow().isoformat()
+                                })
                     
                     # If we've found a satisfactory solution, return it
                     if score >= self.reflection_score:
                         logger.info(f"\nFound satisfactory solution with score {score:.3f}")
+                        
+                        # Send completion update if websocket is provided
+                        if websocket:
+                            await websocket.send_json({
+                                "type": "search_complete",
+                                "status": "success",
+                                "score": score,
+                                "path": [{"id": id(node), "action": node.action} for node in path[1:]],
+                                "timestamp": datetime.utcnow().isoformat()
+                            })
+                        
                         return [{"action": node.action} for node in path[1:]]
                     
                 except Exception as e:
                     logger.error(f"Error in simulation: {str(e)}")
+                    if websocket:
+                        await websocket.send_json({
+                            "type": "simulation_error",
+                            "error": str(e),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
                     continue
                 
                 # Update node statistics
@@ -309,13 +399,46 @@ class MCTSAgent:
                     logger.info(f"Node {node.action}:")
                     logger.info(f"  Visits: {node.visits}")
                     logger.info(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+                
+                # Send backpropagation update if websocket is provided
+                if websocket:
+                    await websocket.send_json({
+                        "type": "backpropagation_complete",
+                        "updated_nodes": [{"id": id(node), "visits": node.visits, "value": node.value} for node in path],
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
             
             # If we've exhausted all iterations and haven't found a perfect solution,
             # return the best path we found
             if best_path and len(best_path) > 1:
                 logger.info(f"\nSearch complete. Returning best path found with score {best_score:.3f}")
+                
+                # Send completion update if websocket is provided
+                if websocket:
+                    await websocket.send_json({
+                        "type": "search_complete",
+                        "status": "partial_success",
+                        "score": best_score,
+                        "path": [{"id": id(node), "action": node.action} for node in best_path[1:]],
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                
                 return [{"action": node.action} for node in best_path[1:]]
+            
+            # If no path was found at all
+            logger.warning("\nNo valid path found")
 
+            # Send failure update if websocket is provided
+            if websocket:
+                await websocket.send_json({
+                    "type": "search_complete", 
+                    "status": "failure",
+                    "message": "Search exhausted without finding valid path",
+                    "fallback_action": "refresh()",  # Include the fallback action
+                    "timestamp": datetime.utcnow().isoformat()
+                })            
+
+                        
             # If no valid path was found or path was just the root, return a default action
             logger.warning("\nNo valid path found, returning fallback action")
             return [{"action": "refresh()", "description": "Fallback action - no valid path found"}]
@@ -323,6 +446,14 @@ class MCTSAgent:
         except Exception as e:
             error_msg = f"Error in RMCTS search: {str(e)}"
             logger.error(error_msg)
+            
+            # Send error update if websocket is provided
+            if websocket:
+                await websocket.send_json({
+                    "type": "search_error",
+                    "error": error_msg,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
             
             if best_path:
                 logger.info(f"\nReturning best path found before error with score {best_score:.3f}")

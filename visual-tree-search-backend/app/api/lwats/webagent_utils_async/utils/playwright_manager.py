@@ -101,7 +101,7 @@ async def authenticate(browser_tab: Page, cookie_file_path: str):
     """Authenticate using remote API call and store cookies if successful"""
     print("Attempting authentication via remote API")
     
-    auth_url = os.environ["AUTHENTICATE_URL"]
+    auth_url = "http://visual-tree-search-bs-lb-178303037.us-east-1.elb.amazonaws.com/authenticate"#os.environ["AUTHENTICATE_URL"]
     auth_data = {
         "username": "emma.lopez@gmail.com",
         "password": "Password.123",
