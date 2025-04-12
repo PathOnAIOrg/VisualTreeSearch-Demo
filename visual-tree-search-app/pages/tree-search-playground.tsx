@@ -903,11 +903,8 @@ const TreeSearchPlayground = () => {
 
   // New state for the collapsible parameters section
   const [showParameters, setShowParameters] = useState(true);
-  const [verticalSplitPosition, setVerticalSplitPosition] = useState(70);
   const [horizontalSplitPosition, setHorizontalSplitPosition] = useState(70);
-  const [isVerticalDragging, setIsVerticalDragging] = useState(false);
   const [isHorizontalDragging, setIsHorizontalDragging] = useState(false);
-  const verticalSplitRef = useRef<HTMLDivElement>(null);
   const horizontalSplitRef = useRef<HTMLDivElement>(null);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -1159,63 +1156,57 @@ const TreeSearchPlayground = () => {
     }));
   };
 
-  // Add new handlers for vertical and horizontal resizing
-  const handleVerticalMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsVerticalDragging(true);
-  };
-
   const handleHorizontalMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsHorizontalDragging(true);
+    
+    // Capture current mouse position to avoid jumps
+    const containerRect = horizontalSplitRef.current?.getBoundingClientRect();
+    if (containerRect) {
+      const initialPosition = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+      setHorizontalSplitPosition(initialPosition);
+    }
   };
 
   useEffect(() => {
-    const handleVerticalMouseMove = (e: MouseEvent) => {
-      if (!isVerticalDragging || !verticalSplitRef.current) return;
-      
-      const containerRect = verticalSplitRef.current.getBoundingClientRect();
-      const newPosition = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      
-      // Limit the split position between 30% and 70%
-      if (newPosition >= 30 && newPosition <= 70) {
-        setVerticalSplitPosition(newPosition);
-      }
-    };
-    
     const handleHorizontalMouseMove = (e: MouseEvent) => {
       if (!isHorizontalDragging || !horizontalSplitRef.current) return;
       
       const containerRect = horizontalSplitRef.current.getBoundingClientRect();
       const newPosition = ((e.clientY - containerRect.top) / containerRect.height) * 100;
       
-      // Limit the split position between 30% and 70%
-      if (newPosition >= 30 && newPosition <= 70) {
-        setHorizontalSplitPosition(newPosition);
-      }
+      // Use window.requestAnimationFrame to optimize performance and handle fast movements
+      window.requestAnimationFrame(() => {
+        // Limit the split position between 20% and a maximum of 80%
+        if (newPosition >= 20 && newPosition <= 80) {
+          setHorizontalSplitPosition(newPosition);
+        }
+      });
     };
     
     const handleMouseUp = () => {
-      setIsVerticalDragging(false);
       setIsHorizontalDragging(false);
     };
     
-    if (isVerticalDragging) {
-      document.addEventListener('mousemove', handleVerticalMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
+    // Handle mouse leaving the window
+    const handleMouseLeave = () => {
+      if (isHorizontalDragging) {
+        setIsHorizontalDragging(false);
+      }
+    };
     
     if (isHorizontalDragging) {
-      document.addEventListener('mousemove', handleHorizontalMouseMove);
+      document.addEventListener('mousemove', handleHorizontalMouseMove, { passive: false });
       document.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mouseleave', handleMouseLeave);
     }
     
     return () => {
-      document.removeEventListener('mousemove', handleVerticalMouseMove);
       document.removeEventListener('mousemove', handleHorizontalMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [isVerticalDragging, isHorizontalDragging]);
+  }, [isHorizontalDragging]);
 
   // Add auto-scroll effect
   useEffect(() => {
@@ -1313,7 +1304,7 @@ const TreeSearchPlayground = () => {
                     <li>Click the &quot;Start&quot; button above to connect and begin the search.</li>
                     <li>Configure your search parameters below.</li>
                     <li>The tree of possible actions will appear on the right, while the resulting web page will display on the left.</li>
-                    <li>You can drag the divider to resize the panels as needed.</li>
+                    <li>You can drag the divider between Tree View and Message Log to resize these panels as needed.</li>
                   </ol>
                 </div>
                 
@@ -1370,14 +1361,11 @@ const TreeSearchPlayground = () => {
         </div>
       </div>
       
-      {/* Main content area - Three panel layout */}
+      {/* Main content area - Two column layout */}
       <div className="flex-1 px-4 mt-4 overflow-hidden">
-        <div ref={verticalSplitRef} className="relative h-[calc(100vh-270px)] rounded-lg overflow-hidden shadow-lg">
-          {/* Left panel - Live Browser */}
-          <div 
-            className="absolute top-0 bottom-0 left-0 overflow-hidden bg-white dark:bg-slate-800 rounded-l-lg"
-            style={{ width: `${verticalSplitPosition}%` }}
-          >
+        <div className="flex h-[calc(100vh-270px)] gap-4">
+          {/* Left panel - Live Browser (fixed 50% width) */}
+          <div className="w-1/2 rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800">
             <div className="p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
               <h2 className="text-lg font-semibold text-sky-950 dark:text-sky-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-cyan-500" viewBox="0 0 20 20" fill="currentColor">
@@ -1401,24 +1389,13 @@ const TreeSearchPlayground = () => {
             </div>
           </div>
 
-          {/* Vertical resizable handle */}
-          <div 
-            className="absolute top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors z-10"
-            style={{ left: `calc(${verticalSplitPosition}% - 8px)` }}
-            onMouseDown={handleVerticalMouseDown}
-          >
-            <div className="h-16 w-1 bg-sky-300 dark:bg-sky-600 rounded"></div>
-          </div>
-
-          {/* Right panel - Tree View and Message Log */}
-          <div 
-            className="absolute top-0 bottom-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-r-lg"
-            style={{ width: `${100 - verticalSplitPosition}%` }}
-          >
+          {/* Right panel - Tree View and Message Log with resizable splitter */}
+          <div className="w-1/2 rounded-lg overflow-hidden shadow-lg bg-white dark:bg-slate-800">
+            {/* Container for the vertical splitter */}
             <div ref={horizontalSplitRef} className="relative h-full">
               {/* Top panel - Tree View */}
               <div 
-                className="absolute top-0 left-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-tr-lg"
+                className="absolute top-0 left-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-t-lg"
                 style={{ height: `${horizontalSplitPosition}%` }}
               >
                 <div className="p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
@@ -1441,8 +1418,8 @@ const TreeSearchPlayground = () => {
 
               {/* Horizontal resizable handle */}
               <div 
-                className="absolute left-0 right-0 h-4 cursor-row-resize flex items-center justify-center hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors z-10"
-                style={{ top: `calc(${horizontalSplitPosition}% - 8px)` }}
+                className="absolute left-0 right-0 h-6 cursor-row-resize flex items-center justify-center hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors z-10"
+                style={{ top: `calc(${horizontalSplitPosition}% - 12px)` }}
                 onMouseDown={handleHorizontalMouseDown}
               >
                 <div className="w-16 h-1 bg-sky-300 dark:bg-sky-600 rounded"></div>
@@ -1450,7 +1427,7 @@ const TreeSearchPlayground = () => {
 
               {/* Bottom panel - Message Log */}
               <div 
-                className="absolute bottom-0 left-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-br-lg"
+                className="absolute bottom-0 left-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-b-lg"
                 style={{ height: `${100 - horizontalSplitPosition}%` }}
               >
                 <div className="p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
@@ -1532,7 +1509,6 @@ const TreeSearchPlayground = () => {
                                   <button 
                                     className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1 bg-white/30 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 hover:bg-white/70 dark:hover:bg-slate-700/70 transition-colors"
                                     onClick={() => {
-                                      // Create an expanded card view for this message to show in MessageCard format
                                       setExpandedStartSearch(index === expandedStartSearch ? null : index);
                                     }}
                                   >
