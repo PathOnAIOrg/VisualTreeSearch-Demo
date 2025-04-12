@@ -75,12 +75,12 @@ def read_steps_json(file_path):
 
 
 # Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=) search running shoes, click on the first result <lwats.webagent_utils_async.utils.playwright_manager.AsyncPlaywrightManager object at 0x126dcd110> False log
-# page: <Page url='http://128.105.145.205:7770/'>
+# page: <Page url='http://xwebarena.pathonai.org:7770/'>
 # node: Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=)
 # node.element: <coroutine object locate_element at 0x10db66880>
 # Error in locate_element: Connection closed
 # selector: body
-# element: <Locator frame=<Frame name= url='http://128.105.145.205:7770/'> selector='body'>
+# element: <Locator frame=<Frame name= url='http://xwebarena.pathonai.org:7770/'> selector='body'>
 # {}
 # element count before: 1
 # element count after: 1
@@ -90,11 +90,11 @@ def read_steps_json(file_path):
 
 
 # Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=) search running shoes, click on the first result <lwats.webagent_utils_async.utils.playwright_manager.AsyncPlaywrightManager object at 0x1244aee10> False log
-# page: <Page url='http://128.105.145.205:7770/'>
+# page: <Page url='http://xwebarena.pathonai.org:7770/'>
 # node: Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=)
 # node.element: {'text': '', 'type': 'text', 'tag': 'input', 'id': 'search', 'name': 'q', 'value': '', 'placeholder': 'Search entire store here...', 'class': 'input-text', 'role': 'combobox'}
 # selector: body
-# element: <Locator frame=<Frame name= url='http://128.105.145.205:7770/'> selector='body'>
+# element: <Locator frame=<Frame name= url='http://xwebarena.pathonai.org:7770/'> selector='body'>
 # {'text': '', 'type': 'text', 'tag': 'input', 'id': 'search', 'name': 'q', 'value': '', 'placeholder': 'Search entire store here...', 'class': 'input-text', 'role': 'combobox'}
 # element count before: 1
 # element count after: 1
@@ -102,10 +102,10 @@ def read_steps_json(file_path):
 
 
 # Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=) search running shoes, click on the first result <lwats.webagent_utils_sync.utils.playwright_manager.PlaywrightManager object at 0x111584210> False log
-# page: <Page url='http://128.105.145.205:7770/'>
+# page: <Page url='http://xwebarena.pathonai.org:7770/'>
 # node: Node(depth=1, value=0.00, visits=0, action=fill('274', 'running shoes'), feedback=)
 # selector: #search
-# element: <Locator frame=<Frame name= url='http://128.105.145.205:7770/'> selector='#search'>
+# element: <Locator frame=<Frame name= url='http://xwebarena.pathonai.org:7770/'> selector='#search'>
 # {'text': '', 'type': 'text', 'tag': 'input', 'id': 'search', 'name': 'q', 'value': '', 'placeholder': 'Search entire store here...', 'class': 'input-text', 'role': 'combobox', 'unique_selector': '#search', 'selector_uniqueness_validated': True}
 # element count before: 1
 # element count after: 1
@@ -459,7 +459,7 @@ if __name__ == "__main__":
             if args.url:
                 await page.goto(args.url)
             else:
-                await page.goto("http://128.105.145.205:7770/")  # Default URL from your debug output
+                await page.goto("http://xwebarena.pathonai.org:7770/")  # Default URL from your debug output
             
             print("Manual test mode - executing a single fill action")
             

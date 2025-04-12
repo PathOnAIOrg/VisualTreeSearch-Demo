@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--agent-type", type=str, default="LATSAgent",
                     help="Type of agent to use (default: LATSAgent)")
     # Task
-    parser.add_argument("--starting-url", type=str, default="http://128.105.145.205:7770/",
+    parser.add_argument("--starting-url", type=str, default="http://xwebarena.pathonai.org:7770/",
                         help="Starting URL for the web agent")
     parser.add_argument("--goal", type=str, default="search running shoes, click on the first result",
                         help="Goal for the web agent to accomplish")

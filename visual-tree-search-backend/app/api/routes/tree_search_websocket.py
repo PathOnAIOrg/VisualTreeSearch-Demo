@@ -72,7 +72,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
     try:
         # Extract parameters from the message
         agent_type = message.get("agent_type", "SimpleSearchAgent")
-        starting_url = message.get("starting_url", "http://128.105.145.205:7770/")
+        starting_url = message.get("starting_url", "http://xwebarena.pathonai.org:7770/")
         goal = message.get("goal", "search running shoes, click on the first result")
         search_algorithm = message.get("search_algorithm", "bfs")
         max_depth = message.get("max_depth", 3)

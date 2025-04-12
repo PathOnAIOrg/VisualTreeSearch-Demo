@@ -83,7 +83,7 @@ const TreeSearchPlayground = () => {
 
   // Search parameters
   const [searchParams, setSearchParams] = useState<SearchParams>({
-    startingUrl: 'http://128.105.145.205:7770/',
+    startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     algorithm: 'bfs',
     maxDepth: 3
