@@ -20,7 +20,7 @@ class AgentConfig:
     search_algorithm: str = "bfs"
     exploration_weight: float = 1.41
     branching_factor: int = 5
-    iterations: int = 1
+    iterations: int = 3
     max_depth: int = 3
     num_simulations: int = 100
     account_reset: bool = True

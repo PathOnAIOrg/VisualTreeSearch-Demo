@@ -77,10 +77,14 @@ class MCTSAgent:
             List[Dict[str, Any]]: List of actions in the best path found
         """
         logger.info("Starting Reflective MCTS algorithm")
-        if websocket:
+        logger.info(f"Browser mode: {self.config.browser_mode}, Config iterations: {self.config.iterations}")
+        
+        if self.config.browser_mode == "browserbase":
+            logger.info("Using rmcts_with_websocket method for browserbase mode")
             return await self.rmcts_with_websocket(websocket)
         else:
-            return await self.rmcts()
+            logger.info("Using rmcts method for non-browserbase mode")
+            return await self.rmcts(websocket)
         
     async def rmcts(self, websocket=None) -> List[Dict[str, Any]]:
         """
@@ -300,7 +304,7 @@ class MCTSAgent:
                             })
                         
                         # Generate reflection prompt
-                        reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
+                        reflection_prompt = f"""Analyze the current trajectory and suggest improvements for the current website.
                         
                         Goal: {self.goal}
                         
@@ -313,7 +317,7 @@ class MCTSAgent:
                         {{
                             "backtrack_to_step": int,  # Which step to backtrack to (0-based index)
                             "reason": str,  # Why backtrack to this step
-                            "suggested_improvements": [str]  # List of suggested improvements
+                            "suggested_improvements": [str]  # List of suggested improvements specific to current websites
                         }}"""
                         
                         try:
@@ -473,27 +477,26 @@ class MCTSAgent:
         """
         best_score = float('-inf')
         best_path = None
-        # The current algorithm doesn't need 'visited because:
-        # Each node has a direct reference to its parent
-        # The algorithm uses a structured tree navigation approach
-        # The path selection is controlled by GPT-4's node selection logic
-        # visited = set()  # Track visited nodes to avoid cycles        
-        max_iterations = self.config.iterations  # Use configured number of iterations
+        
+        # Log config values directly
+        logger.info(f"CRITICAL: Starting RMCTS with self.config.iterations = {self.config.iterations}")
+        logger.info(f"Type of self.config.iterations: {type(self.config.iterations)}")
         
         try:
             # Initial browser setup
             live_browser_url, session_id = await self._reset_browser(websocket)
             
-            for iteration in range(max_iterations):
+            # Use self.config.iterations directly in the loop
+            for iteration in range(self.config.iterations):
                 logger.info(f"\n{'='*50}")
-                logger.info(f"RMCTS Iteration {iteration + 1}/{max_iterations}")
+                logger.info(f"RMCTS Iteration {iteration + 1}/{self.config.iterations}")
                 logger.info(f"{'='*50}\n")
                 
                 # Send iteration update if websocket is provided
                 await websocket.send_json({
                     "type": "rmcts_iteration",
                     "iteration": iteration + 1,
-                    "max_iterations": max_iterations,
+                    "max_iterations": self.config.iterations,
                     "timestamp": datetime.utcnow().isoformat()
                 })
                 
@@ -671,7 +674,7 @@ class MCTSAgent:
                         })
                         
                         # Generate reflection prompt
-                        reflection_prompt = f"""Analyze the current trajectory and suggest improvements.
+                        reflection_prompt = f"""Analyze the current trajectory and suggest improvements for the current website.
                         
                         Goal: {self.goal}
                         
@@ -684,7 +687,7 @@ class MCTSAgent:
                         {{
                             "backtrack_to_step": int,  # Which step to backtrack to (0-based index)
                             "reason": str,  # Why backtrack to this step
-                            "suggested_improvements": [str]  # List of suggested improvements
+                            "suggested_improvements": [str]  # List of suggested improvements specific to current websites
                         }}"""
                         
                         try:
@@ -825,69 +828,34 @@ class MCTSAgent:
             
     async def _reset_browser(self, websocket=None) -> Optional[tuple]:
         """Reset the browser to initial state and return the live browser URL if available."""
-        await self.playwright_manager.close()
-        
-        ## reset account using api-based account reset
-        if self.config.account_reset:
-            if websocket:
-                await websocket.send_json({
-                    "type": "account_reset",
-                    "status": "started",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
-            try:
-                # Use aiohttp instead of curl
-                async with aiohttp.ClientSession() as session:
-                    headers = {'Connection': 'close'}  # Similar to curl -N
-                    async with session.get(self.reset_url, headers=headers) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            print(f"Account reset successful: {data}")
-                            if websocket:
-                                await websocket.send_json({
-                                    "type": "account_reset",
-                                    "status": "success",
-                                    "data": data,
-                                    "timestamp": datetime.utcnow().isoformat()
-                                })
-                        else:
-                            error_msg = f"Account reset failed with status {response.status}"
-                            print(error_msg)
-                            if websocket:
-                                await websocket.send_json({
-                                    "type": "account_reset",
-                                    "status": "failed",
-                                    "reason": error_msg,
-                                    "timestamp": datetime.utcnow().isoformat()
-                                })
-                            
-            except Exception as e:
-                print(f"Error during account reset: {e}")
-                if websocket:
-                    await websocket.send_json({
-                        "type": "account_reset",
-                        "status": "failed",
-                        "reason": str(e),
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-
         try:
-            # Create new playwright manager
-            self.playwright_manager = await setup_playwright(
-                storage_state=self.config.storage_state,
-                headless=self.config.headless,
-                mode=self.config.browser_mode
-            )
-            page = await self.playwright_manager.get_page()
-            live_browser_url = None
+            # Log config values before browser setup
+            logger.info(f"Before _reset_browser - config.iterations: {self.config.iterations}")
+            
+            # Only close and recreate if we're in browserbase mode
             if self.config.browser_mode == "browserbase":
+                await self.playwright_manager.close()
+                
+                # Create new playwright manager
+                self.playwright_manager = await setup_playwright(
+                    storage_state=self.config.storage_state,
+                    headless=self.config.headless,
+                    mode=self.config.browser_mode
+                )
+                
+                page = await self.playwright_manager.get_page()
                 live_browser_url = await self.playwright_manager.get_live_browser_url()
                 session_id = await self.playwright_manager.get_session_id()
             else:
-                session_id = None
+                # For non-browserbase mode, just get the page
+                page = await self.playwright_manager.get_page()
                 live_browser_url = None
-            await page.goto(self.starting_url, wait_until="networkidle")
+                session_id = None
+            
+            await page.goto(self.starting_url, wait_until="networkidle", timeout=60000)
+            
+            # Log config values after browser setup
+            logger.info(f"After _reset_browser - config.iterations: {self.config.iterations}")
             
             # Send success message if websocket is provided
             if websocket:
@@ -981,8 +949,6 @@ class MCTSAgent:
         Returns:
             list[dict]: List of child state dictionaries
         """
-        # Reset browser and get live URL
-        live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
         logger.info(f"######### Generating children for path with {len(path)} nodes")
         # Execute path
@@ -1113,15 +1079,6 @@ class MCTSAgent:
                 children.append(action)
 
         if not children:
-            # node.is_terminal = True
-            # if websocket:
-            #     await websocket.send_json({
-            #         "type": "node_terminal",
-            #         "node_id": id(node),
-            #         "reason": "no_valid_actions",
-            #         "timestamp": datetime.utcnow().isoformat()
-            #     })
-            # logger.warning("No children generated")
             logger.warning("No viable children, creating fallback exploration actions")
 
             # # If empty list would terminate search, create a "fallback" child

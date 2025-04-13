@@ -69,6 +69,7 @@ async def new_tree_search_websocket_endpoint(websocket: WebSocket):
 
 async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
     """Handle a search request from the client"""
+    playwright_manager = None
     try:
         # Extract parameters from the message
         agent_type = message.get("agent_type", "SimpleSearchAgent")
@@ -76,7 +77,16 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         goal = message.get("goal", "search running shoes, click on the first result")
         search_algorithm = message.get("search_algorithm", "bfs")
         max_depth = message.get("max_depth", 3)
+        
+        # Get and validate iterations parameter
+        iterations = message.get("iterations", 3)
+        iterations = int(iterations)  # Ensure it's an integer
+        logging.info(f"Received iterations parameter: {iterations} (type: {type(iterations)})")
+        
         storage_state = message.get("storage_state", "app/api/shopping.json")
+        
+        # Log all message parameters for debugging
+        logging.info(f"Search request parameters: {message}")
         
         # Send status update
         await websocket.send_json({
@@ -90,9 +100,13 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         config = AgentConfig(
             search_algorithm=search_algorithm,
             max_depth=max_depth,
+            iterations=iterations,  # Pass iterations to config
             storage_state=storage_state,
             headless=False
         )
+        
+        # Log the created config
+        logging.info(f"Created AgentConfig with iterations={config.iterations} (type: {type(config.iterations)})")
         
         # Send status update
         await websocket.send_json({
@@ -137,9 +151,6 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
                 "timestamp": datetime.utcnow().isoformat()
             })
         
-        # Clean up
-        await playwright_manager.close()
-        
     except Exception as e:
         logging.error(f"Error handling search request: {e}")
         await websocket.send_json({
@@ -147,6 +158,10 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             "message": f"Error during search: {str(e)}",
             "timestamp": datetime.utcnow().isoformat()
         })
+    finally:
+        # Clean up browser session
+        if playwright_manager:
+            await playwright_manager.close()
 
 async def send_tree_update(websocket: WebSocket, root_node):
     """Send a tree update to the client"""

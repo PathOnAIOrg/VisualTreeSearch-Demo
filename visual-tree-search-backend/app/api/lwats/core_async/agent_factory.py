@@ -120,6 +120,11 @@ async def new_setup_search_agent(
     agent_config: AgentConfig
 ):
     logger = setup_logger()
+    
+    # Log the agent_config values to help debug
+    logger.info(f"Agent config: browser_mode={agent_config.browser_mode}, iterations={agent_config.iterations}, max_depth={agent_config.max_depth}")
+    logger.info(f"Iterations value type: {type(agent_config.iterations)}")
+    logger.info(f"Raw agent_config object: {agent_config}")
 
     file_path = os.path.join(agent_config.log_folder, 'flow', 'steps.json')
     os.makedirs(os.path.dirname(file_path), exist_ok=True)

@@ -23,7 +23,7 @@ async def connect_and_test_search(
     goal: str,
     search_algorithm: str = "bfs",
     max_depth: int = 3,    
-    max_iterations: int = 3
+    iterations: int = 3
 ):
     """
     Connect to the WebSocket endpoint and test the tree search functionality.
@@ -34,6 +34,7 @@ async def connect_and_test_search(
         goal: Goal to achieve
         search_algorithm: Search algorithm to use (bfs or dfs)
         max_depth: Maximum depth for the search tree
+        iterations: Number of MCTS iterations to perform
     """
     logger.info(f"Connecting to WebSocket at {ws_url}")
     
@@ -54,7 +55,7 @@ async def connect_and_test_search(
             "goal": goal,
             "search_algorithm": search_algorithm,
             "max_depth": max_depth,
-            "max_iterations": max_iterations 
+            "iterations": iterations 
         }
         
         logger.info(f"Sending search request: {request}")
@@ -165,8 +166,8 @@ def parse_arguments():
     
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
-    parser.add_argument("--max-iterations", type=int, default=3,
-                        help="Maximum number of MCTS iterations (default: 3)")
+    parser.add_argument("--iterations", type=int, default=3,
+                        help="Number of MCTS iterations to perform (default: 3)")
     
     
     return parser.parse_args()
@@ -181,7 +182,7 @@ async def main():
     logger.info(f"Goal: {args.goal}")
     logger.info(f"Algorithm: {args.algorithm}")
     logger.info(f"Max depth: {args.max_depth}")
-    logger.info(f"Max iterations: {args.max_iterations}")
+    logger.info(f"Iterations: {args.iterations}")
     
     await connect_and_test_search(
         ws_url=args.ws_url,
@@ -189,7 +190,7 @@ async def main():
         goal=args.goal,
         search_algorithm=args.algorithm,
         max_depth=args.max_depth,
-        max_iterations=args.max_iterations
+        iterations=args.iterations
     )
 
 if __name__ == "__main__":
