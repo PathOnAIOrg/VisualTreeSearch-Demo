@@ -40,7 +40,8 @@ python run_demo_treesearch_async.py \
 ```
 uvicorn app.main:app --host 0.0.0.0 --port 3000
 
-python test/test-tree-search-ws.py
+python test/test-tree-search-ws-simple.py --algorithm dfs
+python test/test-tree-search-ws-simple.py --algorithm bfs
 ```
 
 ## 4. end-to-end test with frontend
