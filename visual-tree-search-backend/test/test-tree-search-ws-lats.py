@@ -3,6 +3,8 @@ import json
 import websockets
 import argparse
 import logging
+import sys
+import os
 from datetime import datetime
 
 # Configure logging
@@ -13,14 +15,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# account_reset
+# browser_setup
+
 ## for LATS
 # step_start
 # node_created
 # node_selected
+# node_selected_for_simulation
 # tree_update_node_expansion
-# tree_update_node_evaluation
+# tree_update_node_children_evaluation
 # tree_update_node_backpropagation
-# ANSI color codes for different message types
+# removed_simulation
+
 COLORS = {
     # Core updates
     'iteration_start': '\033[94m',    # Blue
@@ -145,11 +152,39 @@ def parse_arguments():
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
     
+    # Add the new argument for log file
+    parser.add_argument("--log-file", type=str, 
+                        help="File to save the colored output to")
+    
     return parser.parse_args()
 
 async def main():
     """Main entry point"""
     args = parse_arguments()
+    
+    # Setup logging to file if requested
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    log_file = None
+    
+    if args.log_file:
+        class TeeOutput:
+            def __init__(self, terminal, log_file):
+                self.terminal = terminal
+                self.log_file = log_file
+                
+            def write(self, message):
+                self.terminal.write(message)
+                self.log_file.write(message)
+                
+            def flush(self):
+                self.terminal.flush()
+                self.log_file.flush()
+        
+        log_file = open(args.log_file, 'w', encoding='utf-8')
+        sys.stdout = TeeOutput(sys.stdout, log_file)
+        sys.stderr = TeeOutput(sys.stderr, log_file)
+        logger.info(f"Logging colored output to {args.log_file}")
     
     logger.info("Starting tree search WebSocket test")
     logger.info(f"WebSocket URL: {args.ws_url}")
@@ -158,13 +193,21 @@ async def main():
     logger.info(f"Algorithm: {args.algorithm}")
     logger.info(f"Max depth: {args.max_depth}")
     
-    await connect_and_test_search(
-        ws_url=args.ws_url,
-        starting_url=args.starting_url,
-        goal=args.goal,
-        search_algorithm=args.algorithm,
-        max_depth=args.max_depth
-    )
+    try:
+        await connect_and_test_search(
+            ws_url=args.ws_url,
+            starting_url=args.starting_url,
+            goal=args.goal,
+            search_algorithm=args.algorithm,
+            max_depth=args.max_depth
+        )
+    finally:
+        # Clean up if logging to file
+        if log_file:
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            log_file.close()
+            logger.info(f"Closed log file: {args.log_file}")
 
 if __name__ == "__main__":
     asyncio.run(main())

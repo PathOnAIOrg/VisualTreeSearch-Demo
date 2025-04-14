@@ -488,9 +488,9 @@ class BaseAgent:
         print_trajectory(node)
         print("print the entire tree")
         print_entire_tree(self.root_node)
-        if websocket:
-            tree_data = self._get_tree_data()
-            await self.websocket_tree_update(type="tree_update_simulation", tree_data=tree_data, websocket=websocket)
+        # if websocket:
+            # tree_data = self._get_tree_data()
+            # await self.websocket_tree_update(type="tree_update_simulation", tree_data=tree_data, websocket=websocket)
             # await websocket.send_json({
             #     "type": "tree_update",
             #     "tree": tree_data,
