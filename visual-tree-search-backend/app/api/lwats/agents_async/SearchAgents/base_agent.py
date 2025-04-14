@@ -362,7 +362,10 @@ class BaseAgent:
             await websocket.send_json({
                 "type": "simulation_result",
                 "reward": reward,
-                "terminal_node": terminal_node,
+                "terminal_node_id": id(terminal_node),
+                "terminal_node_parent_id": id(terminal_node.parent),
+                "terminal_node_action": terminal_node.action,
+                "terminal_node_description": terminal_node.natural_language_description,
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:

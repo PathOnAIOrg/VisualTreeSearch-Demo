@@ -45,6 +45,7 @@ COLORS = {
     'tree_update_node_expansion': '\033[96m',  # Cyan
     'tree_update_node_evaluation': '\033[96m', # Cyan
     'tree_update_node_children_evaluation': '\033[96m', # Cyan
+    'tree_update_node_backpropagation': '\033[96m', # Cyan
     'tree_update_simulation': '\033[96m', # Cyan
     'trajectory_update': '\033[96m',   # Cyan
     'removed_simulation': '\033[96m',  # Cyan
