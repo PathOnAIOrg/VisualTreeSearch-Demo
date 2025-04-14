@@ -16,13 +16,13 @@ const Sidebar = () => {
       icon: Home
     },
     {
-      name: 'Playground',
-      href: '/playground',
+      name: 'MCTS',
+      href: '/MCTSAgent',
       icon: LayoutDashboard
     },
     {
-      name: 'D3 Playground',
-      href: '/d3-playground',
+      name: 'LATS',
+      href: '/LATSAgent',
       icon: Network
     },
     {
