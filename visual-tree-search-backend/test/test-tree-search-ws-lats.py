@@ -12,6 +12,53 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+## for LATS
+# step_start
+# node_created
+# node_selected
+# tree_update_node_expansion
+# tree_update_node_evaluation
+# tree_update_node_backpropagation
+# ANSI color codes for different message types
+COLORS = {
+    # Core updates
+    'iteration_start': '\033[94m',    # Blue
+    'step_start': '\033[94m',         # Blue
+    
+    # Node operations
+    'node_selected': '\033[92m',      # Green
+    'node_selected_for_simulation': '\033[92m',      # Green
+    'node_created': '\033[92m',       # Green
+    'node_simulated': '\033[92m',     # Green
+    'node_terminal': '\033[92m',      # Green
+    
+    # Tree/Path updates
+    'tree_update': '\033[96m',        # Cyan
+    'tree_update_node_expansion': '\033[96m',  # Cyan
+    'tree_update_node_evaluation': '\033[96m', # Cyan
+    'tree_update_node_children_evaluation': '\033[96m', # Cyan
+    'tree_update_simulation': '\033[96m', # Cyan
+    'trajectory_update': '\033[96m',   # Cyan
+    'removed_simulation': '\033[96m',  # Cyan
+    
+    # Results/Completion
+    'simulation_result': '\033[93m',   # Yellow
+    'search_complete': '\033[95m',     # Magenta
+    'success': '\033[95m',            # Magenta
+    'partial_success': '\033[93m',     # Yellow
+    'failure': '\033[91m',            # Red
+    
+    # System messages
+    'account_reset': '\033[91m',       # Red
+    'browser_setup': '\033[91m',       # Red
+    'error': '\033[91m',              # Red
+    
+    # Status updates
+    'status_update': '\033[94m',      # Blue
+    'reset': '\033[0m'                # Reset
+}
+
 # Default values
 DEFAULT_WS_URL = "ws://localhost:3000/tree-search-ws"
 DEFAULT_STARTING_URL = "http://xwebarena.pathonai.org:7770/"
@@ -64,57 +111,11 @@ async def connect_and_test_search(
                 response = await websocket.recv()
                 data = json.loads(response)
                 
-                # Log the message type and some key information
+                # Print the raw websocket message with colored type
                 msg_type = data.get("type", "unknown")
-                
-                if msg_type == "status_update":
-                    logger.info(f"Status update: {data.get('status')} - {data.get('message')}")
-                
-                elif msg_type == "iteration_start":
-                    logger.info(f"Iteration start: {data.get('iteration')}")
-
-                elif msg_type == "step_start":
-                    logger.info(f"Step start: {data.get('step')} - {data.get('step_name')}")
-                
-                elif msg_type == "node_update":
-                    node_id = data.get("node_id")
-                    status = data.get("status")
-                    logger.info(f"Node update: {node_id} - {status}")
-                    
-                    # If node was scored, log the score
-                    if status == "scored":
-                        logger.info(f"Node score: {data.get('score')}")
-                
-                elif msg_type == "trajectory_update":
-                    logger.info(f"Trajectory update received with {data.get('trajectory')}")
-                
-                elif msg_type == "tree_update":
-                    logger.info(f"Tree update received with {data.get('tree')}")
-                
-                elif msg_type == "best_path_update":
-                    logger.info(f"Best path update: score={data.get('score')}, path length={len(data.get('path', []))}")
-                
-                elif msg_type == "search_complete":
-                    status = data.get("status")
-                    score = data.get("score", "N/A")
-                    path_length = len(data.get("path", []))
-                    
-                    logger.info(f"Search complete: {status}, score={score}, path length={path_length}")
-                    logger.info("Path actions:")
-                    
-                    for i, node in enumerate(data.get("path", [])):
-                        logger.info(f"  {i+1}. {node.get('action')}")
-                    
-                    # Exit the loop when search is complete
-                    break
-                
-                elif msg_type == "error":
-                    logger.error(f"Error: {data.get('message')}")
-                    break
-                
-                else:
-                    logger.info(f"Received message of type {msg_type}")
-                    logger.info(f"Message: {data}")
+                color = COLORS.get(msg_type, COLORS['reset'])
+                print(f"\nWebSocket message - Type: {color}{msg_type}{COLORS['reset']}")
+                print(f"Raw message: {json.dumps(data, indent=2)}")
                     
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("WebSocket connection closed")

@@ -178,14 +178,7 @@ class BaseAgent:
         await self.playwright_manager.close()
         
         ## reset account using api-based account reset
-        if self.config.account_reset:
-            if websocket:
-                await websocket.send_json({
-                    "type": "account_reset",
-                    "status": "started",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
-            
+        if self.config.account_reset:            
             try:
                 # Use aiohttp instead of curl
                 async with aiohttp.ClientSession() as session:
@@ -497,18 +490,18 @@ class BaseAgent:
         print_entire_tree(self.root_node)
         if websocket:
             tree_data = self._get_tree_data()
-            await self.websocket_tree_update(tree_data=tree_data, websocket=websocket)
+            await self.websocket_tree_update(type="tree_update_simulation", tree_data=tree_data, websocket=websocket)
             # await websocket.send_json({
             #     "type": "tree_update",
             #     "tree": tree_data,
             #     "timestamp": datetime.utcnow().isoformat()
             # })
-            trajectory_data = self._get_trajectory_data(node)
-            await websocket.send_json({
-                "type": "trajectory_update",
-                "trajectory": trajectory_data,
-                "timestamp": datetime.utcnow().isoformat()
-            })
+            # trajectory_data = self._get_trajectory_data(node)
+            # await websocket.send_json({
+            #     "type": "trajectory_update",
+            #     "trajectory": trajectory_data,
+            #     "timestamp": datetime.utcnow().isoformat()
+            # })
         return await self.rollout(node, max_depth=max_depth, websocket=websocket)
     
     # refactor simulation, rollout, send_completion_request methods

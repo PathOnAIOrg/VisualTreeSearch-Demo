@@ -49,7 +49,7 @@ class LATSAgent(BaseAgent):
                     break
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(type="tree_update_node_expansion", tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
                 else:
                     print_entire_tree(self.root_node)
 
@@ -60,7 +60,7 @@ class LATSAgent(BaseAgent):
                 await self.node_children_evaluation(node)
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(type="tree_update_node_children_evaluation", tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_children_evaluation", websocket=websocket, tree_data=tree_data)
                 else:
                     print("after evaluation")
                     print_entire_tree(self.root_node)
@@ -84,7 +84,7 @@ class LATSAgent(BaseAgent):
                 self.backpropagate(terminal_node, reward)
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(type="tree_update_node_backpropagation", tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
                 else:
                     print("after backpropagation")
                     print_entire_tree(self.root_node)
