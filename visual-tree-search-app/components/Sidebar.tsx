@@ -26,8 +26,8 @@ const Sidebar = () => {
       icon: Network
     },
     {
-      name: 'Tree Search',
-      href: '/tree-search-playground',
+      name: 'BFS/DFS',
+      href: '/SimpleSearchAgent',
       icon: Search
     },
   ];

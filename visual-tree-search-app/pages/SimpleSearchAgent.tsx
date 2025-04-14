@@ -1,10 +1,8 @@
 import React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import TreeReconstructor from "../components/TreeReconstructor_d3";
-import { Info, ChevronDown, ChevronUp } from "lucide-react";
+import ControlPanel from '../components/ControlPanel';
+import MessageLogPanel from '../components/MessageLogPanel';
 
 // Define types for our messages
 interface Message {
@@ -77,7 +75,7 @@ const TreeSearchPlayground = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Tree visualization state - simpler, just like d3-playground
+  // Tree visualization state
   const [treeMessages, setTreeMessages] = useState<TreeMessage[]>([]);
   const [resetTree, setResetTree] = useState(false);
 
@@ -92,8 +90,8 @@ const TreeSearchPlayground = () => {
   // Add sessionId state
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // New state for the collapsible parameters section
-  const [showParameters, setShowParameters] = useState(true);
+  // Remove these unused states
+  // const [showParameters, setShowParameters] = useState(true);  // Remove this line
   const [splitPosition, setSplitPosition] = useState(70);
   const [isDragging, setIsDragging] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -218,7 +216,7 @@ const TreeSearchPlayground = () => {
   const handleStart = () => {
     if (!connected) {
       // Setup websocket connection
-      const wsUrl = `${backendUrl.replace('http', 'ws')}/new-tree-search-ws`;
+      const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
       console.log(`Connecting to Tree Search WebSocket at: ${wsUrl}`);
       
       setIsSearching(true);
@@ -379,113 +377,14 @@ const TreeSearchPlayground = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-800 pb-4 w-full flex flex-col">
-      {/* Header with title and guidance */}
-      <div className="bg-white dark:bg-slate-800 shadow-sm border-b sticky top-0 z-10">
-        <div className="py-3 px-4 max-w-full">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">Visual Tree Search</h1>
-            
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleStart} 
-                disabled={isSearching}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white disabled:bg-cyan-300 dark:disabled:bg-cyan-900"
-              >
-                Start
-              </Button>
-              <Button 
-                onClick={disconnect} 
-                disabled={!connected} 
-                variant="destructive"
-                className="bg-rose-600 hover:bg-rose-700 text-white"
-              >
-                End
-              </Button>
-            </div>
-          </div>
-          
-          {/* Introduction & Parameters Section */}
-          <div className="mt-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg overflow-hidden">
-            <div 
-              className="p-3 flex justify-between items-center cursor-pointer hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
-              onClick={() => setShowParameters(!showParameters)}
-            >
-              <div className="flex items-start gap-2">
-                <Info className="h-5 w-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-sky-800 dark:text-sky-300">How to use this playground</h3>
-                  <p className="text-sm text-sky-700 dark:text-sky-400">
-                    Configure your search parameters and visualize web browsing automation with tree search algorithms.
-                  </p>
-                </div>
-              </div>
-              {showParameters ? <ChevronUp className="text-cyan-600" /> : <ChevronDown className="text-cyan-600" />}
-            </div>
-            
-            {/* Search Parameters - Expanded by default */}
-            {showParameters && (
-              <div className="p-4 border-t border-sky-200 dark:border-sky-800 bg-white/90 dark:bg-slate-800/90">
-                <div className="mb-4 ml-1 text-sm text-slate-700 dark:text-slate-300">
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Click the &quot;Start&quot; button above to connect and begin the search.</li>
-                    <li>Configure your search parameters below.</li>
-                    <li>The tree of possible actions will appear on the right, while the resulting web page will display on the left.</li>
-                    <li>You can drag the divider to resize the panels as needed.</li>
-                  </ol>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startingUrl" className="text-slate-700 dark:text-slate-300 font-medium">Starting URL</Label>
-                    <Input
-                      id="startingUrl"
-                      value={searchParams.startingUrl}
-                      onChange={(e) => handleParamChange('startingUrl', e.target.value)}
-                      className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="goal" className="text-slate-700 dark:text-slate-300 font-medium">Goal</Label>
-                    <Input
-                      id="goal"
-                      value={searchParams.goal}
-                      onChange={(e) => handleParamChange('goal', e.target.value)}
-                      className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="algorithm" className="text-slate-700 dark:text-slate-300 font-medium">Algorithm</Label>
-                    <select
-                      id="algorithm"
-                      value={searchParams.algorithm}
-                      onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-                      className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
-                    >
-                      <option value="bfs">Breadth-First Search (BFS)</option>
-                      <option value="dfs">Depth-First Search (DFS)</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="maxDepth" className="text-slate-700 dark:text-slate-300 font-medium">Max Depth</Label>
-                    <Input
-                      id="maxDepth"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={searchParams.maxDepth}
-                      onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
-                      className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <ControlPanel
+        searchParams={searchParams}
+        handleParamChange={handleParamChange}
+        handleStart={handleStart}
+        disconnect={disconnect}
+        isSearching={isSearching}
+        connected={connected}
+      />
       
       {/* Main content area - Resizable Split View */}
       <div className="flex-1 px-4 mt-4 overflow-hidden">
@@ -551,24 +450,10 @@ const TreeSearchPlayground = () => {
           </div>
         </div>
         
-        {/* Message Log - Moved to bottom */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 p-3 mt-4">
-          <h2 className="text-lg font-semibold mb-2 text-sky-950 dark:text-sky-100 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-cyan-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-            </svg>
-            Message Log
-          </h2>
-          <div className="h-[150px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md p-2 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
-            {messages.map((msg, index) => (
-              <div key={index} className={`mb-2 ${msg.type === 'outgoing' ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">{msg.timestamp} - {msg.type}</div>
-                <pre className="whitespace-pre-wrap bg-white dark:bg-slate-800 p-2 rounded text-sm border border-slate-200 dark:border-slate-700">{msg.content}</pre>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
+        <MessageLogPanel
+          messages={messages}
+          messagesEndRef={messagesEndRef}
+        />
       </div>
     </div>
   );
