@@ -327,6 +327,7 @@ class BaseAgent:
             })
         else:
             print(f"Node created: {child.action} - {child.natural_language_description}")   
+    
     ## node simulated
     ## message log and d3 visualization add different information
     async def websocket_node_simulated(self, child, node, websocket=None):
@@ -339,6 +340,8 @@ class BaseAgent:
                 "description": child.natural_language_description,
                 "timestamp": datetime.utcnow().isoformat()
             })
+        else:
+            print(f"Node simulated: {child.action} - {child.natural_language_description}") 
         ## but different color for the link
 
     async def websocket_simulation_removed(self, trajectory, websocket=None):
@@ -348,6 +351,8 @@ class BaseAgent:
                 "trajectory": trajectory,
                 "timestamp": datetime.utcnow().isoformat()
             })
+        else:
+            print(f"Simulation removed: {trajectory}")
     
             
     async def websocket_search_complete(self, status, score, path, websocket=None):
@@ -393,23 +398,24 @@ class BaseAgent:
     
      # node evaluation
      # change the node evaluation to use the new prompt
-    # async def node_evaluation(self, node: LATSNode) -> None:
-    #     scores = []
-    #     print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
-    #     for i, child in enumerate(node.children):
-    #         print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
-    #         if child.is_terminal:
-    #             score = 0
-    #         else:
-    #             trajectory = child.get_trajectory()
-    #             prompt = create_llm_prompt(trajectory, self.goal)
-    #             result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model, child.observation.image)
-    #             score = result["overall_score"]
-    #         scores.append(score)
+    async def node_children_evaluation(self, node: LATSNode) -> None:
+        scores = []
+        print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
+        for i, child in enumerate(node.children):
+            print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
+            if child.is_terminal:
+                score = 0
+            else:
+                trajectory = child.get_trajectory()
+                prompt = create_llm_prompt(trajectory, self.goal)
+                # , child.observation.image
+                result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
+                score = result["overall_score"]
+            scores.append(score)
 
-    #     for child, score in zip(node.children, scores):
-    #         child.value = score
-    #         child.reward = score
+        for child, score in zip(node.children, scores):
+            child.value = score
+            child.reward = score
 
     async def node_evaluation(self, node: LATSNode) -> None:
         """Evaluate the current node and assign its score."""
@@ -632,6 +638,9 @@ class BaseAgent:
                 )
                 ## parent node, new node, for this, the link can be different type, indicating, this is simulated
                 ## we don't have node.children.append(child)
+
+                ## new node simulated
+                await self.websocket_node_simulated(new_node, node, websocket=websocket)
 
                 if goal_finished:
                     return trajectory, new_node

@@ -55,8 +55,8 @@ class LATSAgent(BaseAgent):
 
                 # Step 3: Evaluation
                 print(f"{GREEN}Step 3: node evaluation{RESET}")
-                await self.websocket_step_start(step=3, step_name="node_evaluation", websocket=websocket)
-                await self.node_evaluation(node)
+                await self.websocket_step_start(step=3, step_name="node_children_evaluation", websocket=websocket)
+                await self.node_children_evaluation(node)
                 tree_data = self._get_tree_data()
                 if websocket:
                     await self.websocket_tree_update(tree_data=tree_data)
