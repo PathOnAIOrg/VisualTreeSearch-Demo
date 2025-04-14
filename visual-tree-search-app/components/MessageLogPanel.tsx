@@ -1,28 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { 
-  ChevronDown, 
-  ChevronUp, 
   Info, 
-  Play, 
   CheckCircle, 
   XCircle, 
-  Search,
   Globe,
   AlertCircle,
-  Terminal,
   Code,
   Settings,
   RefreshCw,
   Loader2,
-  Shield,
-  Database,
   Network,
-  FileText,
   MessageSquare,
   AlertTriangle,
   HelpCircle,
   Clock,
-  Zap,
   Cpu,
   Brain,
   Target,
@@ -30,11 +21,8 @@ import {
   Award,
   Trophy,
   Star,
-  Heart,
   ThumbsUp,
   ThumbsDown,
-  Smile,
-  Frown,
   Meh,
   ArrowRight,
   PlusCircle,
@@ -57,7 +45,23 @@ interface ParsedMessage {
   content?: string;
   status?: string;
   message?: string;
-  [key: string]: any;
+  goal?: string;
+  search_algorithm?: string;
+  max_depth?: number;
+  browser_type?: string;
+  page_info?: {
+    url?: string;
+    title?: string;
+  };
+  description?: string;
+  action?: string;
+  reason?: string;
+  score?: number;
+  tree?: unknown[];
+  path?: PathStep[];
+  server_info?: {
+    hostname?: string;
+  };
 }
 
 interface PathStep {
@@ -443,18 +447,20 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
               <div className="text-emerald-600 dark:text-emerald-400">
                 Search Complete | Score: {message.score}
               </div>
-              <div className="mt-1">
-                {message.path.map((step: PathStep, index: number) => (
-                  <div 
-                    key={index} 
-                    className="flex items-start gap-1 text-xs text-slate-500 dark:text-slate-400 animate-fadeIn"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <ArrowRight className="h-3 w-3 mt-0.5" />
-                    {step.natural_language_description}
-                  </div>
-                ))}
-              </div>
+              {message.path && message.path.length > 0 && (
+                <div className="mt-1">
+                  {message.path.map((step: PathStep, index: number) => (
+                    <div 
+                      key={index} 
+                      className="flex items-start gap-1 text-xs text-slate-500 dark:text-slate-400 animate-fadeIn"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <ArrowRight className="h-3 w-3 mt-0.5" />
+                      {step.natural_language_description}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
