@@ -19,6 +19,7 @@ class LATSAgent(BaseAgent):
         
         best_node = await self.lats_search(websocket)
         print_trajectory(best_node)
+        return best_node
 
     async def lats_search(self, websocket=None):
             terminal_nodes = []
@@ -71,11 +72,12 @@ class LATSAgent(BaseAgent):
                 await self.websocket_step_start(step=4, step_name="simulation", websocket=websocket)
                 selected_node = max(node.children, key=lambda child: child.value)
                 await self.websocket_node_selection(selected_node, websocket=websocket, type="node_selected_for_simulation")
-                reward, terminal_node = await self.simulation(selected_node, max_depth=self.config.max_depth, num_simulations=1, websocket=websocket)
+                reward, terminal_node = await self.simulation(selected_node, websocket=websocket)
                 terminal_nodes.append(terminal_node)
                 await self.websocket_simulation_result(reward, terminal_node, websocket=websocket)
 
                 if reward == 1:
+                    await self.websocket_search_complete("success", reward, terminal_node.get_trajectory(), websocket=websocket)
                     return terminal_node
 
                 # Step 5: Backpropagation
@@ -96,10 +98,12 @@ class LATSAgent(BaseAgent):
             ## temp change: if reward is the same, choose the deeper node
             best_child = max(all_nodes_list, key=lambda x: (x.reward, x.depth))
             
-            if best_child.reward == 1:
+            if best_child.value >= 0.75:
                 print("Successful trajectory found")
+                await self.websocket_search_complete("success", best_child.value, best_child.get_trajectory(), websocket=websocket)
             else:
                 print("Unsuccessful trajectory found")
+                await self.websocket_search_complete("partial_success", best_child.value, best_child.get_trajectory(), websocket=websocket)
             await self.playwright_manager.close()
                 
             return best_child if best_child is not None else self.root_node

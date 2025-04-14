@@ -109,9 +109,9 @@ class SimpleSearchAgent(BaseAgent):
                     print(f"Found satisfactory solution with score {score}")
                     
                     # Send completion update if websocket is provided
-                    await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=None) 
+                    await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket) 
                     
-                    return [{"action": node.action} for node in path[1:]]
+                    return current_node
             
         # If we've exhausted all nodes and haven't found a perfect solution,
         # return the best path we found
@@ -119,17 +119,17 @@ class SimpleSearchAgent(BaseAgent):
             print(f"Returning best path found with score {best_score}")
             
             # Send completion update if websocket is provided
-            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=None)
+            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=websocket)
             
-            return [{"action": node.action} for node in best_path[1:]]
+            return best_node
         
         # If no path was found at all
         print("No valid path found")
         
         # Send failure update if websocket is provided
-        await self.websocket_search_complete("failure", 0, None, websocket=None)
+        await self.websocket_search_complete("failure", 0, None, websocket=websocket)
         
-        return []
+        return None
         
     # TODO: first evaluate, then expansion
     async def dfs(self, websocket=None) -> List[Dict[str, Any]]:
@@ -209,8 +209,8 @@ class SimpleSearchAgent(BaseAgent):
                 print(f"Found satisfactory solution with score {score}")
                 
                 # Send completion update if websocket is provided
-                await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=None)                
-                return [{"action": node.action} for node in path[1:]]
+                await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket)                
+                return current_node
                         
             # Add non-terminal children to stack in reverse order
             has_unvisited_children = False
@@ -233,15 +233,15 @@ class SimpleSearchAgent(BaseAgent):
             print(f"Returning best path found with score {best_score}")
             
             # Send completion update if websocket is provided
-            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=None)
+            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=websocket)
             
-            return [{"action": node.action} for node in best_path[1:]]
+            return best_node
         
         # If no path was found at all
         print("No valid path found")
         
         # Send failure update if websocket is provided
-        await self.websocket_search_complete("failure", 0, None, websocket=None)
+        await self.websocket_search_complete("failure", 0, None, websocket=websocket)
         
-        return []
+        return None
             

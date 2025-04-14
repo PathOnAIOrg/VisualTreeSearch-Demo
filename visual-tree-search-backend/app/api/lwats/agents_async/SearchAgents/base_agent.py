@@ -34,10 +34,6 @@ from ...webagent_utils_async.evaluation.feedback import capture_post_action_feed
 openai_client = OpenAI()
 
 
-## TODO: remove account reset websocket message
-## browser setup message, ok to leave there in the _reset_browser method
-
-
 class BaseAgent:    
     # no need to pass an initial playwright_manager to the agent class
     def __init__(
@@ -381,6 +377,10 @@ class BaseAgent:
                     "path": path,
                     "timestamp": datetime.utcnow().isoformat()
                 })
+        else:
+            print(f"Search complete: {GREEN}{status}{RESET}")
+            print(f"Search score: {GREEN}{score}{RESET}")
+            print(f"Search path: {GREEN}{path}{RESET}")
         
     # shared, not implemented, BFS, DFS and LATS has its own node selection logic
     async def node_selection(self, node, websocket = None):
@@ -485,31 +485,19 @@ class BaseAgent:
             node = node.parent
 
     # shared
-    async def simulation(self, node: LATSNode, max_depth: int = 2, num_simulations=1, websocket=None) -> tuple[float, LATSNode]:
+    async def simulation(self, node: LATSNode, websocket=None) -> tuple[float, LATSNode]:
         depth = node.depth
+        num_simulations = self.config.num_simulations
+        max_depth = self.config.max_depth
         print("print the trajectory")
         print_trajectory(node)
         print("print the entire tree")
         print_entire_tree(self.root_node)
-        # if websocket:
-            # tree_data = self._get_tree_data()
-            # await self.websocket_tree_update(type="tree_update_simulation", tree_data=tree_data, websocket=websocket)
-            # await websocket.send_json({
-            #     "type": "tree_update",
-            #     "tree": tree_data,
-            #     "timestamp": datetime.utcnow().isoformat()
-            # })
-            # trajectory_data = self._get_trajectory_data(node)
-            # await websocket.send_json({
-            #     "type": "trajectory_update",
-            #     "trajectory": trajectory_data,
-            #     "timestamp": datetime.utcnow().isoformat()
-            # })
-        return await self.rollout(node, max_depth=max_depth, websocket=websocket)
+        return await self.rollout(node, websocket=websocket)
     
     # refactor simulation, rollout, send_completion_request methods
     # TODO: check, score as reward and then update value of the starting node?
-    async def rollout(self, node: LATSNode, max_depth: int = 2, websocket=None)-> tuple[float, LATSNode]:
+    async def rollout(self, node: LATSNode, websocket=None)-> tuple[float, LATSNode]:
         # Reset browser state
         await self._reset_browser()
         path = self.get_path_to_root(node)
@@ -540,23 +528,14 @@ class BaseAgent:
                     "action": n.action,
                     "feedback": n.feedback
                 })
-        ## call the prompt agent
         print("current depth: ", len(path) - 1)
         print("max depth: ", self.config.max_depth)
 
-        ## find a better name for this
         trajectory, terminal_node = await self.send_completion_request(self.goal, len(path) - 1, node=n, trajectory=trajectory, websocket=websocket)
         print("print the trajectory")
         print_trajectory(terminal_node)
         print("print the entire tree")
         print_entire_tree(self.root_node)
-        # if websocket:
-        #     trajectory_data = self._get_trajectory_data(node)
-        #     await websocket.send_json({
-        #         "type": "trajectory_update",
-        #         "trajectory": trajectory_data,
-        #         "timestamp": datetime.utcnow().isoformat()
-        #     })
 
         page = await self.playwright_manager.get_page()
         page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
@@ -583,12 +562,6 @@ class BaseAgent:
         print("print the entire tree")
         print_entire_tree(self.root_node)
         if websocket:
-            # tree_data = self._get_tree_data()
-            # await websocket.send_json({
-            #     "type": "tree_update",
-            #     "tree": tree_data,
-            #     "timestamp": datetime.utcnow().isoformat()
-            # })
             trajectory_data = self._get_trajectory_data(node)
             await websocket.send_json({
                 "type": "trajectory_update",
@@ -684,15 +657,7 @@ class BaseAgent:
         path = self.get_path_to_root(node)
         
         # Execute path
-        for n in path[1:]:  # Skip root node
-            # if websocket:
-            #     await websocket.send_json({
-            #         "type": "replaying_action",
-            #         "node_id": id(n),
-            #         "action": n.action,
-            #         "timestamp": datetime.utcnow().isoformat()
-            #     })
-            
+        for n in path[1:]:  # Skip root node       
             success = await playwright_step_execution(
                 n,
                 self.goal,
@@ -702,12 +667,6 @@ class BaseAgent:
             )
             if not success:
                 n.is_terminal = True
-                # if websocket:
-                #     await websocket.send_json({
-                #         "type": "replay_failed",
-                #         "node_id": id(n),
-                #         "timestamp": datetime.utcnow().isoformat()
-                #     })
                 return []
             
             if not n.feedback:
@@ -716,26 +675,13 @@ class BaseAgent:
                     n.natural_language_description,
                     self.playwright_manager,
                 )
-                # if websocket:
-                #     await websocket.send_json({
-                #         "type": "feedback_generated",
-                #         "node_id": id(n),
-                #         "feedback": n.feedback,
-                #         "timestamp": datetime.utcnow().isoformat()
-                #     })
 
         time.sleep(3)
         page = await self.playwright_manager.get_page()
         page_info = await extract_page_info(page, self.config.fullpage, self.config.log_folder)
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
-        
-        # if websocket:
-        #     await websocket.send_json({
-        #         "type": "generating_actions",
-        #         "node_id": id(node),
-        #         "timestamp": datetime.utcnow().isoformat()
-        #     })
+
         
         next_actions = await extract_top_actions(
             [{"natural_language_description": n.natural_language_description, "action": n.action, "feedback": n.feedback} for n in path[1:]],
@@ -779,23 +725,8 @@ class BaseAgent:
                         action["element"] = element
                 except Exception as e:
                     action["element"] = None
-                    # if websocket:
-                    #     await websocket.send_json({
-                    #         "type": "element_location_failed",
-                    #         "action": action["action"],
-                    #         "error": str(e),
-                    #         "timestamp": datetime.utcnow().isoformat()
-                    #     })
                 children.append(action)
 
         if not children:
-            node.is_terminal = True
-            # if websocket:
-            #     await websocket.send_json({
-            #         "type": "node_terminal",
-            #         "node_id": id(node),
-            #         "reason": "no_valid_actions",
-            #         "timestamp": datetime.utcnow().isoformat()
-            #     })
-        
+            node.is_terminal = True        
         return children
