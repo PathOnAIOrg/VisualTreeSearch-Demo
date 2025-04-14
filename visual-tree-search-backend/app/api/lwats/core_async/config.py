@@ -23,7 +23,8 @@ class AgentConfig:
     iterations: int = 1
     max_depth: int = 3
     num_simulations: int = 100
-    account_reset: bool = True
+    ## TODO: to be fixed, change account reset to False, because it has bug
+    account_reset: bool = False
     
     # Features
     features: List[str] = field(default_factory=lambda: ['axtree'])
