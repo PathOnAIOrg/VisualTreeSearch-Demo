@@ -27,7 +27,7 @@ class SimpleSearchAgent(BaseAgent):
                 })
             raise ValueError(error_msg)
 
-    # TODO: first evaluate, then expansion
+    # TODO: first evaluate, then expansion, right now, it is first expansion, then evaluation
     async def bfs(self, websocket=None):
         queue = deque([self.root_node])
         queue_set = {self.root_node}  # Track nodes in queue
@@ -36,12 +36,6 @@ class SimpleSearchAgent(BaseAgent):
         best_node = None
         visited = set()  # Track visited nodes to avoid cycles
         current_level = 0  # Track current level for BFS
-        
-        # try:
-        # Get the live browser URL during initial setup
-        # if local chromium, then both are None
-        live_browser_url, session_id = await self._reset_browser(websocket)
-        ## well, actually, we don't need live_browser_url, session_id
         
         while queue:
             # Process all nodes at current level
@@ -82,6 +76,8 @@ class SimpleSearchAgent(BaseAgent):
                             "tree": tree_data,
                             "timestamp": datetime.utcnow().isoformat()
                         })
+                    else:
+                        print_entire_tree(self.root_node)
                 
                 # Store node for later processing
                 level_nodes.append(current_node)
@@ -98,7 +94,11 @@ class SimpleSearchAgent(BaseAgent):
                 await self.websocket_node_selection(id(current_node), websocket=websocket)
                 await self.node_evaluation(current_node)
                 tree_data = self._get_tree_data()
-                await self.websocket_tree_update(tree_data=tree_data)
+                if websocket:
+                    await self.websocket_tree_update(tree_data=tree_data)
+                else:
+                    print("after evaluation")
+                    print_entire_tree(self.root_node)
                 path = self.get_path_to_root(current_node)
                 score = current_node.value
                 
@@ -116,7 +116,7 @@ class SimpleSearchAgent(BaseAgent):
                     print(f"Found satisfactory solution with score {score}")
                     
                     # Send completion update if websocket is provided
-                    await self.websocket_search_complete(self, "success", score, current_node.get_trajectory(), websocket=None) 
+                    await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=None) 
                     
                     return [{"action": node.action} for node in path[1:]]
             
@@ -126,7 +126,7 @@ class SimpleSearchAgent(BaseAgent):
             print(f"Returning best path found with score {best_score}")
             
             # Send completion update if websocket is provided
-            await self.websocket_search_complete(self, "partial_success", best_score, best_node.get_trajectory(), websocket=None)
+            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=None)
             
             return [{"action": node.action} for node in best_path[1:]]
         
@@ -134,7 +134,7 @@ class SimpleSearchAgent(BaseAgent):
         print("No valid path found")
         
         # Send failure update if websocket is provided
-        await self.websocket_search_complete(self, "failure", 0, None, websocket=None)
+        await self.websocket_search_complete("failure", 0, None, websocket=None)
         
         return []
         
@@ -148,8 +148,8 @@ class SimpleSearchAgent(BaseAgent):
         visited = set()  # Track visited nodes to avoid cycles
         current_path = []  # Track current path for DFS
         
-        # Get the live browser URL during initial setup
-        live_browser_url, session_id = await self._reset_browser(websocket)
+        # # Get the live browser URL during initial setup
+        # live_browser_url, session_id = await self._reset_browser(websocket)
     
         
         while stack:
@@ -182,7 +182,10 @@ class SimpleSearchAgent(BaseAgent):
                 await self.websocket_step_start(step=1, step_name="node_expansion", websocket=websocket)
                 await self.node_expansion(current_node, websocket)
                 tree_data = self._get_tree_data()
-                await self.websocket_tree_update(tree_data=tree_data)
+                if websocket:
+                    await self.websocket_tree_update(tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
 
                 if websocket:
                     tree_data = self._get_tree_data()
@@ -192,7 +195,11 @@ class SimpleSearchAgent(BaseAgent):
             path = self.get_path_to_root(current_node)
             await self.node_evaluation(current_node)
             tree_data = self._get_tree_data()
-            await self.websocket_tree_update(tree_data=tree_data)
+            if websocket:
+                await self.websocket_tree_update(tree_data=tree_data)
+            else:
+                print("after evaluation")
+                print_entire_tree(self.root_node)
             path = self.get_path_to_root(current_node)
             
 
@@ -212,7 +219,7 @@ class SimpleSearchAgent(BaseAgent):
                 print(f"Found satisfactory solution with score {score}")
                 
                 # Send completion update if websocket is provided
-                await self.websocket_search_complete(self, "success", score, current_node.get_trajectory(), websocket=None)                
+                await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=None)                
                 return [{"action": node.action} for node in path[1:]]
                         
             # Add non-terminal children to stack in reverse order
@@ -236,7 +243,7 @@ class SimpleSearchAgent(BaseAgent):
             print(f"Returning best path found with score {best_score}")
             
             # Send completion update if websocket is provided
-            await self.websocket_search_complete(self, "partial_success", best_score, best_node.get_trajectory(), websocket=None)
+            await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=None)
             
             return [{"action": node.action} for node in best_path[1:]]
         
@@ -244,7 +251,7 @@ class SimpleSearchAgent(BaseAgent):
         print("No valid path found")
         
         # Send failure update if websocket is provided
-        await self.websocket_search_complete(self, "failure", 0, None, websocket=None)
+        await self.websocket_search_complete("failure", 0, None, websocket=None)
         
         return []
             

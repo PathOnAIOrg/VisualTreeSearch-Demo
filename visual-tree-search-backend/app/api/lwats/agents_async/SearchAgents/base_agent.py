@@ -310,6 +310,9 @@ class BaseAgent:
                         "tree": tree_data,
                         "timestamp": datetime.utcnow().isoformat()
                     })
+        else:
+            print(f"Tree updated: {tree_data}")
+    
     async def websocket_node_created(self, child, node, websocket=None):
         if websocket:
             await websocket.send_json({
@@ -320,6 +323,8 @@ class BaseAgent:
                 "description": child.natural_language_description,
                 "timestamp": datetime.utcnow().isoformat()
             })
+        else:
+            print(f"Node created: {child.action} - {child.natural_language_description}")   
     ## node simulated
     ## message log and d3 visualization add different information
     async def websocket_node_simulated(self, child, node, websocket=None):
@@ -385,23 +390,66 @@ class BaseAgent:
 
     
      # node evaluation
-    async def node_evaluation(self, node: LATSNode) -> None:
-        scores = []
-        print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
-        for i, child in enumerate(node.children):
-            print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
-            if child.is_terminal:
-                score = 0
-            else:
-                trajectory = child.get_trajectory()
-                prompt = create_llm_prompt(trajectory, self.goal)
-                result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model, child.observation.image)
-                score = result["overall_score"]
-            scores.append(score)
+     # change the node evaluation to use the new prompt
+    # async def node_evaluation(self, node: LATSNode) -> None:
+    #     scores = []
+    #     print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
+    #     for i, child in enumerate(node.children):
+    #         print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
+    #         if child.is_terminal:
+    #             score = 0
+    #         else:
+    #             trajectory = child.get_trajectory()
+    #             prompt = create_llm_prompt(trajectory, self.goal)
+    #             result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model, child.observation.image)
+    #             score = result["overall_score"]
+    #         scores.append(score)
 
-        for child, score in zip(node.children, scores):
-            child.value = score
-            child.reward = score
+    #     for child, score in zip(node.children, scores):
+    #         child.value = score
+    #         child.reward = score
+
+    async def node_evaluation(self, node: LATSNode) -> None:
+        """Evaluate the current node and assign its score."""
+        try:
+            # Get the path from root to this node
+            path = self.get_path_to_root(node)
+            
+            # Create trajectory for scoring (skip root node)
+            trajectory = []
+            for n in path[1:]:  # Skip root node
+                trajectory.append({
+                    "natural_language_description": n.natural_language_description,
+                    "action": n.action,
+                    "feedback": n.feedback
+                })
+            
+            try:
+                # Score the trajectory
+                if node.is_terminal:
+                    score = 0
+                else:
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    result = score_trajectory_with_openai(
+                        prompt, 
+                        openai_client, 
+                        model=self.config.evaluation_model
+                    )
+                    score = result["overall_score"]
+            
+            except Exception as e:
+                error_msg = f"Error scoring node {id(node)}: {str(e)}"
+                print(error_msg)
+                score = float('-inf')
+            
+            # Assign the score to the node
+            node.value = score
+            node.reward = score
+            
+
+        except Exception as e:
+            error_msg = f"Error in node evaluation: {str(e)}"
+            print(error_msg)
     
     # shared
     ## TODO: check the logic of updating value/ reward, is the input value?
