@@ -330,7 +330,7 @@ async def main():
     await test_chromium_mode()
     
     # Test Browserbase mode
-    #await test_browserbase_mode()
+    await test_browserbase_mode()
 
 if __name__ == "__main__":
     asyncio.run(main())
