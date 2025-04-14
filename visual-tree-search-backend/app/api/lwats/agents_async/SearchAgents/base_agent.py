@@ -113,7 +113,7 @@ class BaseAgent:
         return tree_data
     
     ## TODO: newly added, debug needed
-    async def remove_simulated_trajectory(self, starting_node, terminal_node: LATSNode):
+    async def remove_simulated_trajectory(self, starting_node, terminal_node: LATSNode, websocket=None):
         # to be implemented
         trajectory_data = []
         path = []
@@ -302,6 +302,8 @@ class BaseAgent:
                 "node_id": id,
                 "timestamp": datetime.utcnow().isoformat()
             })
+        else:
+            print(f"Node selected: {id}")
 
     async def websocket_tree_update(self, tree_data, websocket=None):
         if websocket:

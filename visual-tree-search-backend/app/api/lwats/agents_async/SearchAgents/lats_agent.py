@@ -32,7 +32,7 @@ class LATSAgent(BaseAgent):
                 ## TODO: move websocket node selection into node_selection method
                 print(f"{GREEN}Step 1: node selection{RESET}")
                 await self.websocket_step_start(step=1, step_name="node_selection", websocket=websocket)
-                node = self.node_selection(self.root_node)
+                node = await self.node_selection(self.root_node)
 
                 if node is None:
                     print("All paths lead to terminal nodes with reward 0. Ending search.")
@@ -47,7 +47,10 @@ class LATSAgent(BaseAgent):
                     print(f"{RED}All nodes are terminal, stopping search{RESET}")
                     break
                 tree_data = self._get_tree_data()
-                await self.websocket_tree_update(tree_data=tree_data)
+                if websocket:
+                    await self.websocket_tree_update(tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
 
 
                 # Step 3: Evaluation
@@ -55,7 +58,11 @@ class LATSAgent(BaseAgent):
                 await self.websocket_step_start(step=3, step_name="node_evaluation", websocket=websocket)
                 await self.node_evaluation(node)
                 tree_data = self._get_tree_data()
-                await self.websocket_tree_update(tree_data=tree_data)
+                if websocket:
+                    await self.websocket_tree_update(tree_data=tree_data)
+                else:
+                    print("after evaluation")
+                    print_entire_tree(self.root_node)
 
 
                 # Step 4: Simulation

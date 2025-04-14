@@ -67,15 +67,9 @@ class SimpleSearchAgent(BaseAgent):
                     await self.websocket_node_selection(id(current_node), websocket=websocket)
                     await self.node_expansion(current_node, websocket)
                     tree_data = self._get_tree_data()
-                    await self.websocket_tree_update(tree_data=tree_data)
-
+                    
                     if websocket:
-                        tree_data = self._get_tree_data()
-                        await websocket.send_json({
-                            "type": "tree_update",
-                            "tree": tree_data,
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
+                        await self.websocket_tree_update(tree_data=tree_data)
                     else:
                         print_entire_tree(self.root_node)
                 
