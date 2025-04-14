@@ -22,7 +22,7 @@ class AgentConfig:
     branching_factor: int = 5
     iterations: int = 1
     max_depth: int = 3
-    num_simulations: int = 100
+    num_simulations: int = 1
     account_reset: bool = True
     
     # Features

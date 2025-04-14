@@ -116,6 +116,9 @@ async def connect_and_test_search(
                 color = COLORS.get(msg_type, COLORS['reset'])
                 print(f"\nWebSocket message - Type: {color}{msg_type}{COLORS['reset']}")
                 print(f"Raw message: {json.dumps(data, indent=2)}")
+
+                if msg_type == "search_complete":
+                    break
                     
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("WebSocket connection closed")

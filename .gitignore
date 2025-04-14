@@ -1,3 +1,4 @@
+visual-tree-search-backend/app/api/test_logs/*
 visual-tree-search-backend/log/*
 log/*
 shopping.json
