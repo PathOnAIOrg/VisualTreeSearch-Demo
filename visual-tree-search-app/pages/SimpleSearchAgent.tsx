@@ -88,15 +88,8 @@ const TreeSearchPlayground = () => {
     maxDepth: 3
   });
 
-  // Add sessionId state
   const [sessionId, setSessionId] = useState<string | null>(null);
-
-  // Remove these unused states
-  // const [showParameters, setShowParameters] = useState(true);  // Remove this line
-  const [splitPosition, setSplitPosition] = useState(70);
-  const [isDragging, setIsDragging] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const splitPaneRef = useRef<HTMLDivElement>(null);
 
   // Initialize backend URL from env variable
   useEffect(() => {
@@ -342,40 +335,6 @@ const TreeSearchPlayground = () => {
     }));
   };
 
-  // Handle resizing
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !splitPaneRef.current) return;
-      
-      const containerRect = splitPaneRef.current.getBoundingClientRect();
-      const newPosition = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      
-      // Limit the split position between 30% and 70%
-      if (newPosition >= 30 && newPosition <= 80) {
-        setSplitPosition(newPosition);
-      }
-    };
-    
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-    
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-800 pb-4 w-full flex flex-col">
       <ControlPanel
@@ -387,29 +346,17 @@ const TreeSearchPlayground = () => {
         connected={connected}
       />
       
-      {/* Main content area - Resizable Split View */}
+      {/* Main content area - Split View */}
       <div className="flex-1 px-4 mt-4 overflow-hidden">
-        <div ref={splitPaneRef} className="relative h-[calc(100vh-270px)] rounded-lg overflow-hidden shadow-lg">
+        <div className="flex h-[calc(100vh-270px)] rounded-lg overflow-hidden shadow-lg">
           {/* Browser View Container */}
           <LiveBrowserView 
             liveBrowserUrl={liveBrowserUrl}
-            splitPosition={splitPosition}
+            width="70%"
           />
 
-          {/* Resizable handle - Absolute positioned */}
-          <div 
-            className="absolute top-0 bottom-0 w-4 cursor-col-resize flex items-center justify-center hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors z-10"
-            style={{ left: `calc(${splitPosition}% - 8px)` }}
-            onMouseDown={handleMouseDown}
-          >
-            <div className="h-16 w-1 bg-sky-300 dark:bg-sky-600 rounded"></div>
-          </div>
-
-          {/* Tree Visualization Container - Absolute positioned with percentage width */}
-          <div 
-            className="absolute top-0 bottom-0 right-0 overflow-hidden bg-white dark:bg-slate-800 rounded-r-lg"
-            style={{ width: `${100 - splitPosition}%` }}
-          >
+          {/* Tree Visualization Container */}
+          <div className="w-[30%] bg-white dark:bg-slate-800 rounded-r-lg overflow-hidden">
             <div className="p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
               <h2 className="text-lg font-semibold text-sky-950 dark:text-sky-100 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-cyan-500" viewBox="0 0 20 20" fill="currentColor">
