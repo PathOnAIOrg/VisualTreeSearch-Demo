@@ -96,6 +96,7 @@ def print_entire_tree(root: LATSNode) -> None:
         
         # Prepare node statistics
         action = node.action
+        node_id = f"id: {id(node)}"
         visits = f"visits: {node.visits}"
         value = f"value: {node.value:.3f}" if hasattr(node, 'value') else "value: N/A"
         reward = f"reward: {node.reward:.3f}" if hasattr(node, 'reward') else "reward: N/A"
@@ -111,7 +112,7 @@ def print_entire_tree(root: LATSNode) -> None:
             indicator = "(Root)"
         
         # Print the current node
-        print(f"{current_prefix}Level {level}: {GREEN}{action}{RESET} {stats} {indicator}")
+        print(f"{current_prefix}{node_id} Level {level}: {GREEN}{action}{RESET} {stats} {indicator}")
         
         # Prepare the prefix for children
         child_prefix = prefix + ("    " if is_last else "│   ")

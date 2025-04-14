@@ -17,8 +17,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..lwats.webagent_utils_async.utils.playwright_manager import setup_playwright
 from ..lwats.core_async.config import AgentConfig
 from ..lwats.core_async.agent_factory import setup_search_agent
-from ..lwats.agents_async.SimpleSearchAgents.tree_vis import collect_all_nodes
-from ..lwats.agents_async.SimpleSearchAgents.trajectory_score import create_llm_prompt, score_trajectory_with_openai
+from ..lwats.agents_async.SearchAgents.tree_vis import collect_all_nodes
+from ..lwats.agents_async.SearchAgents.trajectory_score import create_llm_prompt, score_trajectory_with_openai
 
 router = APIRouter()
 
@@ -122,10 +122,10 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         # Run search with WebSocket updates
         if search_algorithm.lower() == "bfs":
             # Use the agent's built-in WebSocket-enabled BFS method
-            await agent.bfs_with_websocket(websocket)
+            await agent.bfs(websocket)
         elif search_algorithm.lower() == "dfs":
             # Use the agent's built-in WebSocket-enabled DFS method
-            await agent.dfs_with_websocket(websocket)
+            await agent.dfs(websocket)
         elif search_algorithm.lower() == "lats":
             await agent.run(websocket)
         elif search_algorithm.lower() == "mcts":
