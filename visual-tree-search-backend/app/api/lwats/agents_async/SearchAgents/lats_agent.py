@@ -33,6 +33,7 @@ class LATSAgent(BaseAgent):
                 print(f"{GREEN}Step 1: node selection{RESET}")
                 await self.websocket_step_start(step=1, step_name="node_selection", websocket=websocket)
                 node = await self.node_selection(self.root_node)
+                await self.websocket_node_selection(node, websocket=websocket)
 
                 if node is None:
                     print("All paths lead to terminal nodes with reward 0. Ending search.")
@@ -48,18 +49,18 @@ class LATSAgent(BaseAgent):
                     break
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_expansion", tree_data=tree_data)
                 else:
                     print_entire_tree(self.root_node)
 
 
                 # Step 3: Evaluation
-                print(f"{GREEN}Step 3: node evaluation{RESET}")
+                print(f"{GREEN}Step 3: node chilren evaluation{RESET}")
                 await self.websocket_step_start(step=3, step_name="node_children_evaluation", websocket=websocket)
                 await self.node_children_evaluation(node)
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_children_evaluation", tree_data=tree_data)
                 else:
                     print("after evaluation")
                     print_entire_tree(self.root_node)
@@ -68,8 +69,11 @@ class LATSAgent(BaseAgent):
                 # Step 4: Simulation
                 print(f"{GREEN}Step 4: simulation{RESET}")
                 await self.websocket_step_start(step=4, step_name="simulation", websocket=websocket)
-                reward, terminal_node = await self.simulation(max(node.children, key=lambda child: child.value), max_depth=self.config.max_depth, num_simulations=1, websocket=websocket)
+                selected_node = max(node.children, key=lambda child: child.value)
+                await self.websocket_node_selection(selected_node, websocket=websocket, type="node_selected_for_simulation")
+                reward, terminal_node = await self.simulation(selected_node, max_depth=self.config.max_depth, num_simulations=1, websocket=websocket)
                 terminal_nodes.append(terminal_node)
+                await self.websocket_simulation_result(reward, terminal_node, websocket=websocket)
 
                 if reward == 1:
                     return terminal_node
@@ -79,7 +83,11 @@ class LATSAgent(BaseAgent):
                 await self.websocket_step_start(step=5, step_name="backpropagation", websocket=websocket)
                 self.backpropagate(terminal_node, reward)
                 tree_data = self._get_tree_data()
-                await self.websocket_tree_update(tree_data=tree_data)
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_backpropagation", tree_data=tree_data)
+                else:
+                    print("after backpropagation")
+                    print_entire_tree(self.root_node)
 
             # Find best node
             all_nodes_list = collect_all_nodes(self.root_node)
@@ -101,5 +109,5 @@ class LATSAgent(BaseAgent):
             return None
         ## TODO; move this node selection logic from LATSNode to LATSAgent
         selected_node = node.get_best_leaf()
-        await self.websocket_node_selection(id(selected_node), websocket=websocket)
+        await self.websocket_node_selection(selected_node, websocket=websocket)
         return selected_node

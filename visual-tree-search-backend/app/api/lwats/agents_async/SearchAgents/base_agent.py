@@ -292,28 +292,32 @@ class BaseAgent:
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-
     # node selected is used to highlight node
-    # node
-    async def websocket_node_selection(self, id, websocket=None):
+    async def websocket_node_selection(self, node, websocket=None, type="node_selected"):
         if websocket:
             await websocket.send_json({
-                "type": "node_selected",
-                "node_id": id,
+                "type":type,
+                "node_id": id(node),
+                "parent_id": id(node.parent),
+                "action": node.action,
+                "description": node.natural_language_description,
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:
-            print(f"Node selected: {id}")
+            print(f"{type}: {GREEN}{id(node)}{RESET}")
+            print(f"Node parent: {GREEN}{id(node.parent)}{RESET}")
+            print(f"Node action: {GREEN}{node.action}{RESET}")
+            print(f"Node description: {GREEN}{node.natural_language_description}{RESET}")
 
-    async def websocket_tree_update(self, tree_data, websocket=None):
+    async def websocket_tree_update(self, type, tree_data, websocket=None):
         if websocket:
             await websocket.send_json({
-                        "type": "tree_update",
+                        "type": type,
                         "tree": tree_data,
                         "timestamp": datetime.utcnow().isoformat()
                     })
         else:
-            print(f"Tree updated: {tree_data}")
+            print(f"{type} updated: {tree_data}")
     
     async def websocket_node_created(self, child, node, websocket=None):
         if websocket:
@@ -326,7 +330,10 @@ class BaseAgent:
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:
-            print(f"Node created: {child.action} - {child.natural_language_description}")   
+            print(f"Node created: {GREEN}{id(child)}{RESET}")
+            print(f"Node parent: {GREEN}{id(node)}{RESET}")
+            print(f"Node action: {GREEN}{child.action}{RESET}")
+            print(f"Node description: {GREEN}{child.natural_language_description}{RESET}")
     
     ## node simulated
     ## message log and d3 visualization add different information
@@ -341,7 +348,10 @@ class BaseAgent:
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:
-            print(f"Node simulated: {child.action} - {child.natural_language_description}") 
+            print(f"Node simulated: {GREEN}{id(child)}{RESET}")
+            print(f"Node parent: {GREEN}{id(node)}{RESET}")
+            print(f"Node action: {GREEN}{child.action}{RESET}")
+            print(f"Node description: {GREEN}{child.natural_language_description}{RESET}")
         ## but different color for the link
 
     async def websocket_simulation_removed(self, trajectory, websocket=None):
@@ -352,8 +362,19 @@ class BaseAgent:
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:
-            print(f"Simulation removed: {trajectory}")
-    
+            print(f"Simulation removed: {GREEN}{trajectory}{RESET}")
+
+    async def websocket_simulation_result(self, reward, terminal_node, websocket=None):
+        if websocket:
+            await websocket.send_json({
+                "type": "simulation_result",
+                "reward": reward,
+                "terminal_node": terminal_node,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        else:
+            print(f"Simulation reward: {GREEN}{reward}{RESET}")
+            print(f"Simulation terminal node: {GREEN}{terminal_node}{RESET}")
             
     async def websocket_search_complete(self, status, score, path, websocket=None):
         if websocket:

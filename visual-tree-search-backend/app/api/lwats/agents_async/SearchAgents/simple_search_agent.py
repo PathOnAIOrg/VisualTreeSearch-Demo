@@ -64,12 +64,12 @@ class SimpleSearchAgent(BaseAgent):
                     ## during the node expansion process, reset browser for each node
                     live_browser_url, session_id = await self._reset_browser(websocket)
                     await self.websocket_step_start(step=1, step_name="node_expansion", websocket=websocket)
-                    await self.websocket_node_selection(id(current_node), websocket=websocket)
+                    await self.websocket_node_selection(current_node, websocket=websocket)
                     await self.node_expansion(current_node, websocket)
                     tree_data = self._get_tree_data()
                     
                     if websocket:
-                        await self.websocket_tree_update(tree_data=tree_data)
+                        await self.websocket_tree_update(type="tree_update_node_expansion", tree_data=tree_data)
                     else:
                         print_entire_tree(self.root_node)
                 
@@ -85,11 +85,11 @@ class SimpleSearchAgent(BaseAgent):
             # stage 2: node evaluation
             for current_node in level_nodes:
                 await self.websocket_step_start(step=2, step_name="node_evaluation", websocket=websocket)
-                await self.websocket_node_selection(id(current_node), websocket=websocket)
+                await self.websocket_node_selection(current_node, websocket=websocket)
                 await self.node_evaluation(current_node)
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_evaluation", tree_data=tree_data)
                 else:
                     print("after evaluation")
                     print_entire_tree(self.root_node)
@@ -177,20 +177,16 @@ class SimpleSearchAgent(BaseAgent):
                 await self.node_expansion(current_node, websocket)
                 tree_data = self._get_tree_data()
                 if websocket:
-                    await self.websocket_tree_update(tree_data=tree_data)
+                    await self.websocket_tree_update(type="tree_update_node_expansion", tree_data=tree_data)
                 else:
                     print_entire_tree(self.root_node)
-
-                if websocket:
-                    tree_data = self._get_tree_data()
-                    await self.websocket_tree_update(tree_data=tree_data)
             
             # Get the path from root to this node
             path = self.get_path_to_root(current_node)
             await self.node_evaluation(current_node)
             tree_data = self._get_tree_data()
             if websocket:
-                await self.websocket_tree_update(tree_data=tree_data)
+                await self.websocket_tree_update(type="tree_update_node_evaluation", tree_data=tree_data)
             else:
                 print("after evaluation")
                 print_entire_tree(self.root_node)
