@@ -491,16 +491,6 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
           Tree Visualization
         </h2>
         
-        {/* Simulation indicator */}
-        {simulationStartNodeId && (
-          <div className="mt-2 flex items-center">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              <span className="w-2 h-2 mr-1 rounded-full bg-green-500"></span>
-              Simulation Mode
-            </span>
-          </div>
-        )}
-        
         {/* Legend */}
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           <div className="flex items-center">
