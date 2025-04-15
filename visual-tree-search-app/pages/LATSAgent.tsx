@@ -33,7 +33,7 @@ const LATSAgent = () => {
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
     num_simulations: 1,
-    iterations: 3
+    iterations: 1
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -107,7 +107,7 @@ const LATSAgent = () => {
             search_algorithm: "lats",
             max_depth: searchParams.maxDepth,
             num_simulations: searchParams.num_simulations,
-            iterations: 3
+            iterations: searchParams.iterations
           };
           
           wsRef.current?.send(JSON.stringify(request));
