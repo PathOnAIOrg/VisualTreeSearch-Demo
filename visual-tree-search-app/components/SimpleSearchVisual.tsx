@@ -103,7 +103,7 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
       setTreeNodes(updatedTreeNodes);
       setSelectedNodeId(newSelectedNodeId);
     }
-  }, [messages, treeNodes, selectedNodeId]);
+  }, [messages]);
 
   // Render the tree visualization
   useEffect(() => {
@@ -221,7 +221,7 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
         : theme === 'dark' ? "#374151" : "#D1D5DB")
       .attr("stroke-width", d => d.data.id === selectedNodeId ? 3 : 2);
 
-    // Add node labels directly on the node circles
+    // Add node labels with tooltips
     nodes.append("text")
       .attr("dy", ".35em")
       .attr("x", d => d.children ? -18 : 18)
@@ -230,19 +230,18 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
         // For root node
         if (d.data.parent_id === null) return "ROOT";
         
-        // Extract action name from action string
+        // Show full action string
         if (d.data.action) {
-          const actionMatch = d.data.action.match(/^([a-zA-Z_]+)\(/);
-          return actionMatch ? actionMatch[1] : "action";
+          return d.data.action;
         }
         
         return d.data.id.toString().slice(-4);
       })
-      .attr("font-size", "14px")
+      .attr("font-size", "15px")
       .attr("font-weight", "500")
       .attr("fill", d => {
         if (d.data.id === selectedNodeId) {
-          return theme === 'dark' ? "#93C5FD" : "#2563EB";
+          return "#ff5722"; // Orange for selected node
         }
         return theme === 'dark' ? "#FFFFFF" : "#111827";
       });
@@ -264,29 +263,21 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
     // Add tooltip interactions
     nodes
       .on("mouseover", function(event, d) {
-        if (tooltipRef.current) {
-          let content = `<div><strong>Node ID:</strong> ${d.data.id}</div>`;
-          if (d.data.action) content += `<div><strong>Action:</strong> ${d.data.action}</div>`;
-          if (d.data.description) content += `<div><strong>Description:</strong> ${d.data.description}</div>`;
-          if (typeof d.data.value === 'number') content += `<div><strong>Value:</strong> ${d.data.value.toFixed(2)}</div>`;
-          if (typeof d.data.reward === 'number') content += `<div><strong>Reward:</strong> ${d.data.reward.toFixed(2)}</div>`;
-          if (typeof d.data.visits === 'number') content += `<div><strong>Visits:</strong> ${d.data.visits}</div>`;
-          if (d.data.feedback) content += `<div><strong>Feedback:</strong> ${d.data.feedback}</div>`;
-          
+        if (tooltipRef.current && d.data.description) {
           const tooltip = d3.select(tooltipRef.current);
           tooltip.transition()
             .duration(200)
             .style("opacity", .9);
-          tooltip.html(content)
+          tooltip.html(d.data.description)
             .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 30) + "px");
+            .style("top", (event.pageY - 60) + "px");
         }
       })
       .on("mousemove", function(event) {
         if (tooltipRef.current) {
           d3.select(tooltipRef.current)
             .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 30) + "px");
+            .style("top", (event.pageY - 28) + "px");
         }
       })
       .on("mouseout", function() {
