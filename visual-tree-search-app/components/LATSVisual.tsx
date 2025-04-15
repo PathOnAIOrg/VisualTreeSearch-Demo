@@ -95,7 +95,7 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
         }
         
         // Handle tree structure updates
-        if ((data.type === 'tree_update_node_expansion' || data.type === 'tree_update_node_children_evaluation') 
+        if ((data.type === 'tree_update_node_expansion' || data.type === 'tree_update_node_children_evaluation' || data.typ === 'tree_update_node_backpropagation') 
             && Array.isArray(data.tree)) {
           // Preserve simulation flags when updating from tree
           if (updatedTreeNodes.some(node => node.isSimulated)) {
@@ -151,11 +151,8 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
         
         // Handle simulation removal
         if (data.type === 'removed_simulation') {
-          // Remove simulation flags instead of removing nodes
-          updatedTreeNodes = updatedTreeNodes.map(node => ({
-            ...node, 
-            isSimulated: false // Remove simulation flag
-          }));
+          // Remove all simulated nodes from the tree
+          updatedTreeNodes = updatedTreeNodes.filter(node => !node.isSimulated);
           
           newSimulatedNodes = []; // Clear simulated nodes list
           newSimulationStartNodeId = null; // Clear simulation start node
