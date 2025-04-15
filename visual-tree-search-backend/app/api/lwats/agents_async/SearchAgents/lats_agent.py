@@ -27,7 +27,7 @@ class LATSAgent(BaseAgent):
             for i in range(self.config.iterations):
                 await self.websocket_iteration_start(i, websocket=websocket)
                 
-                print(f"Iteration {i}...")
+                print(f"Iteration {i}/{self.config.iterations} ...")
 
                 # Step 1: Node Selection
                 ## TODO: move websocket node selection into node_selection method

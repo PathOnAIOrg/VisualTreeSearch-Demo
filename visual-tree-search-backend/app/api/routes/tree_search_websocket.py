@@ -77,6 +77,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         search_algorithm = message.get("search_algorithm", "bfs")
         max_depth = message.get("max_depth", 3)
         storage_state = message.get("storage_state", "app/api/shopping.json")
+        iterations = message.get("iterations", 3)  # Extract iterations parameter
         
         # Send status update
         await websocket.send_json({
@@ -91,7 +92,8 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             search_algorithm=search_algorithm,
             max_depth=max_depth,
             storage_state=storage_state,
-            headless=False
+            headless=False,
+            iterations=iterations  # Add iterations to config
         )
         
         # Send status update
