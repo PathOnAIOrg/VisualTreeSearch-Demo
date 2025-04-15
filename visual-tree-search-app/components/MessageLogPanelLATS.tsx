@@ -26,7 +26,12 @@ import {
   Meh,
   ArrowRight,
   PlusCircle,
-  Expand
+  Expand,
+  ArrowUp,
+  Play,
+  Route,
+  Trash,
+  StepForward
 } from 'lucide-react';
 
 interface Message {
@@ -62,6 +67,9 @@ interface ParsedMessage {
   server_info?: {
     hostname?: string;
   };
+  node_id?: string;
+  value?: number;
+  visits?: number;
 }
 
 interface PathStep {
@@ -146,6 +154,25 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
         return "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800";
       case 'neutral':
         return "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-800";
+
+      // MCTS specific updates
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
+        return "bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 border-cyan-200 dark:border-cyan-800";
+      
+      case 'iteration_start':
+      case 'step_start':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
+      
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800";
 
       default:
         return "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-800";
@@ -233,6 +260,30 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
         return <Flag className="h-4 w-4 text-blue-500" />;
       case 'best_path_update':
         return <Target className="h-4 w-4 text-blue-500" />;
+      case 'tree_update_node_children_evaluation':
+        return <Brain className="h-4 w-4 text-cyan-500" />;
+      case 'tree_update_node_backpropagation':
+        return <ArrowUp className="h-4 w-4 text-cyan-500" />;
+      case 'tree_update_simulation':
+        return <Play className="h-4 w-4 text-cyan-500" />;
+      case 'trajectory_update':
+        return <Route className="h-4 w-4 text-cyan-500" />;
+      case 'removed_simulation':
+        return <Trash className="h-4 w-4 text-cyan-500" />;
+      case 'iteration_start':
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+      case 'step_start':
+        return <StepForward className="h-4 w-4 text-blue-500" />;
+      case 'node_selected':
+        return <Target className="h-4 w-4 text-green-500" />;
+      case 'node_selected_for_simulation':
+        return <Target className="h-4 w-4 text-green-500" />;
+      case 'node_created':
+        return <PlusCircle className="h-4 w-4 text-green-500" />;
+      case 'node_simulated':
+        return <Play className="h-4 w-4 text-green-500" />;
+      case 'node_terminal':
+        return <Flag className="h-4 w-4 text-green-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -308,6 +359,25 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
         return "bg-red-100 dark:bg-red-800/30 text-red-600 dark:text-red-400";
       case 'neutral':
         return "bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400";
+
+      // MCTS specific updates
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
+        return "bg-cyan-100 dark:bg-cyan-800/30 text-cyan-600 dark:text-cyan-400";
+      
+      case 'iteration_start':
+      case 'step_start':
+        return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
+      
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return "bg-green-100 dark:bg-green-800/30 text-green-600 dark:text-green-400";
 
       default:
         return "bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400";
@@ -473,6 +543,50 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
               <div className="text-red-600 dark:text-red-400">
                 Account reset completed
               </div>
+            </div>
+          </div>
+        );
+
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-cyan-600 dark:text-cyan-400">
+                {message.description || message.type.split('_').join(' ')}
+              </div>
+              {message.node_id && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Node ID: {message.node_id}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-green-600 dark:text-green-400">
+                {message.description || message.type.split('_').join(' ')}
+              </div>
+              {message.node_id && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Node ID: {message.node_id}
+                  {message.value !== undefined && ` | Value: ${message.value.toFixed(2)}`}
+                  {message.visits !== undefined && ` | Visits: ${message.visits}`}
+                </div>
+              )}
             </div>
           </div>
         );

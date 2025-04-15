@@ -11,7 +11,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <>
       <Head>
-        <title>NextJS Project</title>
+        <title>Visual Tree Search</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
