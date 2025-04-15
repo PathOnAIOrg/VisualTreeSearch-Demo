@@ -137,7 +137,7 @@ class BaseAgent:
             }
             trajectory_data.append(node_data)
         
-        await self.websocket_simulation_removed(trajectory_data, websocket=None)
+        await self.websocket_simulation_removed(trajectory_data, websocket=websocket)
         pass
     
     def _get_trajectory_data(self, terminal_node: LATSNode):
