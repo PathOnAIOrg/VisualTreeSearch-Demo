@@ -367,15 +367,15 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
       .attr("font-weight", "500")
       .attr("fill", d => {
         if (d.data.isSimulated) {
-          return theme === 'dark' ? "#FDBA74" : "#C2410C"; // Orange for simulated node
+          return theme === 'dark' ? "#FDBA74" : "#C2410C";
         }
         
         if (d.data.id === simulationStartNodeId) {
-          return theme === 'dark' ? "#A7F3D0" : "#047857"; // Green for simulation start
+          return theme === 'dark' ? "#A7F3D0" : "#047857";
         }
         
         if (d.data.id === selectedNodeId) {
-          return theme === 'dark' ? "#93C5FD" : "#1D4ED8"; // Blue for selected node
+          return theme === 'dark' ? "#93C5FD" : "#1D4ED8";
         }
         
         return theme === 'dark' ? "#FFFFFF" : "#111827";
