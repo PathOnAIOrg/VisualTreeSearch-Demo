@@ -70,6 +70,11 @@ interface ParsedMessage {
   node_id?: string;
   value?: number;
   visits?: number;
+  reward?: number;
+  terminal_node_description?: string;
+  step?: number;
+  step_name?: string;
+  iteration?: number;
 }
 
 interface PathStep {
@@ -173,6 +178,9 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
       case 'node_simulated':
       case 'node_terminal':
         return "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800";
+
+      case 'simulation_result':
+        return "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800";
 
       default:
         return "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-800";
@@ -284,6 +292,8 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
         return <Play className="h-4 w-4 text-green-500" />;
       case 'node_terminal':
         return <Flag className="h-4 w-4 text-green-500" />;
+      case 'simulation_result':
+        return <Info className="h-4 w-4 text-amber-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -378,6 +388,9 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
       case 'node_simulated':
       case 'node_terminal':
         return "bg-green-100 dark:bg-green-800/30 text-green-600 dark:text-green-400";
+
+      case 'simulation_result':
+        return "bg-amber-100 dark:bg-amber-800/30 text-amber-600 dark:text-amber-400";
 
       default:
         return "bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400";
@@ -559,11 +572,6 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
               <div className="text-cyan-600 dark:text-cyan-400">
                 {message.description || message.type.split('_').join(' ')}
               </div>
-              {message.node_id && (
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Node ID: {message.node_id}
-                </div>
-              )}
             </div>
           </div>
         );
@@ -580,13 +588,52 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
               <div className="text-green-600 dark:text-green-400">
                 {message.description || message.type.split('_').join(' ')}
               </div>
-              {message.node_id && (
+              {message.action && (
                 <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Node ID: {message.node_id}
-                  {message.value !== undefined && ` | Value: ${message.value.toFixed(2)}`}
-                  {message.visits !== undefined && ` | Visits: ${message.visits}`}
+                  Action: {message.action}
                 </div>
               )}
+            </div>
+          </div>
+        );
+
+      case 'simulation_result':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400">
+                Simulation Result | Reward: {message.reward}
+              </div>
+              {message.terminal_node_description && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {message.terminal_node_description}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'step_start':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-blue-600 dark:text-blue-400">
+                Step {message.step}: {message.step_name}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'iteration_start':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-blue-600 dark:text-blue-400">
+                Iteration {message.iteration}
+              </div>
             </div>
           </div>
         );

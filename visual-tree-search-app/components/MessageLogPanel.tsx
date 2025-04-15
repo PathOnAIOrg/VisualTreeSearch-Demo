@@ -233,6 +233,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
         return <Flag className="h-4 w-4 text-blue-500" />;
       case 'best_path_update':
         return <Target className="h-4 w-4 text-blue-500" />;
+      case 'node_selected_for_simulation':
+        return <Target className="h-4 w-4 text-purple-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -415,9 +417,6 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
             {getIcon(message)}
             <div className="animate-slideIn">
               <div className="text-purple-600 dark:text-purple-400">{message.description}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                Reason: {message.reason}
-              </div>
             </div>
           </div>
         );
@@ -473,6 +472,16 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
               <div className="text-red-600 dark:text-red-400">
                 Account reset completed
               </div>
+            </div>
+          </div>
+        );
+
+      case 'node_selected_for_simulation':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-purple-600 dark:text-purple-400">{message.description}</div>
             </div>
           </div>
         );
