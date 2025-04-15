@@ -216,10 +216,18 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
         // Action node (default)
         return theme === 'dark' ? "#4B5563" : "#E5E7EB";
       })
-      .attr("stroke", d => d.data.id === selectedNodeId
-        ? theme === 'dark' ? "#93C5FD" : "#2563EB"
-        : theme === 'dark' ? "#374151" : "#D1D5DB")
-      .attr("stroke-width", d => d.data.id === selectedNodeId ? 3 : 2);
+      .attr("stroke", d => {
+        if (d.data.id === selectedNodeId) {
+          return theme === 'dark' ? "#93C5FD" : "#2563EB";
+        }
+        return theme === 'dark' ? "#374151" : "#D1D5DB";
+      })
+      .attr("stroke-width", d => {
+        if (d.data.id === selectedNodeId) {
+          return 3;
+        }
+        return 2;
+      });
 
     // Add node labels with tooltips
     nodes.append("text")
@@ -241,24 +249,10 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
       .attr("font-weight", "500")
       .attr("fill", d => {
         if (d.data.id === selectedNodeId) {
-          return "#ff5722"; // Orange for selected node
+          return theme === 'dark' ? "#93C5FD" : "#1D4ED8";
         }
         return theme === 'dark' ? "#FFFFFF" : "#111827";
       });
-
-    // Add reward values near nodes
-    nodes.append("text")
-      .attr("dy", "1.5em")
-      .attr("x", d => d.children ? -18 : 18)
-      .attr("text-anchor", d => d.children ? "end" : "start")
-      .text(d => {
-        if (typeof d.data.reward === 'number') {
-          return `R: ${d.data.reward.toFixed(2)}`;
-        }
-        return "";
-      })
-      .attr("font-size", "12px")
-      .attr("fill", theme === 'dark' ? "#E5E7EB" : "#4B5563");
 
     // Add tooltip interactions
     nodes
@@ -309,6 +303,18 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
           </svg>
           Tree Visualization
         </h2>
+        
+        {/* Legend */}
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          <div className="flex items-center">
+            <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
+            <span className="text-gray-700 dark:text-gray-300">Selected</span>
+          </div>
+          <div className="flex items-center">
+            <span className="w-3 h-3 rounded-full inline-block mr-1 bg-gray-500 dark:bg-gray-600"></span>
+            <span className="text-gray-700 dark:text-gray-300">Root</span>
+          </div>
+        </div>
       </div>
       <div 
         ref={containerRef} 

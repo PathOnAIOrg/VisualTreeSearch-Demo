@@ -367,33 +367,19 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
       .attr("font-weight", "500")
       .attr("fill", d => {
         if (d.data.isSimulated) {
-          return theme === 'dark' ? "#FDBA74" : "#C2410C"; // Orange for simulated node
+          return theme === 'dark' ? "#FDBA74" : "#C2410C";
         }
         
         if (d.data.id === simulationStartNodeId) {
-          return theme === 'dark' ? "#A7F3D0" : "#047857"; // Green for simulation start
+          return theme === 'dark' ? "#A7F3D0" : "#047857";
         }
         
         if (d.data.id === selectedNodeId) {
-          return theme === 'dark' ? "#93C5FD" : "#1D4ED8"; // Blue for selected node
+          return theme === 'dark' ? "#93C5FD" : "#1D4ED8";
         }
         
         return theme === 'dark' ? "#FFFFFF" : "#111827";
       });
-
-    // Add reward values near nodes
-    nodes.append("text")
-      .attr("dy", "1.5em")
-      .attr("x", d => d.children ? -18 : 18)
-      .attr("text-anchor", d => d.children ? "end" : "start")
-      .text(d => {
-        if (typeof d.data.reward === 'number') {
-          return `R: ${d.data.reward.toFixed(2)}`;
-        }
-        return "";
-      })
-      .attr("font-size", "12px")
-      .attr("fill", theme === 'dark' ? "#E5E7EB" : "#4B5563");
 
     // Add tooltip interactions
     nodes
