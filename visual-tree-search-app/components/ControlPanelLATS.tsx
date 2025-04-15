@@ -9,6 +9,7 @@ interface SearchParams {
   goal: string;
   maxDepth: number;
   num_simulations: number;
+  iterations: number;
 }
 
 interface ControlPanelProps {
@@ -128,6 +129,19 @@ const ControlPanelLATS: React.FC<ControlPanelProps> = ({
                     max={100}
                     value={searchParams.num_simulations}
                     onChange={(e) => handleParamChange('num_simulations', parseInt(e.target.value))}
+                    className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="iterations" className="text-slate-700 dark:text-slate-300 font-medium">Iterations</Label>
+                  <Input
+                    id="iterations"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={searchParams.iterations}
+                    onChange={(e) => handleParamChange('iterations', parseInt(e.target.value))}
                     className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
                   />
                 </div>
