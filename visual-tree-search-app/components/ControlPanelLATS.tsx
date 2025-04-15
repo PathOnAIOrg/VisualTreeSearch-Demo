@@ -34,7 +34,7 @@ const ControlPanelLATS: React.FC<ControlPanelProps> = ({
     <div className="bg-white dark:bg-slate-800 shadow-sm border-b sticky top-0 z-10">
       <div className="py-3 px-4 max-w-full">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">Visual Tree Search</h1>
+          <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">Visual Tree Search: LATS</h1>
           
           <div className="flex gap-2">
             <Button 
