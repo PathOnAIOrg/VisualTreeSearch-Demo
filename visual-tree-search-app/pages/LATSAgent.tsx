@@ -10,6 +10,7 @@ interface SearchParams {
   goal: string;
   maxDepth: number;
   num_simulations: number;
+  iterations: number;
 }
 
 interface Message {
@@ -31,7 +32,8 @@ const LATSAgent = () => {
     startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
-    num_simulations: 1
+    num_simulations: 1,
+    iterations: 3
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -103,6 +105,9 @@ const LATSAgent = () => {
             starting_url: searchParams.startingUrl,
             goal: searchParams.goal,
             search_algorithm: "lats",
+            max_depth: searchParams.maxDepth,
+            num_simulations: searchParams.num_simulations,
+            iterations: 3
           };
           
           wsRef.current?.send(JSON.stringify(request));

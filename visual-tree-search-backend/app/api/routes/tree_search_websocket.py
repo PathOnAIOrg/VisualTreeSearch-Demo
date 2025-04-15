@@ -93,7 +93,8 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             max_depth=max_depth,
             storage_state=storage_state,
             headless=False,
-            iterations=iterations  # Add iterations to config
+            iterations=iterations,
+            num_simulations=message.get("num_simulations", 1)
         )
         
         # Send status update
