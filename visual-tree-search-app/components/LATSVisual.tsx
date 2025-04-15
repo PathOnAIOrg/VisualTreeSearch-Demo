@@ -381,20 +381,6 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
         return theme === 'dark' ? "#FFFFFF" : "#111827";
       });
 
-    // Add reward values near nodes
-    nodes.append("text")
-      .attr("dy", "1.5em")
-      .attr("x", d => d.children ? -18 : 18)
-      .attr("text-anchor", d => d.children ? "end" : "start")
-      .text(d => {
-        if (typeof d.data.reward === 'number') {
-          return `R: ${d.data.reward.toFixed(2)}`;
-        }
-        return "";
-      })
-      .attr("font-size", "12px")
-      .attr("fill", theme === 'dark' ? "#E5E7EB" : "#4B5563");
-
     // Add tooltip interactions
     nodes
       .on("mouseover", function(event, d) {
