@@ -499,7 +499,7 @@ class BaseAgent:
     # TODO: check, score as reward and then update value of the starting node?
     async def rollout(self, node: LATSNode, websocket=None)-> tuple[float, LATSNode]:
         # Reset browser state
-        await self._reset_browser()
+        live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
         
         print("execute path")
