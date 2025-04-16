@@ -256,17 +256,56 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
 
     // Add tooltip interactions
     nodes
-      .on("mouseover", function(event, d) {
-        if (tooltipRef.current && d.data.description) {
-          const tooltip = d3.select(tooltipRef.current);
-          tooltip.transition()
-            .duration(200)
-            .style("opacity", .9);
-          tooltip.html(d.data.description)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 60) + "px");
+    .on("mouseover", function(event, d) {
+      if (tooltipRef.current) {
+        let tooltipContent = '';
+        
+        // Add description if available
+        if (d.data.description) {
+          tooltipContent += `<p>${d.data.description}</p>`;
         }
-      })
+        
+        // Add node status information
+        const nodeInfo = [];
+        
+        
+        if (d.data.id === selectedNodeId) {
+          nodeInfo.push(`<span class="font-semibold text-blue-600 dark:text-blue-400">Selected Node</span>`);
+        }
+        
+        if (nodeInfo.length > 0) {
+          tooltipContent += `<div class="mt-2">${nodeInfo.join(' | ')}</div>`;
+        }
+        
+        // Add reward info if available
+        if (typeof d.data.reward === 'number') {
+          tooltipContent += `<div class="mt-1">Reward: <span class="font-bold">${d.data.reward.toFixed(2)}</span></div>`;
+        }
+        
+        // Add value info if available
+        if (typeof d.data.value === 'number') {
+          tooltipContent += `<div>Value: <span class="font-bold">${d.data.value.toFixed(2)}</span></div>`;
+        }
+        
+        // Add visits info if available
+        if (typeof d.data.visits === 'number') {
+          tooltipContent += `<div>Visits: <span class="font-bold">${d.data.visits}</span></div>`;
+        }
+        
+        // Add depth info if available
+        if (typeof d.data.depth === 'number') {
+          tooltipContent += `<div>Depth: <span class="font-bold">${d.data.depth}</span></div>`;
+        }
+        
+        const tooltip = d3.select(tooltipRef.current);
+        tooltip.transition()
+          .duration(200)
+          .style("opacity", .9);
+        tooltip.html(tooltipContent)
+          .style("left", (event.pageX + 15) + "px")
+          .style("top", (event.pageY - 60) + "px");
+      }
+    })
       .on("mousemove", function(event) {
         if (tooltipRef.current) {
           d3.select(tooltipRef.current)
@@ -309,10 +348,6 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
           <div className="flex items-center">
             <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
             <span className="text-gray-700 dark:text-gray-300">Selected</span>
-          </div>
-          <div className="flex items-center">
-            <span className="w-3 h-3 rounded-full inline-block mr-1 bg-gray-500 dark:bg-gray-600"></span>
-            <span className="text-gray-700 dark:text-gray-300">Root</span>
           </div>
         </div>
       </div>

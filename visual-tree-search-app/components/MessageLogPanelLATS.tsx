@@ -497,9 +497,8 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
           <div className="flex items-center gap-2 animate-fadeIn">
             {getIcon(message)}
             <div className="animate-slideIn">
-              <div className="text-purple-600 dark:text-purple-400">{message.description}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                Reason: {message.reason}
+              <div className="text-purple-600 dark:text-purple-400">
+                {message.description ? `Select ${message.description}` : 'Select the root node'}
               </div>
             </div>
           </div>
