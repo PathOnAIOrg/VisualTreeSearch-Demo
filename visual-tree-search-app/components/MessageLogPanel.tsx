@@ -416,7 +416,9 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
           <div className="flex items-center gap-2 animate-fadeIn">
             {getIcon(message)}
             <div className="animate-slideIn">
-              <div className="text-purple-600 dark:text-purple-400">{message.description}</div>
+              <div className="text-purple-600 dark:text-purple-400">
+                {message.description ? `Select ${message.description}` : 'Select the root node'}
+              </div>
             </div>
           </div>
         );
