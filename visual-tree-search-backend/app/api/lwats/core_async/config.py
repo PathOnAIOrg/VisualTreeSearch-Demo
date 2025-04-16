@@ -24,6 +24,8 @@ class AgentConfig:
     max_depth: int = 3
     num_simulations: int = 1
     account_reset: bool = True
+
+    reflection_score: float = 0.75
     
     # Features
     features: List[str] = field(default_factory=lambda: ['axtree'])

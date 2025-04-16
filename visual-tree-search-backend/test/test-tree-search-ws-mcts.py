@@ -107,7 +107,8 @@ async def connect_and_test_search(
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
-            "max_depth": max_depth
+            "max_depth": max_depth,
+            "iterations": 10
         }
         
         logger.info(f"Sending search request: {request}")
