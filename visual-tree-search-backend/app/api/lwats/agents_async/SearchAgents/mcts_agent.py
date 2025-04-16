@@ -17,4 +17,30 @@ class MCTSAgent(BaseAgent):
                 "timestamp": datetime.utcnow().isoformat()
             })
         
-        pass
+        best_node = await self.mcts_search(websocket)
+        print_trajectory(best_node)
+        return best_node
+    
+
+    # Performs Monte Carlo Tree Search starting from the root node with WebSocket updates.
+    # Uses GPT-4 for node selection and reflection-based backpropagation.
+    async def mcts_search(self, websocket=None):
+        for i in range(self.config.iterations):
+            await self.websocket_iteration_start(i, websocket=websocket)
+                
+            print(f"Iteration {i}/{self.config.iterations} ...")
+
+            # Step 1: Node Selection
+            # Selection: Use GPT-4 to select a promising path
+
+
+            # Step 2: Node Expansion
+            # Expansion: Expand the selected node if possible
+
+
+            # Step 3: Node Simulation
+            # Simulation: Evaluate the current path
+
+
+            # Step 4: Backpropagation
+            # # Reflection-based backpropagation
