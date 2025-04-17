@@ -77,7 +77,8 @@ async def connect_and_test_search(
     starting_url: str,
     goal: str,
     search_algorithm: str = "bfs",
-    max_depth: int = 3
+    max_depth: int = 3,
+    iterations: int = 5
 ):
     """
     Connect to the WebSocket endpoint and test the tree search functionality.
@@ -88,6 +89,7 @@ async def connect_and_test_search(
         goal: Goal to achieve
         search_algorithm: Search algorithm to use (bfs or dfs)
         max_depth: Maximum depth for the search tree
+        iterations: Number of iterations for LATS algorithm
     """
     logger.info(f"Connecting to WebSocket at {ws_url}")
     
@@ -107,7 +109,8 @@ async def connect_and_test_search(
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
-            "max_depth": max_depth
+            "max_depth": max_depth,
+            "iterations": iterations
         }
         
         logger.info(f"Sending search request: {request}")
@@ -156,6 +159,9 @@ def parse_arguments():
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
     
+    parser.add_argument("--iterations", type=int, default=5,
+                        help="Number of iterations for LATS algorithm (default: 5)")
+    
     # Add the new argument for log file
     parser.add_argument("--log-file", type=str, 
                         help="File to save the colored output to")
@@ -196,6 +202,7 @@ async def main():
     logger.info(f"Goal: {args.goal}")
     logger.info(f"Algorithm: {args.algorithm}")
     logger.info(f"Max depth: {args.max_depth}")
+    logger.info(f"Iterations: {args.iterations}")
     
     try:
         await connect_and_test_search(
@@ -203,7 +210,8 @@ async def main():
             starting_url=args.starting_url,
             goal=args.goal,
             search_algorithm=args.algorithm,
-            max_depth=args.max_depth
+            max_depth=args.max_depth,
+            iterations=args.iterations
         )
     finally:
         # Clean up if logging to file

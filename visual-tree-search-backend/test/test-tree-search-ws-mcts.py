@@ -77,7 +77,8 @@ async def connect_and_test_search(
     starting_url: str,
     goal: str,
     search_algorithm: str = "bfs",
-    max_depth: int = 3
+    max_depth: int = 3,
+    iterations: int = 5
 ):
     """
     Connect to the WebSocket endpoint and test the tree search functionality.
@@ -88,6 +89,7 @@ async def connect_and_test_search(
         goal: Goal to achieve
         search_algorithm: Search algorithm to use (bfs or dfs)
         max_depth: Maximum depth for the search tree
+        iterations: Number of iterations for MCTS algorithm
     """
     logger.info(f"Connecting to WebSocket at {ws_url}")
     
@@ -99,16 +101,23 @@ async def connect_and_test_search(
         data = json.loads(response)
         if data.get("type") == "connection_established":
             logger.info(f"Connection established with ID: {data.get('connection_id')}")
-        
+        if search_algorithm in ["bfs", "dfs"]:
+            agent_type = "SimpleSearchAgent"
+        elif search_algorithm in ["lats"]:
+            agent_type = "LATSAgent"
+        elif search_algorithm in ["mcts"]:
+            agent_type = "MCTSAgent"
+        else:
+            raise ValueError(f"Invalid search algorithm: {search_algorithm}")
         # Send search request
         request = {
             "type": "start_search",
-            "agent_type": "MCTSAgent",
+            "agent_type": agent_type,
             "starting_url": starting_url,
             "goal": goal,
             "search_algorithm": search_algorithm,
             "max_depth": max_depth,
-            "iterations": 10
+            "iterations": iterations
         }
         
         logger.info(f"Sending search request: {request}")
@@ -151,11 +160,14 @@ def parse_arguments():
     parser.add_argument("--goal", type=str, default=DEFAULT_GOAL,
                         help=f"Goal to achieve (default: {DEFAULT_GOAL})")
     
-    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats", "mcts"], default="lats",
-                        help="Search algorithm to use (default: lats)")
+    parser.add_argument("--algorithm", type=str, choices=["bfs", "dfs", "lats", "mcts"], default="mcts",
+                        help="Search algorithm to use (default: mcts)")
     
     parser.add_argument("--max-depth", type=int, default=3,
                         help="Maximum depth for the search tree (default: 3)")
+    
+    parser.add_argument("--iterations", type=int, default=5,
+                        help="Number of iterations for LATS algorithm (default: 5)")
     
     # Add the new argument for log file
     parser.add_argument("--log-file", type=str, 
@@ -197,6 +209,7 @@ async def main():
     logger.info(f"Goal: {args.goal}")
     logger.info(f"Algorithm: {args.algorithm}")
     logger.info(f"Max depth: {args.max_depth}")
+    logger.info(f"Iterations: {args.iterations}")
     
     try:
         await connect_and_test_search(
@@ -205,6 +218,8 @@ async def main():
             goal=args.goal,
             search_algorithm=args.algorithm,
             max_depth=args.max_depth
+            ,
+            iterations=args.iterations
         )
     finally:
         # Clean up if logging to file

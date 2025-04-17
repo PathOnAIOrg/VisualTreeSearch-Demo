@@ -289,7 +289,9 @@ class MCTSAgent(BaseAgent):
             print(f"{GREEN}Step 4: Reflection Backtracking{RESET}")
             await self.websocket_step_start(step=4, step_name="reflection_backtracking", websocket=websocket)
             if score >= self.config.reflection_score:
-                await self.websocket_search_complete("success", score, path, websocket=websocket)
+                # Convert path to serializable trajectory
+                trajectory = [node.action for node in path if node.action is not None]
+                await self.websocket_search_complete("success", score, trajectory, websocket=websocket)
                 return node
 
             print(f"path: {path}")
