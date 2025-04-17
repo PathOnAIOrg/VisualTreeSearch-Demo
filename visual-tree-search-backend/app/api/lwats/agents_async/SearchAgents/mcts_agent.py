@@ -141,10 +141,10 @@ class MCTSAgent(BaseAgent):
                 "feedback": n.feedback
             })
         
-        # Score the trajectory
-        # TODO: if node is terminal, score is 0?
-        # if node.is_terminal:
-        #     score = 0
+        ## fix for MCTS agent only
+        if len(trajectory) == 0:
+            score = 0
+            return score
         prompt = create_llm_prompt(trajectory, self.goal)
         print(f"prompt: {prompt}")
         result = score_trajectory_with_openai(
@@ -230,8 +230,10 @@ class MCTSAgent(BaseAgent):
             print("Suggested improvements:")
             for improvement in reflection_result["suggested_improvements"]:
                 print(f"- {improvement}")
+            print(f"current_node: {current_node.action}")
+            print(f"current_node: {current_node.natural_language_description}")
         
-        return path
+        return path, current_node
 
     async def mcts_search(self, websocket=None) -> Optional[LATSNode]:
         best_score = float('-inf')
@@ -249,17 +251,22 @@ class MCTSAgent(BaseAgent):
             # "node selection" combines selection and partial simulation
             print(f"{GREEN}Step 1: Node Selection{RESET}")
             await self.websocket_step_start(step=1, step_name="node_selection", websocket=websocket)
-            node = await self.node_selection(self.root_node, websocket)
+            selected_node = await self.node_selection(self.root_node, websocket)
+            tree_data = self._get_tree_data()
+            if websocket:
+                await self.websocket_tree_update(type="tree_update_node_selection", websocket=websocket, tree_data=tree_data)
+            else:
+                print_entire_tree(self.root_node)
             
-            if node is None:
+            if selected_node is None:
                 logger.warning("All paths lead to terminal nodes. Ending search.")
                 break
             
             # Step 2: Node Expansion
             print(f"{GREEN}Step 2: Node Expansion{RESET}")
             await self.websocket_step_start(step=2, step_name="node_expansion", websocket=websocket)
-            await self.node_expansion(node, websocket)
-            if node is None:
+            await self.node_expansion(selected_node, websocket)
+            if selected_node is None:
                 # all the nodes are terminal, stop the search
                 print(f"{RED}All nodes are terminal, stopping search{RESET}")
                 break
@@ -274,15 +281,18 @@ class MCTSAgent(BaseAgent):
             # TODO: implement simulation using openai
             print(f"{GREEN}Step 3: Simulation{RESET}")
             await self.websocket_step_start(step=3, step_name="simulation", websocket=websocket)
-            path = self.get_path_to_root(node)
+            path = self.get_path_to_root(selected_node)
             score = await self.evaluate_selected_path(path)
             # change to reward later?
             if score > best_score:
                 best_score = score
                 best_path = path
+                best_node = selected_node
                 print(f"\nNew best path found!")
-                print(f"Previous best score: {best_score:.3f}")
-                print(f"New best score: {score:.3f}")
+                print(f"best score: {best_score:.3f}")
+                print(f"best node: {best_node.action}")
+                print(f"best node: {best_node.natural_language_description}")
+                print(f"best path: {best_path}")
 
 
             ## Step 4: reflection backtracking
@@ -290,13 +300,15 @@ class MCTSAgent(BaseAgent):
             await self.websocket_step_start(step=4, step_name="reflection_backtracking", websocket=websocket)
             if score >= self.config.reflection_score:
                 # Convert path to serializable trajectory
-                trajectory = [node.action for node in path if node.action is not None]
-                await self.websocket_search_complete("success", score, trajectory, websocket=websocket)
-                return node
+                # trajectory = [node.action for node in path if node.action is not None]
+                await self.websocket_search_complete("success", score, selected_node.get_trajectory(), websocket=websocket)
+                return selected_node
 
             print(f"path: {path}")
-            path = await self.reflection_backtracking(path)
+            path, current_node = await self.reflection_backtracking(path)
             print(f"path: {path}")
+            print(f"current_node: {current_node.action}")
+            print(f"current_node: {current_node.natural_language_description}")
 
             # Step 5: backpropagation
             print(f"{GREEN}Step 5: Backpropagation{RESET}")
@@ -308,8 +320,12 @@ class MCTSAgent(BaseAgent):
                 print(f"Node {node.action}:")
                 print(f"  Visits: {node.visits}")
                 print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+            if websocket:
+                await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
+            else:
+                print_entire_tree(self.root_node)
         if best_node:
              # Convert node to serializable trajectory
-            trajectory = [n.action for n in self.get_path_to_root(best_node) if n.action is not None]
+            # trajectory = [n.action for n in self.get_path_to_root(best_node) if n.action is not None]
             await self.websocket_search_complete("partial_success", best_node.value, best_node.get_trajectory(), websocket=websocket)
         return best_node

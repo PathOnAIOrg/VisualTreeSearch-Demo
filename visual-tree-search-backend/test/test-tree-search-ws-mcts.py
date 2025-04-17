@@ -42,6 +42,7 @@ COLORS = {
     
     # Tree/Path updates
     'tree_update': '\033[96m',        # Cyan
+    'tree_update_node_selection': '\033[96m', # Cyan
     'tree_update_node_expansion': '\033[96m',  # Cyan
     'tree_update_node_evaluation': '\033[96m', # Cyan
     'tree_update_node_children_evaluation': '\033[96m', # Cyan
