@@ -309,5 +309,7 @@ class MCTSAgent(BaseAgent):
                 print(f"  Visits: {node.visits}")
                 print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
         if best_node:
+             # Convert node to serializable trajectory
+            trajectory = [n.action for n in self.get_path_to_root(best_node) if n.action is not None]
             await self.websocket_search_complete("partial_success", best_node.value, best_node.get_trajectory(), websocket=websocket)
         return best_node
