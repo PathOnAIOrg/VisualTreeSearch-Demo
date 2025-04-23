@@ -479,10 +479,16 @@ class BaseAgent:
     # shared
     ## TODO: check the logic of updating value/ reward, is the input value?
     def backpropagate(self, node: LATSNode, value: float) -> None:
+        print(f"\n{GREEN}Starting backpropagation with reward value: {value}{RESET}")
+        steps = 0
         while node:
+            old_value = node.value
             node.visits += 1
             node.value = (node.value * (node.visits - 1) + value) / node.visits
+            print(f"  Node at depth {node.depth}: visits={node.visits}, value: {old_value:.4f} → {node.value:.4f}")
+            steps += 1
             node = node.parent
+        print(f"{GREEN}Backpropagation complete - updated {steps} nodes{RESET}\n")
 
     # shared
     async def simulation(self, node: LATSNode, websocket=None) -> tuple[float, LATSNode]:
@@ -502,6 +508,7 @@ class BaseAgent:
         live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
         
+        print(f"\n{GREEN}Starting rollout from node at depth {node.depth}{RESET}")
         print("execute path")
         # Execute path
 
@@ -517,6 +524,8 @@ class BaseAgent:
                 log_folder=self.config.log_folder
             )
             if not success:
+                print(f"{RED}Execution failed at node depth {n.depth}, action: {n.action}{RESET}")
+                print(f"{RED}Setting reward to 0 for this path{RESET}")
                 return 0, n
             if not n.feedback:
                 n.feedback = await generate_feedback(
@@ -547,9 +556,15 @@ class BaseAgent:
             self.goal, 
             page_info['screenshot']
         )
-        print("evaluating")
+        print(f"{GREEN}Goal evaluation: finished={goal_finished}, confidence={confidence_score:.4f}{RESET}")
         
         score = confidence_score if goal_finished else 0
+        print(f"{GREEN}Final reward score: {score:.4f}{RESET}")
+        
+        # Update the node's reward directly
+        node.reward = score
+        print(f"Set reward={score:.4f} for node at depth {node.depth}")
+        
         await self.remove_simulated_trajectory(starting_node=node, terminal_node=terminal_node, websocket=websocket)
 
         return score, node

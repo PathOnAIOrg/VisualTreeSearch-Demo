@@ -156,9 +156,9 @@ class LATSNode:
         Returns:
             str: A string describing the node's key attributes
         """
-        return (f"Node(depth={self.depth}, value={self.value:.2f}, "
-                f"visits={self.visits}, action={self.action}, "
-                f"feedback={self.feedback})")
+        return (f"Node(depth={self.depth}, value={self.value:.4f}, reward={self.reward:.4f}, "
+                f"visits={self.visits}, action='{self.action}', "
+                f"is_terminal={self.is_terminal})")
 
     def to_dict(self) -> dict:
         """

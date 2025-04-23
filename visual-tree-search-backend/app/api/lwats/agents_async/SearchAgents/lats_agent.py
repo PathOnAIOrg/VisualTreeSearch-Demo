@@ -71,12 +71,15 @@ class LATSAgent(BaseAgent):
             print(f"{GREEN}Step 4: simulation{RESET}")
             await self.websocket_step_start(step=4, step_name="simulation", websocket=websocket)
             selected_node = max(node.children, key=lambda child: child.value)
+            print(f"Selected node for simulation: depth={selected_node.depth}, action='{selected_node.action}', current value={selected_node.value:.4f}")
             await self.websocket_node_selection(selected_node, websocket=websocket, type="node_selected_for_simulation")
             reward, terminal_node = await self.simulation(selected_node, websocket=websocket)
             terminal_nodes.append(terminal_node)
+            print(f"Simulation complete: reward={reward:.4f}, terminal_node depth={terminal_node.depth}")
             await self.websocket_simulation_result(reward, terminal_node, websocket=websocket)
 
             if reward == 1:
+                print(f"{GREEN}Found perfect solution (reward=1.0). Ending search.{RESET}")
                 await self.websocket_search_complete("success", reward, terminal_node.get_trajectory(), websocket=websocket)
                 return terminal_node
 
@@ -90,6 +93,8 @@ class LATSAgent(BaseAgent):
             else:
                 print("after backpropagation")
                 print_entire_tree(self.root_node)
+                
+            print(f"End of iteration {i} - Selected node value updated to: {selected_node.value:.4f}")
 
         # Find best node
         all_nodes_list = collect_all_nodes(self.root_node)
@@ -97,6 +102,7 @@ class LATSAgent(BaseAgent):
         
         ## temp change: if reward is the same, choose the deeper node
         best_child = max(all_nodes_list, key=lambda x: (x.reward, x.depth))
+        print(f"\n{GREEN}Best node found: depth={best_child.depth}, reward={best_child.reward:.4f}, value={best_child.value:.4f}{RESET}")
         
         if best_child.value >= 0.75:
             print("Successful trajectory found")
