@@ -38,6 +38,7 @@ interface Message {
 interface MessageLogPanelProps {
   messages: Message[];
   messagesEndRef?: React.RefObject<HTMLDivElement | null>;
+  onSessionIdChange?: (sessionId: string) => void;
 }
 
 interface ParsedMessage {
@@ -62,6 +63,7 @@ interface ParsedMessage {
   server_info?: {
     hostname?: string;
   };
+  session_id?: string;
 }
 
 interface PathStep {
@@ -69,12 +71,26 @@ interface PathStep {
   action: string;
 }
 
-const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEndRef }) => {
+const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEndRef, onSessionIdChange }) => {
   useEffect(() => {
     if (messagesEndRef?.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, messagesEndRef]);
+
+  useEffect(() => {
+    if (!messages.length || !onSessionIdChange) return;
+    
+    const latestMessage = messages[messages.length - 1];
+    try {
+      const data = JSON.parse(latestMessage.content);
+      if (data.type === 'browser_setup' && data.status === 'success' && data.session_id) {
+        onSessionIdChange(data.session_id);
+      }
+    } catch {
+      // Not JSON or doesn't contain session info, ignore
+    }
+  }, [messages, onSessionIdChange]);
 
   const getCardStyle = (type: string) => {
     switch (type) {
@@ -536,7 +552,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
                   </div>
                 </div>
               </div>
-            </div>
+          </div>
           );
         })}
         {messagesEndRef && <div ref={messagesEndRef} />}

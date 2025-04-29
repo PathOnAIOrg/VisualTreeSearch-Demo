@@ -89,16 +89,7 @@ const LATSAgent = () => {
         wsRef.current.onopen = () => {
           logMessage('Connected to LATS WebSocket server');
           setConnected(true);
-          
-        //   const request = {
-        //     type: "start_search",
-        //     agent_type: "LATSAgent",
-        //     starting_url: searchParams.startingUrl,
-        //     goal: searchParams.goal,
-        //     max_depth: searchParams.maxDepth,
-        //     num_simulations: searchParams.num_simulations
-        //   };
-
+        
           const request = {
             type: "start_search",
             agent_type: "LATSAgent",
@@ -214,9 +205,18 @@ const LATSAgent = () => {
           <LATSVisual messages={messages} />
         </div>
         
+        {/* In LATSAgent.tsx */}
         <MessageLogPanelLATS
           messages={messages}
           messagesEndRef={messagesEndRef}
+          onSessionIdChange={(newSessionId) => {
+            // Handle session ID change
+            if (sessionId && sessionId !== newSessionId) {
+              // Terminate old session if needed
+              // ...terminate code...
+            }
+            setSessionId(newSessionId);
+          }}
         />
       </div>
     </div>

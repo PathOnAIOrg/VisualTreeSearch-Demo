@@ -43,6 +43,7 @@ interface Message {
 interface MessageLogPanelProps {
   messages: Message[];
   messagesEndRef?: React.RefObject<HTMLDivElement | null>;
+  onSessionIdChange?: (sessionId: string) => void;
 }
 
 interface ParsedMessage {
@@ -75,6 +76,7 @@ interface ParsedMessage {
   step?: number;
   step_name?: string;
   iteration?: number;
+  session_id?: string;
 }
 
 interface PathStep {
@@ -82,12 +84,26 @@ interface PathStep {
   action: string;
 }
 
-const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, messagesEndRef }) => {
+const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, messagesEndRef, onSessionIdChange }) => {
   useEffect(() => {
     if (messagesEndRef?.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, messagesEndRef]);
+
+  useEffect(() => {
+    if (!messages.length || !onSessionIdChange) return;
+    
+    const latestMessage = messages[messages.length - 1];
+    try {
+      const data = JSON.parse(latestMessage.content);
+      if (data.type === 'browser_setup' && data.status === 'success' && data.session_id) {
+        onSessionIdChange(data.session_id);
+      }
+    } catch {
+      // Not JSON or doesn't contain session info, ignore
+    }
+  }, [messages, onSessionIdChange]);
 
   const getCardStyle = (type: string) => {
     switch (type) {
@@ -408,7 +424,8 @@ const MessageLogPanelLATS: React.FC<MessageLogPanelProps> = ({ messages, message
 
   const parseMessage = (content: string): ParsedMessage => {
     try {
-      return JSON.parse(content);
+      const data = JSON.parse(content);
+      return data;
     } catch {
       return { content };
     }
