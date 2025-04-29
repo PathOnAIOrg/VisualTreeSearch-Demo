@@ -201,9 +201,18 @@ const SimpleSearchAgent = () => {
           <SimpleSearchVisual messages={messages} />
         </div>
         
+        {/* In LATSAgent.tsx */}
         <MessageLogPanel
           messages={messages}
           messagesEndRef={messagesEndRef}
+          onSessionIdChange={(newSessionId) => {
+            // Handle session ID change
+            if (sessionId && sessionId !== newSessionId) {
+              // Terminate old session if needed
+              // ...terminate code...
+            }
+            setSessionId(newSessionId);
+          }}
         />
       </div>
     </div>
