@@ -12,7 +12,7 @@ interface TreeNode {
   value?: number;
   visits?: number;
   feedback?: string;
-  reward?: number;
+  // reward?: number;
 }
 
 interface Message {
@@ -277,10 +277,10 @@ const SimpleSearchVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => 
           tooltipContent += `<div class="mt-2">${nodeInfo.join(' | ')}</div>`;
         }
         
-        // Add reward info if available
-        if (typeof d.data.reward === 'number') {
-          tooltipContent += `<div class="mt-1">Reward: <span class="font-bold">${d.data.reward.toFixed(2)}</span></div>`;
-        }
+        // // Add reward info if available
+        // if (typeof d.data.reward === 'number') {
+        //   tooltipContent += `<div class="mt-1">Reward: <span class="font-bold">${d.data.reward.toFixed(2)}</span></div>`;
+        // }
         
         // Add value info if available
         if (typeof d.data.value === 'number') {

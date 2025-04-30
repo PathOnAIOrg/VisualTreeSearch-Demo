@@ -12,7 +12,7 @@ interface TreeNode {
   value?: number;
   visits?: number;
   feedback?: string;
-  reward?: number;
+  // reward?: number;
   isSimulated?: boolean; // Flag to track newly simulated nodes
 }
 
@@ -412,9 +412,9 @@ const LATSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
           }
           
           // Add reward info if available
-          if (typeof d.data.reward === 'number') {
-            tooltipContent += `<div class="mt-1">Reward: <span class="font-bold">${d.data.reward.toFixed(2)}</span></div>`;
-          }
+          // if (typeof d.data.reward === 'number') {
+          //   tooltipContent += `<div class="mt-1">Reward: <span class="font-bold">${d.data.reward.toFixed(2)}</span></div>`;
+          // }
           
           // Add value info if available
           if (typeof d.data.value === 'number') {

@@ -71,7 +71,6 @@ interface ParsedMessage {
   node_id?: string;
   value?: number;
   visits?: number;
-  reward?: number;
   terminal_node_description?: string;
   step?: number;
   step_name?: string;
