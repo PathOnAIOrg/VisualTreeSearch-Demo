@@ -88,7 +88,9 @@ class LATSNode:
         self.value = 0.0
         self.depth = 0 if parent is None else parent.depth + 1
         self.is_terminal = False
-        # self.reward = 0.0
+        # The goal has been achieved;
+        # The maximum depth has been reached;
+        # A failure condition has been triggered.
         self.exhausted = False  # If all children are terminal
         self.em = 0.0  # Exact match, evaluation metric
         self.observation: Optional[Observation] = None
@@ -106,6 +108,16 @@ class LATSNode:
         return self.value / self.visits + np.sqrt(2 * np.log(self.parent.visits) / self.visits)
     
     def get_best_leaf(self) -> 'LATSNode':
+        """
+        Recursively get the best leaf node from the current node.
+
+        The method searches through unfinished (non-terminal) children,
+        selects the one with the highest UCT score, and continues the 
+        search recursively until a leaf node (with no unfinished children) is reached.
+        
+        Returns:
+            LATSNode: The best leaf node for expansion based on UCT.
+        """
         unfinished_children = [c for c in self.children if not c.is_terminal]
         if not unfinished_children:
             return self

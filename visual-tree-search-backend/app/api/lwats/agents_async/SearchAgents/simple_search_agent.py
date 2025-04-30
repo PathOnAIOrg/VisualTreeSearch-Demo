@@ -47,16 +47,7 @@ class SimpleSearchAgent(BaseAgent):
             for _ in range(level_size):
                 current_node = queue.popleft()
                 queue_set.remove(current_node)  # Remove from queue tracking
-                
-                # Skip if we've already visited this node
-                if current_node in visited:
-                    continue
-                    
                 visited.add(current_node)
-                
-                # Skip terminal nodes
-                if current_node.is_terminal:
-                    continue
                 
                 # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
                 # node expansion for the next level
@@ -78,7 +69,7 @@ class SimpleSearchAgent(BaseAgent):
                 
                 # Add non-terminal children to queue for next level if they haven't reached max_depth
                 for child in current_node.children:
-                    if not child.is_terminal and child not in visited and child not in queue_set and child.depth < self.config.max_depth:
+                    if child not in visited and child not in queue_set and child.depth <= self.config.max_depth:
                         queue.append(child)
                         queue_set.add(child)  # Add to queue tracking
 
@@ -134,58 +125,34 @@ class SimpleSearchAgent(BaseAgent):
         
         return None
         
-    # TODO: first evaluate, then expansion
-    async def dfs(self, websocket=None) -> List[Dict[str, Any]]:
-        stack = [self.root_node]
+    async def dfs(self, websocket=None):
+        stack = [self.root_node]  # Use a list as a stack
         stack_set = {self.root_node}  # Track nodes in stack
         best_score = float('-inf')
         best_path = None
         best_node = None
         visited = set()  # Track visited nodes to avoid cycles
-        current_path = []  # Track current path for DFS
-        
-        # # Get the live browser URL during initial setup
-        # live_browser_url, session_id = await self._reset_browser(websocket)
-    
         
         while stack:
-            current_node = stack[-1]  # Peek at the top node without removing it
-            
-            # Skip if we've already visited this node
-            if current_node in visited:
-                stack.pop()
-                stack_set.remove(current_node)
-                if current_path:
-                    current_path.pop()  # Remove from current path
-                continue
-                
+            # Get the top node from the stack
+            current_node = stack.pop()
+            stack_set.remove(current_node)  # Remove from stack tracking
             visited.add(current_node)
-            current_path.append(current_node)  # Add to current path
             
-            # Skip terminal nodes
-            if current_node.is_terminal:
-                print(f"Node {id(current_node)} is terminal")
-                stack.pop()
-                stack_set.remove(current_node)
-                current_path.pop()  # Remove from current path
-                continue
-                
             # Expand current node if it hasn't been expanded yet and hasn't reached max_depth
-            # stage 1: node expansion
             if not current_node.children and current_node.depth < self.config.max_depth:
-                    ## during the node expansion process, reset browser for each node
+                # Reset browser for each node expansion
                 live_browser_url, session_id = await self._reset_browser(websocket)
-                # await self.websocket_step_start(step=1, step_name="node_expansion", websocket=websocket)
                 await self.websocket_node_selection(current_node, websocket=websocket)
                 await self.node_expansion(current_node, websocket)
                 tree_data = self._get_tree_data()
+                
                 if websocket:
                     await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
                 else:
                     print_entire_tree(self.root_node)
             
-            # Get the path from root to this node
-            path = self.get_path_to_root(current_node)
+            # Node evaluation
             await self.node_evaluation(current_node)
             tree_data = self._get_tree_data()
             if websocket:
@@ -193,9 +160,8 @@ class SimpleSearchAgent(BaseAgent):
             else:
                 print("after evaluation")
                 print_entire_tree(self.root_node)
-            path = self.get_path_to_root(current_node)
             
-
+            path = self.get_path_to_root(current_node)
             score = current_node.value
             
             # Update best path if this score is better
@@ -203,7 +169,6 @@ class SimpleSearchAgent(BaseAgent):
                 best_score = score
                 best_path = path
                 best_node = current_node
-
                 
             print(f"Node {id(current_node)} score: {score}")
             
@@ -213,23 +178,16 @@ class SimpleSearchAgent(BaseAgent):
                 
                 # Send completion update if websocket is provided
                 await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket) 
-                await self.playwright_manager.close()               
+                await self.playwright_manager.close()
+                
                 return current_node
-                        
-            # Add non-terminal children to stack in reverse order
-            has_unvisited_children = False
+            
+            # Add children to stack in reverse order so that the first child is processed first
+            # This maintains the left-to-right exploration order similar to BFS
             for child in reversed(current_node.children):
-                if not child.is_terminal and child not in visited and child not in stack_set:
+                if child not in visited and child not in stack_set and child.depth <= self.config.max_depth:
                     stack.append(child)
                     stack_set.add(child)  # Add to stack tracking
-                    has_unvisited_children = True
-                    break  # Only add one child at a time for DFS
-            
-            # If no unvisited children, remove current node from stack
-            if not has_unvisited_children:
-                stack.pop()
-                stack_set.remove(current_node)
-                current_path.pop()  # Remove from current path
         
         # If we've exhausted all nodes and haven't found a perfect solution,
         # return the best path we found
@@ -250,4 +208,3 @@ class SimpleSearchAgent(BaseAgent):
         await self.playwright_manager.close()
         
         return None
-            

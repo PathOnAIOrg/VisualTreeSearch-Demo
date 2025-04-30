@@ -361,19 +361,7 @@ class MCTSAgent(BaseAgent):
                         print(f"Node {node.action}:")
                         print(f"  Visits: {node.visits}")
                         print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
-                    # add websocket information, just use websocket here
-                    # if websocket:
-                    #     await websocket.send_json({
-                    #         "type": "backpropagation",
-                    #         "node_id": id(node),
-                    #         "node_parent_id": id(node.parent),
-                    #         "node_action": node.action,
-                    #         "node_value": node.value,
-                    #         "node_visits": node.visits,
-                    #         "node_old_value": old_value,
-                    #         "node_description": node.natural_language_description,
-                    #     })
-
+                        
                 tree_data = self._get_tree_data()
                 print_entire_tree(self.root_node)
                 print(tree_data)
