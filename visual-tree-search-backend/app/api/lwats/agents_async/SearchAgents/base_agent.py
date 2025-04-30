@@ -102,7 +102,7 @@ class BaseAgent:
                 "value": node.value,
                 "visits": node.visits,
                 "feedback": node.feedback,
-                "reward": node.reward
+                # "reward": node.reward
             }
             tree_data.append(node_data)
         
@@ -129,7 +129,7 @@ class BaseAgent:
                 "description": node.natural_language_description,
                 "visits": node.visits,
                 "value": float(f"{node.value:.3f}") if hasattr(node, 'value') else None,
-                "reward": float(f"{node.reward:.3f}") if hasattr(node, 'reward') else None,
+                # "reward": float(f"{node.reward:.3f}") if hasattr(node, 'reward') else None,
                 "is_terminal": node.is_terminal,
                 "feedback": node.feedback if hasattr(node, 'feedback') else None,
                 "is_root": not hasattr(node, 'parent') or node.parent is None,
@@ -159,7 +159,7 @@ class BaseAgent:
                 "description": node.natural_language_description,
                 "visits": node.visits,
                 "value": float(f"{node.value:.3f}") if hasattr(node, 'value') else None,
-                "reward": float(f"{node.reward:.3f}") if hasattr(node, 'reward') else None,
+                # "reward": float(f"{node.reward:.3f}") if hasattr(node, 'reward') else None,
                 "is_terminal": node.is_terminal,
                 "feedback": node.feedback if hasattr(node, 'feedback') else None,
                 "is_root": not hasattr(node, 'parent') or node.parent is None,
@@ -424,15 +424,18 @@ class BaseAgent:
                 score = 0
             else:
                 trajectory = child.get_trajectory()
-                prompt = create_llm_prompt(trajectory, self.goal)
-                # , child.observation.image
-                result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
-                score = result["overall_score"]
+                if len(trajectory) == 0:
+                    score = 0
+                else:
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    # , child.observation.image
+                    result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
+                    score = result["overall_score"]
             scores.append(score)
 
         for child, score in zip(node.children, scores):
             child.value = score
-            child.reward = score
+            # child.reward = score
 
     async def node_evaluation(self, node: LATSNode) -> None:
         """Evaluate the current node and assign its score."""
@@ -454,13 +457,16 @@ class BaseAgent:
                 if node.is_terminal:
                     score = 0
                 else:
-                    prompt = create_llm_prompt(trajectory, self.goal)
-                    result = score_trajectory_with_openai(
-                        prompt, 
-                        openai_client, 
-                        model=self.config.evaluation_model
-                    )
-                    score = result["overall_score"]
+                    if len(trajectory) == 0:
+                        score = 0
+                    else:
+                        prompt = create_llm_prompt(trajectory, self.goal)
+                        result = score_trajectory_with_openai(
+                            prompt, 
+                            openai_client, 
+                            model=self.config.evaluation_model
+                        )
+                        score = result["overall_score"]
             
             except Exception as e:
                 error_msg = f"Error scoring node {id(node)}: {str(e)}"
@@ -469,7 +475,7 @@ class BaseAgent:
             
             # Assign the score to the node
             node.value = score
-            node.reward = score
+            # node.reward = score
             
 
         except Exception as e:

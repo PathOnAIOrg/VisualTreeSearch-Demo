@@ -88,7 +88,7 @@ class LATSNode:
         self.value = 0.0
         self.depth = 0 if parent is None else parent.depth + 1
         self.is_terminal = False
-        self.reward = 0.0
+        # self.reward = 0.0
         self.exhausted = False  # If all children are terminal
         self.em = 0.0  # Exact match, evaluation metric
         self.observation: Optional[Observation] = None
@@ -177,7 +177,7 @@ class LATSNode:
             'value': self.value,
             'depth': self.depth,
             'is_terminal': self.is_terminal,
-            'reward': self.reward,
+            # 'reward': self.reward,
             'em': self.em,
         }
 
