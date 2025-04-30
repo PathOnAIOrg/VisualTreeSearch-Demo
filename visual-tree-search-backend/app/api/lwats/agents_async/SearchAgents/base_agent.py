@@ -490,7 +490,7 @@ class BaseAgent:
                 node.visits += 1
                 # Calculate running average: newAvg = oldAvg + (value - oldAvg) / newCount
                 node.value += (value - node.value) / node.visits
-                node = node.parent
+            node = node.parent
 
     # shared
     async def simulation(self, node: LATSNode, websocket=None) -> tuple[float, LATSNode]:

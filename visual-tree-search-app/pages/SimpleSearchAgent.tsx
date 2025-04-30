@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import ControlPanel from '../components/ControlPanel';
 import MessageLogPanel from '../components/MessageLogPanel';
 import LiveBrowserView from '../components/LiveBrowserView';
-import SimpleSearchVisual from '../components/SimpleSearchVisual';
+import TreeVisual from '../components/TreeVisual';
 
 interface SearchParams {
   startingUrl: string;
@@ -222,7 +222,8 @@ const SimpleSearchAgent = () => {
             liveBrowserUrl={liveBrowserUrl}
             width="70%"
           />
-          <SimpleSearchVisual messages={messages} />
+          {/* <SimpleSearchVisual messages={messages} /> */}
+          <TreeVisual messages={messages} visualType="simple" />
         </div>
         
         {/* In LATSAgent.tsx */}
