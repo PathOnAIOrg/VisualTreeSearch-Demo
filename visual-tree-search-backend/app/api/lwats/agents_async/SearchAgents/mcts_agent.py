@@ -264,11 +264,12 @@ class MCTSAgent(BaseAgent):
             print(f"{GREEN}Step 1: Node Selection{RESET}")
             await self.websocket_step_start(step=1, step_name="node_selection", websocket=websocket)
             selected_node = await self.node_selection(self.root_node, websocket)
-            tree_data = self._get_tree_data()
-            if websocket:
-                await self.websocket_tree_update(type="tree_update_node_selection", websocket=websocket, tree_data=tree_data)
-            else:
-                print_entire_tree(self.root_node)
+            # await self.websocket_node_selection(selected_node, websocket=websocket)
+            # tree_data = self._get_tree_data()
+            # if websocket:
+            #     await self.websocket_tree_update(type="tree_update_node_selection", websocket=websocket, tree_data=tree_data)
+            # else:
+            #     print_entire_tree(self.root_node)
             
             if selected_node is None:
                 logger.warning("All paths lead to terminal nodes. Ending search.")
@@ -338,10 +339,28 @@ class MCTSAgent(BaseAgent):
             for node in path:
                 old_value = node.value
                 node.visits += 1
-                node.value = (node.value * (node.visits - 1) + score) / node.visits
+                node.value += (score - node.value) / node.visits
+                # consiste with lats backpropagation
+                #node.value = (node.value * (node.visits - 1) + score) / node.visits
                 print(f"Node {node.action}:")
                 print(f"  Visits: {node.visits}")
                 print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+                # add websocket information, just use websocket here
+                # if websocket:
+                #     await websocket.send_json({
+                #         "type": "backpropagation",
+                #         "node_id": id(node),
+                #         "node_parent_id": id(node.parent),
+                #         "node_action": node.action,
+                #         "node_value": node.value,
+                #         "node_visits": node.visits,
+                #         "node_old_value": old_value,
+                #         "node_description": node.natural_language_description,
+                #     })
+
+            tree_data = self._get_tree_data()
+            print_entire_tree(self.root_node)
+            print(tree_data)
             if websocket:
                 await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
             else:
