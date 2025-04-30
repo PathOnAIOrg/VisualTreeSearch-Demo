@@ -33,7 +33,7 @@ const LATSAgent = () => {
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
     num_simulations: 1,
-    iterations: 1
+    iterations: 2
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -87,10 +87,17 @@ const LATSAgent = () => {
         wsRef.current = new WebSocket(wsUrl);
 
         wsRef.current.onopen = () => {
-          logMessage('Connected to LATS WebSocket server');
+          const connectionMessage = {
+            type: "server_connection",
+            info: 'Connecting to LATS WebSocket server'
+          };
+
+          wsRef.current?.send(JSON.stringify(connectionMessage));
+          logMessage(connectionMessage, 'incoming');
+          // logMessage('Connected to LATS WebSocket server');
           setConnected(true);
         
-          const request = {
+          const searchRequest = {
             type: "start_search",
             agent_type: "LATSAgent",
             starting_url: searchParams.startingUrl,
@@ -101,8 +108,8 @@ const LATSAgent = () => {
             iterations: searchParams.iterations
           };
           
-          wsRef.current?.send(JSON.stringify(request));
-          logMessage(request, 'outgoing');
+          wsRef.current?.send(JSON.stringify(searchRequest));
+          logMessage(searchRequest, 'outgoing');
         };
 
         wsRef.current.onmessage = (event) => {
@@ -119,19 +126,31 @@ const LATSAgent = () => {
         };
 
         wsRef.current.onclose = () => {
-          logMessage('Disconnected from WebSocket server');
+          const closeMessage = {
+            type: "server_connection",
+            info: 'Disconnected from WebSocket server'
+          };
+          logMessage(closeMessage, 'incoming');
           setConnected(false);
           setIsSearching(false);
           wsRef.current = null;
         };
 
         wsRef.current.onerror = (error) => {
-          logMessage(`WebSocket error: ${error instanceof Error ? error.message : String(error)}`);
+          const errorMessage = {
+            type: "server_connection",
+            info: `WebSocket error: ${error instanceof Error ? error.message : String(error)}`
+          };
+          logMessage(errorMessage, 'incoming');
           setConnected(false);
           setIsSearching(false);
         };
       } catch (error) {
-        logMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = {
+          type: "server_connection",
+          info: `Failed to connect: ${error instanceof Error ? error.message : String(error)}`
+        };
+        logMessage(errorMessage, 'incoming');
         setConnected(false);
         setIsSearching(false);
       }
@@ -164,9 +183,17 @@ const LATSAgent = () => {
         if (!response.ok) {
           throw new Error(`Failed to terminate session: ${response.statusText}`);
         }
-        logMessage(`Session ${sessionId} terminated successfully`);
+        const terminateMessage = {
+          type: "server_connection",
+          info: `Session ${sessionId} terminated successfully`
+        };
+        logMessage(terminateMessage, 'incoming');
       } catch (error) {
-        logMessage(`Failed to terminate session: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = {
+          type: "server_connection",
+          info: `Failed to terminate session: ${error instanceof Error ? error.message : String(error)}`
+        };
+        logMessage(errorMessage, 'incoming');
       }
     }
 

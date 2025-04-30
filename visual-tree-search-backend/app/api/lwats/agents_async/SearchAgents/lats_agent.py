@@ -9,13 +9,13 @@ from .base_agent import BaseAgent
 
 class LATSAgent(BaseAgent):
     async def run(self, websocket=None) -> list[LATSNode]:
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "Starting LATS search",
-                "timestamp": datetime.utcnow().isoformat()
-            })
+        # if websocket:
+        #     await websocket.send_json({
+        #         "type": "search_status",
+        #         "status": "started",
+        #         "message": "Starting LATS search",
+        #         "timestamp": datetime.utcnow().isoformat()
+        #     })
         
         best_node = await self.lats_search(websocket)
         print_trajectory(best_node)
@@ -43,16 +43,17 @@ class LATSAgent(BaseAgent):
             # Step 2: Node Expansion
             print(f"{GREEN}Step 2: node expansion{RESET}")
             await self.websocket_step_start(step=2, step_name="node_expansion", websocket=websocket)
-            await self.node_expansion(node, websocket)
-            if node is None:
-                # all the nodes are terminal, stop the search
-                print(f"{RED}All nodes are terminal, stopping search{RESET}")
-                break
-            tree_data = self._get_tree_data()
-            if websocket:
-                await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
-            else:
-                print_entire_tree(self.root_node)
+            if node.depth < self.config.max_depth :
+                await self.node_expansion(node, websocket)
+                if node is None:
+                    # all the nodes are terminal, stop the search
+                    print(f"{RED}All nodes are terminal, stopping search{RESET}")
+                    break
+                tree_data = self._get_tree_data()
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
 
 
             # Step 3: Evaluation

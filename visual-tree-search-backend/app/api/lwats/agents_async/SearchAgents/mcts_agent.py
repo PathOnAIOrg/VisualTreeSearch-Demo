@@ -38,13 +38,13 @@ class MCTSAgent(BaseAgent):
         Returns:
             List[Dict[str, Any]]: List of actions in the best path found
         """
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "Starting MCTS search",
-                "timestamp": datetime.utcnow().isoformat()
-            })
+        # if websocket:
+        #     await websocket.send_json({
+        #         "type": "search_status",
+        #         "status": "started",
+        #         "message": "Starting MCTS search",
+        #         "timestamp": datetime.utcnow().isoformat()
+        #     })
         
         # Reset browser to initial state
         live_browser_url, session_id = await self._reset_browser(websocket)
@@ -165,11 +165,13 @@ class MCTSAgent(BaseAgent):
         if websocket:
             await websocket.send_json({
                 "type": "reflection_backtracking",
-                "path": [node.action for node in path if node.action is not None],
+                "path": [{
+                    "natural_language_description": node.natural_language_description,
+                    "action": node.action} for node in path if node.action is not None],
                 "node_id": id(selected_node),
-                "node_parent_id": id(selected_node.parent),
-                "node_action": selected_node.action,
-                "node_description": selected_node.natural_language_description,
+                "parent_id": id(selected_node.parent),
+                "action": selected_node.action,
+                "description": selected_node.natural_language_description,
                 "trajectory": selected_node.get_trajectory()
             })
 
@@ -278,16 +280,17 @@ class MCTSAgent(BaseAgent):
             # Step 2: Node Expansion
             print(f"{GREEN}Step 2: Node Expansion{RESET}")
             await self.websocket_step_start(step=2, step_name="node_expansion", websocket=websocket)
-            await self.node_expansion(selected_node, websocket)
-            if selected_node is None:
-                # all the nodes are terminal, stop the search
-                print(f"{RED}All nodes are terminal, stopping search{RESET}")
-                break
-            tree_data = self._get_tree_data()
-            if websocket:
-                await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
-            else:
-                print_entire_tree(self.root_node)
+            if selected_node.depth < self.config.max_depth :
+                await self.node_expansion(selected_node, websocket)
+                if selected_node is None:
+                    # all the nodes are terminal, stop the search
+                    print(f"{RED}All nodes are terminal, stopping search{RESET}")
+                    break
+                tree_data = self._get_tree_data()
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
             
 
             # optional: prior value
@@ -303,80 +306,81 @@ class MCTSAgent(BaseAgent):
 
             # Step 3: simulation using the current node, (generate a path using the current node, and score the path)
             # TODO: implement simulation using openai
-            print(f"{GREEN}Step 3: Simulation{RESET}")
-            await self.websocket_step_start(step=3, step_name="simulation", websocket=websocket)
-            path = self.get_path_to_root(selected_node)
-            # here score is the reward
-            score = await self.evaluate_selected_path(path)
-            # change to reward later?
-            if score > best_score:
-                best_score = score
-                best_path = path
-                best_node = selected_node
-                print(f"\nNew best path found!")
-                print(f"best score: {best_score:.3f}")
-                print(f"best node: {best_node.action}")
-                print(f"best node: {best_node.natural_language_description}")
-                print(f"best path: {best_path}")
+            if selected_node != self.root_node:
+                print(f"{GREEN}Step 3: Simulation{RESET}")
+                await self.websocket_step_start(step=3, step_name="simulation", websocket=websocket)
+                path = self.get_path_to_root(selected_node)
+                # here score is the reward
+                score = await self.evaluate_selected_path(path)
+                # change to reward later?
+                if score > best_score:
+                    best_score = score
+                    best_path = path
+                    best_node = selected_node
+                    print(f"\nNew best path found!")
+                    print(f"best score: {best_score:.3f}")
+                    print(f"best node: {best_node.action}")
+                    print(f"best node: {best_node.natural_language_description}")
+                    print(f"best path: {best_path}")
 
-            # add websocket information, just use websocket here
-            if websocket:
-                await self.websocket_simulation_result(score, selected_node, websocket=websocket)
-
-
-            ## Step 4: reflection backtracking
-            print(f"{GREEN}Step 4: Reflection Backtracking{RESET}")
-            await self.websocket_step_start(step=4, step_name="reflection_backtracking", websocket=websocket)
-            if score >= self.config.reflection_score:
-                # Convert path to serializable trajectory
-                # trajectory = [node.action for node in path if node.action is not None]
-                await self.websocket_search_complete("success", score, selected_node.get_trajectory(), websocket=websocket)
-                await self.playwright_manager.close()
-                return selected_node
-
-            print(f"path: {path}")
-            path, current_node = await self.reflection_backtracking(path)
-            print(f"path: {path}")
-            print(f"current_node: {current_node.action}")
-            print(f"current_node: {current_node.natural_language_description}")
-
-            # add websocket information, just use websocket here
-            if websocket:
-                await self.websocket_reflection_backtracking(path, current_node, websocket=websocket)
-
-            # Step 5: backpropagation
-            print(f"{GREEN}Step 5: Backpropagation{RESET}")
-            await self.websocket_step_start(step=5, step_name="backpropagation", websocket=websocket)
-            for node in path:
-                if node != self.root_node:
-                    old_value = node.value
-                    node.visits += 1
-                    node.value += (score - node.value) / node.visits
-                    # consiste with lats backpropagation
-                    #node.value = (node.value * (node.visits - 1) + score) / node.visits
-                    print(f"Node {node.action}:")
-                    print(f"  Visits: {node.visits}")
-                    print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
                 # add websocket information, just use websocket here
-                # if websocket:
-                #     await websocket.send_json({
-                #         "type": "backpropagation",
-                #         "node_id": id(node),
-                #         "node_parent_id": id(node.parent),
-                #         "node_action": node.action,
-                #         "node_value": node.value,
-                #         "node_visits": node.visits,
-                #         "node_old_value": old_value,
-                #         "node_description": node.natural_language_description,
-                #     })
+                if websocket:
+                    await self.websocket_simulation_result(score, selected_node, websocket=websocket)
 
-            tree_data = self._get_tree_data()
-            print_entire_tree(self.root_node)
-            print(tree_data)
-            if websocket:
-                await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
-            else:
+
+                ## Step 4: reflection backtracking
+                print(f"{GREEN}Step 4: Reflection Backtracking{RESET}")
+                await self.websocket_step_start(step=4, step_name="reflection_backtracking", websocket=websocket)
+                if score >= self.config.reflection_score:
+                    # Convert path to serializable trajectory
+                    # trajectory = [node.action for node in path if node.action is not None]
+                    await self.websocket_search_complete("success", score, selected_node.get_trajectory(), websocket=websocket)
+                    await self.playwright_manager.close()
+                    return selected_node
+
+                print(f"path: {path}")
+                path, current_node = await self.reflection_backtracking(path)
+                print(f"path: {path}")
+                print(f"current_node: {current_node.action}")
+                print(f"current_node: {current_node.natural_language_description}")
+
+                # add websocket information, just use websocket here
+                if websocket:
+                    await self.websocket_reflection_backtracking(path, current_node, websocket=websocket)
+
+                # Step 5: backpropagation
+                print(f"{GREEN}Step 5: Backpropagation{RESET}")
+                await self.websocket_step_start(step=5, step_name="backpropagation", websocket=websocket)
+                for node in path:
+                    if node != self.root_node:
+                        old_value = node.value
+                        node.visits += 1
+                        node.value += (score - node.value) / node.visits
+                        # consiste with lats backpropagation
+                        #node.value = (node.value * (node.visits - 1) + score) / node.visits
+                        print(f"Node {node.action}:")
+                        print(f"  Visits: {node.visits}")
+                        print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+                    # add websocket information, just use websocket here
+                    # if websocket:
+                    #     await websocket.send_json({
+                    #         "type": "backpropagation",
+                    #         "node_id": id(node),
+                    #         "node_parent_id": id(node.parent),
+                    #         "node_action": node.action,
+                    #         "node_value": node.value,
+                    #         "node_visits": node.visits,
+                    #         "node_old_value": old_value,
+                    #         "node_description": node.natural_language_description,
+                    #     })
+
+                tree_data = self._get_tree_data()
                 print_entire_tree(self.root_node)
+                print(tree_data)
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
         if best_node:
              # Convert node to serializable trajectory
             # trajectory = [n.action for n in self.get_path_to_root(best_node) if n.action is not None]

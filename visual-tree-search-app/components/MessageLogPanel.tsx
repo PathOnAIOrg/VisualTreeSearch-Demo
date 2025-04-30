@@ -43,6 +43,7 @@ interface MessageLogPanelProps {
 
 interface ParsedMessage {
   type?: string;
+  info?: string;
   content?: string;
   status?: string;
   message?: string;
@@ -95,6 +96,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
   const getCardStyle = (type: string) => {
     switch (type) {
       // System Status Messages
+      case 'server_connection':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'start_search':
         return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'connection_established':
@@ -170,6 +173,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
 
   const getIcon = (message: ParsedMessage) => {
     switch (message.type) {
+      case 'server_connection':
+        return <Globe className="h-4 w-4 text-green-500 animate-pulse" />;
       case 'start_search':
         return <Target className="h-4 w-4 text-blue-500" />;
       case 'connection_established':
@@ -259,6 +264,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
   const getIconBgColor = (type: string) => {
     switch (type) {
       // System Status Messages
+      case 'server_connection':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'start_search':
         return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
       case 'connection_established':
@@ -351,6 +358,16 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
 
   const formatMessageContent = (message: ParsedMessage) => {
     switch (message.type) {
+      case 'server_connection':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-green-600 dark:text-green-400">{message.info}</div>
+            </div>
+          </div>
+        );
+
       case 'start_search':
         return (
           <div className="flex items-center gap-2 animate-fadeIn">
