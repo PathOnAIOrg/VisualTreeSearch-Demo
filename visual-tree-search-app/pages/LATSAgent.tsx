@@ -142,8 +142,10 @@ const LATSAgent = () => {
         agent_type: "LATSAgent",
         starting_url: searchParams.startingUrl,
         goal: searchParams.goal,
+        search_algorithm: "lats",
         max_depth: searchParams.maxDepth,
-        num_simulations: searchParams.num_simulations
+        num_simulations: searchParams.num_simulations,
+        iterations: searchParams.iterations
       };
 
       wsRef.current?.send(JSON.stringify(request));

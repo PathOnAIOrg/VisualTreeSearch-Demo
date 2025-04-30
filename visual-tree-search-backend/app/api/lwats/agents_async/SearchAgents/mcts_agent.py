@@ -161,6 +161,18 @@ class MCTSAgent(BaseAgent):
         print(f"Robustness Score: {result['robustness_score']:.3f}")
         return score
     
+    async def websocket_reflection_backtracking(self, path, selected_node, websocket=None):
+        if websocket:
+            await websocket.send_json({
+                "type": "reflection_backtracking",
+                "path": [node.action for node in path if node.action is not None],
+                "node_id": id(selected_node),
+                "node_parent_id": id(selected_node.parent),
+                "node_action": selected_node.action,
+                "node_description": selected_node.natural_language_description,
+                "trajectory": selected_node.get_trajectory()
+            })
+
     async def reflection_backtracking(self, path) -> List[LATSNode]:
         """
         Implement reflection-based backtracking to improve search trajectory.
@@ -282,6 +294,7 @@ class MCTSAgent(BaseAgent):
             print(f"{GREEN}Step 3: Simulation{RESET}")
             await self.websocket_step_start(step=3, step_name="simulation", websocket=websocket)
             path = self.get_path_to_root(selected_node)
+            # here score is the reward
             score = await self.evaluate_selected_path(path)
             # change to reward later?
             if score > best_score:
@@ -293,6 +306,10 @@ class MCTSAgent(BaseAgent):
                 print(f"best node: {best_node.action}")
                 print(f"best node: {best_node.natural_language_description}")
                 print(f"best path: {best_path}")
+
+            # add websocket information, just use websocket here
+            if websocket:
+                await self.websocket_simulation_result(score, selected_node, websocket=websocket)
 
 
             ## Step 4: reflection backtracking
@@ -310,6 +327,10 @@ class MCTSAgent(BaseAgent):
             print(f"path: {path}")
             print(f"current_node: {current_node.action}")
             print(f"current_node: {current_node.natural_language_description}")
+
+            # add websocket information, just use websocket here
+            if websocket:
+                await self.websocket_reflection_backtracking(path, current_node, websocket=websocket)
 
             # Step 5: backpropagation
             print(f"{GREEN}Step 5: Backpropagation{RESET}")
