@@ -490,6 +490,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
             tooltipContent += `<div class="mt-2">${nodeInfo.join(' | ')}</div>`;
           }
           
+
           // Add value info if available
           if (typeof d.data.value === 'number') {
             tooltipContent += `<div>Value: <span class="font-bold">${d.data.value.toFixed(2)}</span></div>`;
@@ -503,6 +504,11 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
           // Add depth info if available
           if (typeof d.data.depth === 'number') {
             tooltipContent += `<div>Depth: <span class="font-bold">${d.data.depth}</span></div>`;
+          }
+
+          // Add is_terminal info if available
+          if (typeof d.data.is_terminal === 'boolean') {
+            tooltipContent += `<div>Is Terminal: <span class="font-bold">${d.data.is_terminal ? 'Yes' : 'No'}</span></div>`;
           }
           
           const tooltip = d3.select(tooltipRef.current);

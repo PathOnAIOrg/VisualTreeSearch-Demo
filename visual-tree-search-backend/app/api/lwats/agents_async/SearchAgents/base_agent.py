@@ -398,19 +398,10 @@ class BaseAgent:
                 goal=node.goal,
                 parent=node
             )
+            if child.depth == self.config.max_depth:
+                child.is_terminal = True
             node.children.append(child)
             await self.websocket_node_created(child, node, websocket=websocket)
-            
-            # Send child creation update if websocket is provided
-            # if websocket:
-            #     await websocket.send_json({
-            #         "type": "node_created",
-            #         "node_id": id(child),
-            #         "parent_id": id(node),
-            #         "action": child.action,
-            #         "description": child.natural_language_description,
-            #         "timestamp": datetime.utcnow().isoformat()
-            #     })
 
     
      # node evaluation
@@ -420,17 +411,17 @@ class BaseAgent:
         print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
         for i, child in enumerate(node.children):
             print(f"{GREEN}--- evaluating child {i+1}...{RESET}")
-            if child.is_terminal:
+            # if child.is_terminal:
+            #     score = 0
+            # else:
+            trajectory = child.get_trajectory()
+            if len(trajectory) == 0:
                 score = 0
             else:
-                trajectory = child.get_trajectory()
-                if len(trajectory) == 0:
-                    score = 0
-                else:
-                    prompt = create_llm_prompt(trajectory, self.goal)
-                    # , child.observation.image
-                    result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
-                    score = result["overall_score"]
+                prompt = create_llm_prompt(trajectory, self.goal)
+                # , child.observation.image
+                result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
+                score = result["overall_score"]
             scores.append(score)
 
         for child, score in zip(node.children, scores):
@@ -454,19 +445,19 @@ class BaseAgent:
             
             try:
                 # Score the trajectory
-                if node.is_terminal:
+                # if node.is_terminal:
+                #     score = 0
+                # else:
+                if len(trajectory) == 0:
                     score = 0
                 else:
-                    if len(trajectory) == 0:
-                        score = 0
-                    else:
-                        prompt = create_llm_prompt(trajectory, self.goal)
-                        result = score_trajectory_with_openai(
-                            prompt, 
-                            openai_client, 
-                            model=self.config.evaluation_model
-                        )
-                        score = result["overall_score"]
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    result = score_trajectory_with_openai(
+                        prompt, 
+                        openai_client, 
+                        model=self.config.evaluation_model
+                    )
+                    score = result["overall_score"]
             
             except Exception as e:
                 error_msg = f"Error scoring node {id(node)}: {str(e)}"
