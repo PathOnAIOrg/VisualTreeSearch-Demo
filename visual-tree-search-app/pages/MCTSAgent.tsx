@@ -10,7 +10,7 @@ interface SearchParams {
   goal: string;
   maxDepth: number;
   iterations: number;
-  prior_value: boolean;
+  set_prior_value: boolean;
 }
 
 interface Message {
@@ -32,7 +32,7 @@ const MCTSAgent = () => {
     startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
-    prior_value: false,
+    set_prior_value: false,
     iterations: 1
   });
 
@@ -97,7 +97,7 @@ const MCTSAgent = () => {
             goal: searchParams.goal,
             search_algorithm: "mcts",
             iterations: searchParams.iterations,
-            prior_value: searchParams.prior_value,
+            set_prior_value: searchParams.set_prior_value,
             max_depth: searchParams.maxDepth
           };
           console.log(request);
@@ -145,7 +145,7 @@ const MCTSAgent = () => {
         goal: searchParams.goal,
         search_algorithm: "mcts",
         iterations: searchParams.iterations,
-        prior_value: searchParams.prior_value,
+        set_prior_value: searchParams.set_prior_value,
         max_depth: searchParams.maxDepth
       };
 

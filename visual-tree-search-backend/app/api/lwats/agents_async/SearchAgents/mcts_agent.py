@@ -291,7 +291,7 @@ class MCTSAgent(BaseAgent):
             
 
             # optional: prior value
-            if self.config.prior_value:
+            if self.config.set_prior_value:
                 await self.websocket_step_start(step=2, step_name="node_children_evaluation", websocket=websocket)
                 await self.node_children_evaluation(selected_node)
                 tree_data = self._get_tree_data()
@@ -348,14 +348,15 @@ class MCTSAgent(BaseAgent):
             print(f"{GREEN}Step 5: Backpropagation{RESET}")
             await self.websocket_step_start(step=5, step_name="backpropagation", websocket=websocket)
             for node in path:
-                old_value = node.value
-                node.visits += 1
-                node.value += (score - node.value) / node.visits
-                # consiste with lats backpropagation
-                #node.value = (node.value * (node.visits - 1) + score) / node.visits
-                print(f"Node {node.action}:")
-                print(f"  Visits: {node.visits}")
-                print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
+                if node != self.root_node:
+                    old_value = node.value
+                    node.visits += 1
+                    node.value += (score - node.value) / node.visits
+                    # consiste with lats backpropagation
+                    #node.value = (node.value * (node.visits - 1) + score) / node.visits
+                    print(f"Node {node.action}:")
+                    print(f"  Visits: {node.visits}")
+                    print(f"  Value: {old_value:.3f} -> {node.value:.3f}")
                 # add websocket information, just use websocket here
                 # if websocket:
                 #     await websocket.send_json({

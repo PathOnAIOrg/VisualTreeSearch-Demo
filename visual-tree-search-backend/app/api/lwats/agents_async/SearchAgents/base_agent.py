@@ -486,10 +486,11 @@ class BaseAgent:
     ## TODO: check the logic of updating value/ reward, is the input value?
     def backpropagate(self, node: LATSNode, value: float) -> None:
         while node:
-            node.visits += 1
-            # Calculate running average: newAvg = oldAvg + (value - oldAvg) / newCount
-            node.value += (value - node.value) / node.visits
-            node = node.parent
+            if node.depth != 0:
+                node.visits += 1
+                # Calculate running average: newAvg = oldAvg + (value - oldAvg) / newCount
+                node.value += (value - node.value) / node.visits
+                node = node.parent
 
     # shared
     async def simulation(self, node: LATSNode, websocket=None) -> tuple[float, LATSNode]:

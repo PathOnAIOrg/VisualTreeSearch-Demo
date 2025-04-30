@@ -10,7 +10,7 @@ interface SearchParams {
   goal: string;
   maxDepth: number;
   iterations: number;
-  prior_value: boolean;
+  set_prior_value: boolean;
 }
 
 interface ControlPanelProps {
@@ -139,12 +139,12 @@ const ControlPanelMCTS: React.FC<ControlPanelProps> = ({
               <div className="mt-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox 
-                    id="prior_value" 
-                    checked={searchParams.prior_value}
-                    onCheckedChange={(checked) => handleParamChange('prior_value', checked === true)}
+                    id="set_prior_value" 
+                    checked={searchParams.set_prior_value}
+                    onCheckedChange={(checked) => handleParamChange('set_prior_value', checked === true)}
                   />
                   <Label 
-                    htmlFor="prior_value" 
+                    htmlFor="set_prior_value" 
                     className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
                   >
                     Use Prior Value

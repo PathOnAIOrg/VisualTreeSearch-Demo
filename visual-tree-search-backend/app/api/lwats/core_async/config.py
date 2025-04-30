@@ -30,7 +30,7 @@ class AgentConfig:
 
     # for MCTS
     reflection_score: float = 0.75
-    prior_value: bool = False
+    set_prior_value: bool = False
     
     # Features
     features: List[str] = field(default_factory=lambda: ['axtree'])
