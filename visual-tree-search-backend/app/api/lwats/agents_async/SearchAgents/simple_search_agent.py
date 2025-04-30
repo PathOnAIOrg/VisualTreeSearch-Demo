@@ -110,6 +110,7 @@ class SimpleSearchAgent(BaseAgent):
                     
                     # Send completion update if websocket is provided
                     await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket) 
+                    await self.playwright_manager.close()
                     
                     return current_node
             
@@ -120,6 +121,7 @@ class SimpleSearchAgent(BaseAgent):
             
             # Send completion update if websocket is provided
             await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=websocket)
+            await self.playwright_manager.close()
             
             return best_node
         
@@ -128,6 +130,7 @@ class SimpleSearchAgent(BaseAgent):
         
         # Send failure update if websocket is provided
         await self.websocket_search_complete("failure", 0, None, websocket=websocket)
+        await self.playwright_manager.close()
         
         return None
         
@@ -209,7 +212,8 @@ class SimpleSearchAgent(BaseAgent):
                 print(f"Found satisfactory solution with score {score}")
                 
                 # Send completion update if websocket is provided
-                await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket)                
+                await self.websocket_search_complete("success", score, current_node.get_trajectory(), websocket=websocket) 
+                await self.playwright_manager.close()               
                 return current_node
                         
             # Add non-terminal children to stack in reverse order
@@ -234,6 +238,7 @@ class SimpleSearchAgent(BaseAgent):
             
             # Send completion update if websocket is provided
             await self.websocket_search_complete("partial_success", best_score, best_node.get_trajectory(), websocket=websocket)
+            await self.playwright_manager.close()
             
             return best_node
         
@@ -242,6 +247,7 @@ class SimpleSearchAgent(BaseAgent):
         
         # Send failure update if websocket is provided
         await self.websocket_search_complete("failure", 0, None, websocket=websocket)
+        await self.playwright_manager.close()
         
         return None
             

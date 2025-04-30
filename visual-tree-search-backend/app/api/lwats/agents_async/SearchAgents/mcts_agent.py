@@ -302,6 +302,7 @@ class MCTSAgent(BaseAgent):
                 # Convert path to serializable trajectory
                 # trajectory = [node.action for node in path if node.action is not None]
                 await self.websocket_search_complete("success", score, selected_node.get_trajectory(), websocket=websocket)
+                await self.playwright_manager.close()
                 return selected_node
 
             print(f"path: {path}")
@@ -328,4 +329,5 @@ class MCTSAgent(BaseAgent):
              # Convert node to serializable trajectory
             # trajectory = [n.action for n in self.get_path_to_root(best_node) if n.action is not None]
             await self.websocket_search_complete("partial_success", best_node.value, best_node.get_trajectory(), websocket=websocket)
+        await self.playwright_manager.close()
         return best_node

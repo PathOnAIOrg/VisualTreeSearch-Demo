@@ -25,6 +25,7 @@ class AgentConfig:
     num_simulations: int = 1
     account_reset: bool = True
 
+    simulation_score: float = 0.75
     reflection_score: float = 0.75
     
     # Features

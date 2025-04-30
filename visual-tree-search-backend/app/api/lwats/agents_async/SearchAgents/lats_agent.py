@@ -37,7 +37,7 @@ class LATSAgent(BaseAgent):
             await self.websocket_node_selection(node, websocket=websocket)
 
             if node is None:
-                print("All paths lead to terminal nodes with reward 0. Ending search.")
+                print("All paths lead to terminal nodes with value 0. Ending search.")
                 break
 
             # Step 2: Node Expansion
@@ -76,8 +76,10 @@ class LATSAgent(BaseAgent):
             terminal_nodes.append(terminal_node)
             await self.websocket_simulation_result(reward, terminal_node, websocket=websocket)
 
-            if reward == 1:
+            # simulation score threshold
+            if reward >= self.config.simulation_score:
                 await self.websocket_search_complete("success", reward, terminal_node.get_trajectory(), websocket=websocket)
+                await self.playwright_manager.close()
                 return terminal_node
 
             # Step 5: Backpropagation
@@ -95,8 +97,8 @@ class LATSAgent(BaseAgent):
         all_nodes_list = collect_all_nodes(self.root_node)
         all_nodes_list.extend(terminal_nodes)
         
-        ## temp change: if reward is the same, choose the deeper node
-        best_child = max(all_nodes_list, key=lambda x: (x.reward, x.depth))
+        ## temp change: if value is the same, choose the deeper node
+        best_child = max(all_nodes_list, key=lambda x: (x.value, x.depth))
         
         if best_child.value >= 0.75:
             print("Successful trajectory found")
