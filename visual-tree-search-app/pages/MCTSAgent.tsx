@@ -87,7 +87,11 @@ const MCTSAgent = () => {
         wsRef.current = new WebSocket(wsUrl);
 
         wsRef.current.onopen = () => {
-          logMessage('Connected to MCTS WebSocket server');
+          const connectionMessage = {
+            type: "server_connection",
+            info: 'Connecting to MCTS WebSocket server'
+          };
+          logMessage(connectionMessage, 'incoming');
           setConnected(true);
         
           const request = {
@@ -120,19 +124,31 @@ const MCTSAgent = () => {
         };
 
         wsRef.current.onclose = () => {
-          logMessage('Disconnected from WebSocket server');
+          const closeMessage = {
+            type: "server_connection",
+            info: 'Disconnected from WebSocket server'
+          };
+          logMessage(closeMessage, 'incoming');
           setConnected(false);
           setIsSearching(false);
           wsRef.current = null;
         };
 
         wsRef.current.onerror = (error) => {
-          logMessage(`WebSocket error: ${error instanceof Error ? error.message : String(error)}`);
+          const errorMessage = {
+            type: "server_connection",
+            info: `WebSocket error: ${error instanceof Error ? error.message : String(error)}`
+          };
+          logMessage(errorMessage, 'incoming');
           setConnected(false);
           setIsSearching(false);
         };
       } catch (error) {
-        logMessage(`Failed to connect: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = {
+          type: "server_connection",
+          info: `Failed to connect: ${error instanceof Error ? error.message : String(error)}`
+        };
+        logMessage(errorMessage, 'incoming');
         setConnected(false);
         setIsSearching(false);
       }
@@ -165,9 +181,17 @@ const MCTSAgent = () => {
         if (!response.ok) {
           throw new Error(`Failed to terminate session: ${response.statusText}`);
         }
-        logMessage(`Session ${sessionId} terminated successfully`);
+        const terminateMessage = {
+          type: "server_connection",
+          info: `Session ${sessionId} terminated successfully`
+        };
+        logMessage(terminateMessage, 'incoming');
       } catch (error) {
-        logMessage(`Failed to terminate session: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMessage = {
+          type: "server_connection",
+          info: `Failed to terminate session: ${error instanceof Error ? error.message : String(error)}`
+        };
+        logMessage(errorMessage, 'incoming');
       }
     }
 

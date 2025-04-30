@@ -38,13 +38,13 @@ class MCTSAgent(BaseAgent):
         Returns:
             List[Dict[str, Any]]: List of actions in the best path found
         """
-        if websocket:
-            await websocket.send_json({
-                "type": "search_status",
-                "status": "started",
-                "message": "Starting MCTS search",
-                "timestamp": datetime.utcnow().isoformat()
-            })
+        # if websocket:
+        #     await websocket.send_json({
+        #         "type": "search_status",
+        #         "status": "started",
+        #         "message": "Starting MCTS search",
+        #         "timestamp": datetime.utcnow().isoformat()
+        #     })
         
         # Reset browser to initial state
         live_browser_url, session_id = await self._reset_browser(websocket)
@@ -278,16 +278,17 @@ class MCTSAgent(BaseAgent):
             # Step 2: Node Expansion
             print(f"{GREEN}Step 2: Node Expansion{RESET}")
             await self.websocket_step_start(step=2, step_name="node_expansion", websocket=websocket)
-            await self.node_expansion(selected_node, websocket)
-            if selected_node is None:
-                # all the nodes are terminal, stop the search
-                print(f"{RED}All nodes are terminal, stopping search{RESET}")
-                break
-            tree_data = self._get_tree_data()
-            if websocket:
-                await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
-            else:
-                print_entire_tree(self.root_node)
+            if selected_node.depth < self.config.max_depth :
+                await self.node_expansion(selected_node, websocket)
+                if selected_node is None:
+                    # all the nodes are terminal, stop the search
+                    print(f"{RED}All nodes are terminal, stopping search{RESET}")
+                    break
+                tree_data = self._get_tree_data()
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_expansion", websocket=websocket, tree_data=tree_data)
+                else:
+                    print_entire_tree(self.root_node)
             
 
             # optional: prior value
