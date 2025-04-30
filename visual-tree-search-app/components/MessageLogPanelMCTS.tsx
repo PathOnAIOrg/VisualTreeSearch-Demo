@@ -109,6 +109,8 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
   const getCardStyle = (type: string) => {
     switch (type) {
       // System Status Messages
+      case 'reflection_backtracking':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'server_connection':
         return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'start_search':
@@ -208,6 +210,8 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
 
   const getIcon = (message: ParsedMessage) => {
     switch (message.type) {
+      case 'reflection_backtracking':
+        return <Brain className="h-4 w-4 text-blue-500" />;
       case 'server_connection':
         return <Globe className="h-4 w-4 text-green-500 animate-pulse" />;
       case 'start_search':
@@ -323,6 +327,8 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
   const getIconBgColor = (type: string) => {
     switch (type) {
       // System Status Messages
+      case 'reflection_backtracking':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'start_search':
         return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
       case 'connection_established':
@@ -552,6 +558,32 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
           </div>
         );
 
+        case 'reflection_backtracking':
+          return (
+            <div className="flex items-center gap-2 animate-fadeIn">
+              {getIcon(message)}
+              <div className="animate-slideIn">
+                <div className="text-emerald-600 dark:text-emerald-400">
+                  Reflecting & backtracking | Node: {message.description}
+                </div>
+                {message.path && message.path.length > 0 && (
+                  <div className="mt-1">
+                    {message.path.map((step: PathStep, index: number) => (
+                      <div 
+                        key={index} 
+                        className="flex items-start gap-1 text-xs text-slate-500 dark:text-slate-400 animate-fadeIn"
+                        style={{ animationDelay: `${index * 100}ms` }}
+                      >
+                        <ArrowRight className="h-3 w-3 mt-0.5" />
+                        {step.natural_language_description}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+
       case 'search_complete':
         return (
           <div className="flex items-center gap-2 animate-fadeIn">
@@ -667,6 +699,7 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
             </div>
           </div>
         );
+
 
       default:
         return (

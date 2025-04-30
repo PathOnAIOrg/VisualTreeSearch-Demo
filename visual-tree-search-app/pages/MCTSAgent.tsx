@@ -33,7 +33,7 @@ const MCTSAgent = () => {
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
     set_prior_value: false,
-    iterations: 1
+    iterations: 2
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);

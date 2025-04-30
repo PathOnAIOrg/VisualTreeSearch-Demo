@@ -33,7 +33,7 @@ const LATSAgent = () => {
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
     num_simulations: 1,
-    iterations: 1
+    iterations: 2
   });
 
   const [sessionId, setSessionId] = useState<string | null>(null);
