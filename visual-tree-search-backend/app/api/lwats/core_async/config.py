@@ -25,8 +25,12 @@ class AgentConfig:
     num_simulations: int = 1
     account_reset: bool = True
 
+    # for LATS
     simulation_score: float = 0.75
+
+    # for MCTS
     reflection_score: float = 0.75
+    prior_value: bool = False
     
     # Features
     features: List[str] = field(default_factory=lambda: ['axtree'])

@@ -79,6 +79,7 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
         storage_state = message.get("storage_state", "app/api/shopping.json")
         iterations = message.get("iterations", 1)  # Extract iterations parameter
         num_simulations=message.get("num_simulations", 1)
+        prior_value = message.get("prior_value", False)
         
         # Send status update
         await websocket.send_json({
@@ -95,8 +96,10 @@ async def handle_search_request(websocket: WebSocket, message: Dict[str, Any]):
             storage_state=storage_state,
             headless=False,
             iterations=iterations,
-            num_simulations=num_simulations
+            num_simulations=num_simulations,
+            prior_value=prior_value
         )
+        print(config)
         
         # Send status update
         await websocket.send_json({

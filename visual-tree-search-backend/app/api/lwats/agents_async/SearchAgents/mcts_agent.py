@@ -290,6 +290,17 @@ class MCTSAgent(BaseAgent):
                 print_entire_tree(self.root_node)
             
 
+            # optional: prior value
+            if self.config.prior_value:
+                await self.websocket_step_start(step=2, step_name="node_children_evaluation", websocket=websocket)
+                await self.node_children_evaluation(selected_node)
+                tree_data = self._get_tree_data()
+                if websocket:
+                    await self.websocket_tree_update(type="tree_update_node_children_evaluation", websocket=websocket, tree_data=tree_data)
+                else:
+                    print("after evaluation")
+                    print_entire_tree(self.root_node)
+
             # Step 3: simulation using the current node, (generate a path using the current node, and score the path)
             # TODO: implement simulation using openai
             print(f"{GREEN}Step 3: Simulation{RESET}")
