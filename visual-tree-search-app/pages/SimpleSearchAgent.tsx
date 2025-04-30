@@ -6,6 +6,7 @@ import LiveBrowserView from '../components/LiveBrowserView';
 import TreeVisual from '../components/TreeVisual';
 
 interface SearchParams {
+  type: 'bfs' | 'dfs';
   startingUrl: string;
   goal: string;
   algorithm: "bfs" | "dfs";
@@ -28,6 +29,7 @@ const SimpleSearchAgent = () => {
 
   // Search parameters
   const [searchParams, setSearchParams] = useState<SearchParams>({
+    type: 'bfs',
     startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     algorithm: 'bfs',
@@ -45,7 +47,10 @@ const SimpleSearchAgent = () => {
 
   // Format time
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
   };
 
   // Extract live browser URL from message content if present
@@ -198,7 +203,7 @@ const SimpleSearchAgent = () => {
   };
 
   // Handle parameter changes
-  const handleParamChange = (param: keyof SearchParams, value: string | boolean | number) => {
+  const handleParamChange = (param: string, value: string | boolean | number) => {
     setSearchParams(prev => ({
       ...prev,
       [param]: value
@@ -208,6 +213,7 @@ const SimpleSearchAgent = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-800 pb-4 w-full flex flex-col">
       <ControlPanel
+        algorithmType="bfs"
         searchParams={searchParams}
         handleParamChange={handleParamChange}
         handleStart={handleStart}

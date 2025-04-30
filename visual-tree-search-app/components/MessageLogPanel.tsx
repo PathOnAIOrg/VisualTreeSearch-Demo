@@ -26,7 +26,12 @@ import {
   Meh,
   ArrowRight,
   PlusCircle,
-  Expand
+  Expand,
+  ArrowUp,
+  Play,
+  Route,
+  Trash,
+  StepForward
 } from 'lucide-react';
 
 interface Message {
@@ -39,6 +44,7 @@ interface MessageLogPanelProps {
   messages: Message[];
   messagesEndRef?: React.RefObject<HTMLDivElement | null>;
   onSessionIdChange?: (sessionId: string) => void;
+  variant?: 'default' | 'mcts' | 'lats';
 }
 
 interface ParsedMessage {
@@ -64,7 +70,16 @@ interface ParsedMessage {
   server_info?: {
     hostname?: string;
   };
+  node_id?: string;
+  value?: number;
+  visits?: number;
+  terminal_node_description?: string;
+  reward?: number;
+  step?: number;
+  step_name?: string;
+  iteration?: number;
   session_id?: string;
+  node_action?: string;
 }
 
 interface PathStep {
@@ -72,7 +87,12 @@ interface PathStep {
   action: string;
 }
 
-const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEndRef, onSessionIdChange }) => {
+const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ 
+  messages, 
+  messagesEndRef, 
+  onSessionIdChange,
+  variant = 'default'
+}) => {
   useEffect(() => {
     if (messagesEndRef?.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -96,6 +116,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
   const getCardStyle = (type: string) => {
     switch (type) {
       // System Status Messages
+      case 'reflection_backtracking':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'server_connection':
         return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
       case 'start_search':
@@ -166,6 +188,28 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
       case 'neutral':
         return "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-800";
 
+      // MCTS specific updates
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
+        return "bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 border-cyan-200 dark:border-cyan-800";
+      
+      case 'iteration_start':
+      case 'step_start':
+        return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
+      
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800";
+
+      case 'simulation_result':
+        return "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-amber-200 dark:border-amber-800";
+
       default:
         return "bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/20 dark:to-slate-800/20 border-slate-200 dark:border-slate-800";
     }
@@ -173,6 +217,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
 
   const getIcon = (message: ParsedMessage) => {
     switch (message.type) {
+      case 'reflection_backtracking':
+        return <Brain className="h-4 w-4 text-blue-500" />;
       case 'server_connection':
         return <Globe className="h-4 w-4 text-green-500 animate-pulse" />;
       case 'start_search':
@@ -254,8 +300,32 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
         return <Flag className="h-4 w-4 text-blue-500" />;
       case 'best_path_update':
         return <Target className="h-4 w-4 text-blue-500" />;
+      case 'tree_update_node_children_evaluation':
+        return <Brain className="h-4 w-4 text-cyan-500" />;
+      case 'tree_update_node_backpropagation':
+        return <ArrowUp className="h-4 w-4 text-cyan-500" />;
+      case 'tree_update_simulation':
+        return <Play className="h-4 w-4 text-cyan-500" />;
+      case 'trajectory_update':
+        return <Route className="h-4 w-4 text-cyan-500" />;
+      case 'removed_simulation':
+        return <Trash className="h-4 w-4 text-cyan-500" />;
+      case 'iteration_start':
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+      case 'step_start':
+        return <StepForward className="h-4 w-4 text-blue-500" />;
+      case 'node_selected':
+        return <Target className="h-4 w-4 text-green-500" />;
       case 'node_selected_for_simulation':
-        return <Target className="h-4 w-4 text-purple-500" />;
+        return <Target className="h-4 w-4 text-green-500" />;
+      case 'node_created':
+        return <PlusCircle className="h-4 w-4 text-green-500" />;
+      case 'node_simulated':
+        return <Play className="h-4 w-4 text-green-500" />;
+      case 'node_terminal':
+        return <Flag className="h-4 w-4 text-green-500" />;
+      case 'simulation_result':
+        return <Info className="h-4 w-4 text-amber-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -264,8 +334,10 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
   const getIconBgColor = (type: string) => {
     switch (type) {
       // System Status Messages
-      case 'server_connection':
+      case 'reflection_backtracking':
         return "bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-800";
+      case 'server_connection':
+        return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
       case 'start_search':
         return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
       case 'connection_established':
@@ -334,6 +406,28 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
       case 'neutral':
         return "bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400";
 
+      // MCTS specific updates
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
+        return "bg-cyan-100 dark:bg-cyan-800/30 text-cyan-600 dark:text-cyan-400";
+      
+      case 'iteration_start':
+      case 'step_start':
+        return "bg-blue-100 dark:bg-blue-800/30 text-blue-600 dark:text-blue-400";
+      
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return "bg-green-100 dark:bg-green-800/30 text-green-600 dark:text-green-400";
+
+      case 'simulation_result':
+        return "bg-amber-100 dark:bg-amber-800/30 text-amber-600 dark:text-amber-400";
+
       default:
         return "bg-slate-100 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400";
     }
@@ -358,6 +452,32 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
 
   const formatMessageContent = (message: ParsedMessage) => {
     switch (message.type) {
+      case 'reflection_backtracking':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-emerald-600 dark:text-emerald-400">
+                Reflecting & backtracking | Node: {message.description}
+              </div>
+              {message.path && message.path.length > 0 && (
+                <div className="mt-1">
+                  {message.path.map((step: PathStep, index: number) => (
+                    <div 
+                      key={index} 
+                      className="flex items-start gap-1 text-xs text-slate-500 dark:text-slate-400 animate-fadeIn"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <ArrowRight className="h-3 w-3 mt-0.5" />
+                      {step.natural_language_description}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'server_connection':
         return (
           <div className="flex items-center gap-2 animate-fadeIn">
@@ -466,7 +586,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
                 {message.type === 'tree_update_node_expansion' ? 'Node Expanded' : 'Node Evaluated'}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">
-             {message.tree?.length && ` Number of nodes: ${message.tree.length}`}
+              {message.tree?.length && ` Number of nodes: ${message.tree.length}`}
               </div>
             </div>
           </div>
@@ -510,12 +630,80 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
           </div>
         );
 
-      case 'node_selected_for_simulation':
+      case 'tree_update_node_children_evaluation':
+      case 'tree_update_node_backpropagation':
+      case 'tree_update_simulation':
+      case 'trajectory_update':
+      case 'removed_simulation':
         return (
           <div className="flex items-center gap-2 animate-fadeIn">
             {getIcon(message)}
             <div className="animate-slideIn">
-              <div className="text-purple-600 dark:text-purple-400">{message.description}</div>
+              <div className="text-cyan-600 dark:text-cyan-400">
+                {message.description || message.type.split('_').join(' ')}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'node_selected':
+      case 'node_selected_for_simulation':
+      case 'node_created':
+      case 'node_simulated':
+      case 'node_terminal':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-green-600 dark:text-green-400">
+                {message.description || message.type.split('_').join(' ')}
+              </div>
+              {message.action && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Action: {message.action}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'simulation_result':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400">
+                Simulation Result | Reward: {message.reward}
+              </div>
+              {message.terminal_node_description && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {message.terminal_node_description}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'step_start':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-blue-600 dark:text-blue-400">
+                Step {message.step}: {message.step_name}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'iteration_start':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-blue-600 dark:text-blue-400">
+                Iteration {message.iteration}
+              </div>
             </div>
           </div>
         );
@@ -533,12 +721,12 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 p-3 mt-4">
+    <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-md border border-slate-200 dark:border-slate-700 p-3 mt-4 ${variant === 'mcts' ? 'border-cyan-500' : variant === 'lats' ? 'border-purple-500' : ''}`}>
       <h2 className="text-lg font-semibold mb-2 text-sky-950 dark:text-sky-100 flex items-center">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-cyan-500" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
         </svg>
-        Message Log
+        Message Log {variant !== 'default' ? `(${variant.toUpperCase()})` : ''}
       </h2>
       <div className="h-[150px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md p-2 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
         {messages.map((msg, index) => {
@@ -568,7 +756,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
                   </div>
                 </div>
               </div>
-          </div>
+            </div>
           );
         })}
         {messagesEndRef && <div ref={messagesEndRef} />}
