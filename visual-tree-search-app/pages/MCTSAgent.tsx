@@ -9,8 +9,8 @@ interface SearchParams {
   startingUrl: string;
   goal: string;
   maxDepth: number;
-  num_simulations: number;
   iterations: number;
+  set_prior_value: boolean;
 }
 
 interface Message {
@@ -32,7 +32,7 @@ const MCTSAgent = () => {
     startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
-    num_simulations: 1,
+    set_prior_value: false,
     iterations: 1
   });
 
@@ -96,8 +96,11 @@ const MCTSAgent = () => {
             starting_url: searchParams.startingUrl,
             goal: searchParams.goal,
             search_algorithm: "mcts",
-            iterations: searchParams.iterations
+            iterations: searchParams.iterations,
+            set_prior_value: searchParams.set_prior_value,
+            max_depth: searchParams.maxDepth
           };
+          console.log(request);
           
           wsRef.current?.send(JSON.stringify(request));
           logMessage(request, 'outgoing');
@@ -141,7 +144,9 @@ const MCTSAgent = () => {
         starting_url: searchParams.startingUrl,
         goal: searchParams.goal,
         search_algorithm: "mcts",
-        iterations: searchParams.iterations
+        iterations: searchParams.iterations,
+        set_prior_value: searchParams.set_prior_value,
+        max_depth: searchParams.maxDepth
       };
 
       wsRef.current?.send(JSON.stringify(request));

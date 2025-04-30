@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SearchParams {
   startingUrl: string;
   goal: string;
+  maxDepth: number;
   iterations: number;
+  set_prior_value: boolean;
 }
 
 interface ControlPanelProps {
@@ -106,6 +109,19 @@ const ControlPanelMCTS: React.FC<ControlPanelProps> = ({
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="maxDepth" className="text-slate-700 dark:text-slate-300 font-medium">Max Depth</Label>
+                  <Input
+                    id="maxDepth"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={searchParams.maxDepth}
+                    onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
+                    className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="iterations" className="text-slate-700 dark:text-slate-300 font-medium">Iterations</Label>
                   <Input
                     id="iterations"
@@ -117,6 +133,26 @@ const ControlPanelMCTS: React.FC<ControlPanelProps> = ({
                     className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
                   />
                 </div>
+              </div>
+              
+              {/* Add prior_value checkbox */}
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="set_prior_value" 
+                    checked={searchParams.set_prior_value}
+                    onCheckedChange={(checked) => handleParamChange('set_prior_value', checked === true)}
+                  />
+                  <Label 
+                    htmlFor="set_prior_value" 
+                    className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+                  >
+                    Use Prior Value
+                  </Label>
+                </div>
+                <p className="mt-1 ml-6 text-xs text-slate-500 dark:text-slate-400">
+                  When enabled, RMCTS will use an LLM to generate an initial value as a prior value for each newly generated node.
+                </p>
               </div>
             </div>
           )}
