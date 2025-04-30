@@ -85,8 +85,10 @@ class LATSAgent(BaseAgent):
             # Step 5: Backpropagation
             print(f"{GREEN}Step 5: backpropagation{RESET}")
             await self.websocket_step_start(step=5, step_name="backpropagation", websocket=websocket)
-            self.backpropagate(terminal_node, reward)
+            self.backpropagate(selected_node, reward)
             tree_data = self._get_tree_data()
+            print_entire_tree(self.root_node)
+            print(tree_data)
             if websocket:
                 await self.websocket_tree_update(type="tree_update_node_backpropagation", websocket=websocket, tree_data=tree_data)
             else:

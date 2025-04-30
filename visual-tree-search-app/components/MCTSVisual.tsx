@@ -95,7 +95,7 @@ const MCTSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
         }
         
         // Handle tree structure updates
-        if ((data.type === 'tree_update_node_expansion' || data.type === 'tree_update_node_children_evaluation' || data.typ === 'tree_update_node_backpropagation') 
+        if ((data.type === 'tree_update_node_expansion' || data.type === 'tree_update_node_children_evaluation' || data.type === 'tree_update_node_backpropagation') 
             && Array.isArray(data.tree)) {
           // Preserve simulation flags when updating from tree
           if (updatedTreeNodes.some(node => node.isSimulated)) {

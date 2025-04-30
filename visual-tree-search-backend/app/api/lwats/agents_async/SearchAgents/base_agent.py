@@ -487,7 +487,8 @@ class BaseAgent:
     def backpropagate(self, node: LATSNode, value: float) -> None:
         while node:
             node.visits += 1
-            node.value = (node.value * (node.visits - 1) + value) / node.visits
+            # Calculate running average: newAvg = oldAvg + (value - oldAvg) / newCount
+            node.value += (value - node.value) / node.visits
             node = node.parent
 
     # shared
@@ -558,7 +559,7 @@ class BaseAgent:
         score = confidence_score if goal_finished else 0
         await self.remove_simulated_trajectory(starting_node=node, terminal_node=terminal_node, websocket=websocket)
 
-        return score, node
+        return score, terminal_node
     
 
     # TODO: decide whether to keep the tree update
