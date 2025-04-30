@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import ControlPanelMCTS from '../components/ControlPanelMCTS';
 import MessageLogPanelMCTS from '../components/MessageLogPanelMCTS';
 import LiveBrowserView from '../components/LiveBrowserView';
-import MCTSVisual from '../components/MCTSVisual';
+import TreeVisual from '../components/TreeVisual';
 
 interface SearchParams {
   startingUrl: string;
@@ -229,7 +229,8 @@ const MCTSAgent = () => {
             liveBrowserUrl={liveBrowserUrl}
             width="70%"
           />
-          <MCTSVisual messages={messages} />
+          {/* <MCTSVisual messages={messages} /> */}
+          <TreeVisual messages={messages} visualType="mcts" />
         </div>
         
         {/* In MCTSAgent.tsx */}

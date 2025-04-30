@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import ControlPanelLATS from '../components/ControlPanelLATS';
 import MessageLogPanelLATS from '../components/MessageLogPanelLATS';
 import LiveBrowserView from '../components/LiveBrowserView';
-import LATSVisual from '../components/LATSVisual';
+import TreeVisual from '../components/TreeVisual';
 
 interface SearchParams {
   startingUrl: string;
@@ -231,7 +231,7 @@ const LATSAgent = () => {
             liveBrowserUrl={liveBrowserUrl}
             width="70%"
           />
-          <LATSVisual messages={messages} />
+         <TreeVisual messages={messages} visualType="lats" />
         </div>
         
         {/* In LATSAgent.tsx */}
