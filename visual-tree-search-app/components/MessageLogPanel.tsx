@@ -466,8 +466,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ messages, messagesEnd
                 {message.type === 'tree_update_node_expansion' ? 'Node Expanded' : 'Node Evaluated'}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Score: {message.score}
-                {message.tree?.length && ` | Nodes: ${message.tree.length}`}
+             {message.tree?.length && ` Number of nodes: ${message.tree.length}`}
               </div>
             </div>
           </div>

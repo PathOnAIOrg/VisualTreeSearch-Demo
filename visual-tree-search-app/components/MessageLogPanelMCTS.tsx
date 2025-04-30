@@ -551,8 +551,7 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
                 {message.type === 'tree_update_node_expansion' ? 'Node Expanded' : 'Node Evaluated'}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Score: {message.score}
-                {message.tree?.length && ` | Nodes: ${message.tree.length}`}
+                {message.tree?.length && `Number of nodes: ${message.tree.length}`}
               </div>
             </div>
           </div>
@@ -632,7 +631,7 @@ const MessageLogPanelMCTS: React.FC<MessageLogPanelProps> = ({ messages, message
             {getIcon(message)}
             <div className="animate-slideIn">
               <div className="text-cyan-600 dark:text-cyan-400">
-                {message.description || message.type.split('_').join(' ')}
+              {message.description || message.type.split('_').join(' ')}
               </div>
             </div>
           </div>
