@@ -424,10 +424,13 @@ class BaseAgent:
                 score = 0
             else:
                 trajectory = child.get_trajectory()
-                prompt = create_llm_prompt(trajectory, self.goal)
-                # , child.observation.image
-                result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
-                score = result["overall_score"]
+                if len(trajectory) == 0:
+                    score = 0
+                else:
+                    prompt = create_llm_prompt(trajectory, self.goal)
+                    # , child.observation.image
+                    result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
+                    score = result["overall_score"]
             scores.append(score)
 
         for child, score in zip(node.children, scores):
@@ -454,13 +457,16 @@ class BaseAgent:
                 if node.is_terminal:
                     score = 0
                 else:
-                    prompt = create_llm_prompt(trajectory, self.goal)
-                    result = score_trajectory_with_openai(
-                        prompt, 
-                        openai_client, 
-                        model=self.config.evaluation_model
-                    )
-                    score = result["overall_score"]
+                    if len(trajectory) == 0:
+                        score = 0
+                    else:
+                        prompt = create_llm_prompt(trajectory, self.goal)
+                        result = score_trajectory_with_openai(
+                            prompt, 
+                            openai_client, 
+                            model=self.config.evaluation_model
+                        )
+                        score = result["overall_score"]
             
             except Exception as e:
                 error_msg = f"Error scoring node {id(node)}: {str(e)}"
