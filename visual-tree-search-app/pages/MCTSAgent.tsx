@@ -1,11 +1,12 @@
 import React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import ControlPanelMCTS from '../components/ControlPanelMCTS';
-import MessageLogPanelMCTS from '../components/MessageLogPanelMCTS';
+import ControlPanel from '../components/ControlPanel';
+import MessageLogPanel from '../components/MessageLogPanel';
 import LiveBrowserView from '../components/LiveBrowserView';
 import TreeVisual from '../components/TreeVisual';
 
 interface SearchParams {
+  type: 'mcts';
   startingUrl: string;
   goal: string;
   maxDepth: number;
@@ -29,6 +30,7 @@ const MCTSAgent = () => {
 
   // Search parameters
   const [searchParams, setSearchParams] = useState<SearchParams>({
+    type: 'mcts',
     startingUrl: 'http://xwebarena.pathonai.org:7770/',
     goal: 'search running shoes, click on the first result',
     maxDepth: 3,
@@ -47,7 +49,10 @@ const MCTSAgent = () => {
 
   // Format time
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
   };
 
   // Extract live browser URL from message content if present
@@ -205,16 +210,25 @@ const MCTSAgent = () => {
   };
 
   // Handle parameter changes
-  const handleParamChange = (param: keyof SearchParams, value: string | boolean | number) => {
+  const handleParamChange = (param: string, value: string | number | boolean) => {
     setSearchParams(prev => ({
       ...prev,
       [param]: value
     }));
   };
 
+  const handleSessionIdChange = (newSessionId: string | null) => {
+    if (sessionId && sessionId !== newSessionId) {
+      // Terminate old session if needed
+      // ...terminate code...
+    }
+    setSessionId(newSessionId);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-800 pb-4 w-full flex flex-col">
-      <ControlPanelMCTS
+      <ControlPanel
+        algorithmType="mcts"
         searchParams={searchParams}
         handleParamChange={handleParamChange}
         handleStart={handleStart}
@@ -233,18 +247,11 @@ const MCTSAgent = () => {
           <TreeVisual messages={messages} visualType="mcts" />
         </div>
         
-        {/* In MCTSAgent.tsx */}
-        <MessageLogPanelMCTS
+        <MessageLogPanel
           messages={messages}
           messagesEndRef={messagesEndRef}
-          onSessionIdChange={(newSessionId) => {
-            // Handle session ID change
-            if (sessionId && sessionId !== newSessionId) {
-              // Terminate old session if needed
-              // ...terminate code...
-            }
-            setSessionId(newSessionId);
-          }}
+          onSessionIdChange={handleSessionIdChange}
+          variant="mcts"
         />
       </div>
     </div>

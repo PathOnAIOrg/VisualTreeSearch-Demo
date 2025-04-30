@@ -3,17 +3,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
-interface SearchParams {
+type AlgorithmType = 'bfs' | 'dfs' | 'lats' | 'mcts';
+
+interface BaseSearchParams {
   startingUrl: string;
   goal: string;
-  algorithm: 'bfs' | 'dfs';
   maxDepth: number;
 }
 
+interface BFSSearchParams extends BaseSearchParams {
+  type: 'bfs' | 'dfs';
+  algorithm: 'bfs' | 'dfs';
+}
+
+interface LATSSearchParams extends BaseSearchParams {
+  type: 'lats';
+  num_simulations: number;
+  iterations: number;
+}
+
+interface MCTSSearchParams extends BaseSearchParams {
+  type: 'mcts';
+  iterations: number;
+  set_prior_value: boolean;
+}
+
+type SearchParams = BFSSearchParams | LATSSearchParams | MCTSSearchParams;
+
 interface ControlPanelProps {
+  algorithmType: AlgorithmType;
   searchParams: SearchParams;
-  handleParamChange: (param: keyof SearchParams, value: string | boolean | number) => void;
+  handleParamChange: (param: string, value: string | number | boolean) => void;
   handleStart: () => void;
   disconnect: () => void;
   isSearching: boolean;
@@ -21,6 +43,7 @@ interface ControlPanelProps {
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
+  algorithmType,
   searchParams,
   handleParamChange,
   handleStart,
@@ -30,11 +53,110 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 }) => {
   const [showParameters, setShowParameters] = React.useState(true);
 
+  const getTitle = () => {
+    switch (algorithmType) {
+      case 'bfs':
+      case 'dfs':
+        return 'Visual Tree Search: Simple Search (BFS/DFS)';
+      case 'lats':
+        return 'Visual Tree Search: LATS';
+      case 'mcts':
+        return 'Visual Tree Search: RMCTS';
+      default:
+        return 'Visual Tree Search';
+    }
+  };
+
+  const renderAlgorithmSpecificParams = () => {
+    switch (algorithmType) {
+      case 'bfs':
+      case 'dfs':
+        return (
+          <div className="space-y-2">
+            <Label htmlFor="algorithm" className="text-slate-700 dark:text-slate-300 font-medium">Algorithm</Label>
+            <select
+              id="algorithm"
+              value={(searchParams as BFSSearchParams).algorithm}
+              onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
+              className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+            >
+              <option value="bfs">Breadth-First Search (BFS)</option>
+              <option value="dfs">Depth-First Search (DFS)</option>
+            </select>
+          </div>
+        );
+      case 'lats':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="num_simulations" className="text-slate-700 dark:text-slate-300 font-medium">Number of Simulations</Label>
+              <Input
+                id="num_simulations"
+                type="number"
+                min={1}
+                max={100}
+                value={(searchParams as LATSSearchParams).num_simulations}
+                onChange={(e) => handleParamChange('num_simulations', parseInt(e.target.value))}
+                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="iterations" className="text-slate-700 dark:text-slate-300 font-medium">Iterations</Label>
+              <Input
+                id="iterations"
+                type="number"
+                min={1}
+                max={10}
+                value={(searchParams as LATSSearchParams).iterations}
+                onChange={(e) => handleParamChange('iterations', parseInt(e.target.value))}
+                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+              />
+            </div>
+          </>
+        );
+      case 'mcts':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="iterations" className="text-slate-700 dark:text-slate-300 font-medium">Iterations</Label>
+              <Input
+                id="iterations"
+                type="number"
+                min={1}
+                max={10}
+                value={(searchParams as MCTSSearchParams).iterations}
+                onChange={(e) => handleParamChange('iterations', parseInt(e.target.value))}
+                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+              />
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="set_prior_value" 
+                  checked={(searchParams as MCTSSearchParams).set_prior_value}
+                  onCheckedChange={(checked) => handleParamChange('set_prior_value', checked === true)}
+                />
+                <Label 
+                  htmlFor="set_prior_value" 
+                  className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+                >
+                  Use Prior Value
+                </Label>
+              </div>
+              <p className="mt-1 ml-6 text-xs text-slate-500 dark:text-slate-400">
+                When enabled, RMCTS will use an LLM to generate an initial value as a prior value for each newly generated node.
+              </p>
+            </div>
+          </>
+        );
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-slate-800 shadow-sm border-b sticky top-0 z-10">
       <div className="py-3 px-4 max-w-full">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">Visual Tree Search: Simple Search (BFS/DFS)</h1>
+          <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">{getTitle()}</h1>
           
           <div className="flex gap-2">
             <Button 
@@ -93,7 +215,11 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     value={searchParams.startingUrl}
                     onChange={(e) => handleParamChange('startingUrl', e.target.value)}
                     className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    placeholder="e.g., http://xwebarena.pathonai.org:7770/"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    The starting URL for the web browser. This is where the search will begin.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -103,20 +229,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     value={searchParams.goal}
                     onChange={(e) => handleParamChange('goal', e.target.value)}
                     className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    placeholder="e.g., search for running shoes and click the first result"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="algorithm" className="text-slate-700 dark:text-slate-300 font-medium">Algorithm</Label>
-                  <select
-                    id="algorithm"
-                    value={searchParams.algorithm}
-                    onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-                    className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
-                  >
-                    <option value="bfs">Breadth-First Search (BFS)</option>
-                    <option value="dfs">Depth-First Search (DFS)</option>
-                  </select>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Describe what you want the agent to do in natural language. Examples:
+                    <ul className="list-disc list-inside mt-1">
+                      <li>Search for running shoes and click the first result</li>
+                      <li>Find the price of the latest iPhone</li>
+                      <li>Look up the weather in New York</li>
+                    </ul>
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -130,7 +252,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
                     className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Maximum number of steps the agent can take to reach the goal. Higher values allow for more complex tasks but may take longer.
+                  </p>
                 </div>
+
+                {renderAlgorithmSpecificParams()}
               </div>
             </div>
           )}
