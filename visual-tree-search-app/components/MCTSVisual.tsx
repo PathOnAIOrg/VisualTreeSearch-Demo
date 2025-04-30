@@ -483,14 +483,14 @@ const MCTSVisual: React.FC<SimpleSearchVisualProps> = ({ messages }) => {
             <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
             <span className="text-gray-700 dark:text-gray-300">Selected</span>
           </div>
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <span className="w-3 h-3 rounded-full inline-block mr-1 bg-green-500 dark:bg-green-600"></span>
             <span className="text-gray-700 dark:text-gray-300">Sim Start</span>
           </div>
           <div className="flex items-center">
             <span className="w-3 h-3 rounded-full inline-block mr-1 bg-orange-500 dark:bg-orange-600"></span>
             <span className="text-gray-700 dark:text-gray-300">Simulated</span>
-          </div>
+          </div> */}
         </div>
       </div>
       <div 
