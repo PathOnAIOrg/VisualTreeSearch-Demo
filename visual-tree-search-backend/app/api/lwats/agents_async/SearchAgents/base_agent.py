@@ -443,7 +443,7 @@ class BaseAgent:
     
      # node evaluation
      # change the node evaluation to use the new prompt
-    async def node_children_evaluation(self, node: LATSNode) -> None:
+    async def node_children_evaluation(self, node: LATSNode, websocket = None) -> None:
         if websocket:
             await websocket.send_json({
                 "type": "evaluation_start",
@@ -480,7 +480,7 @@ class BaseAgent:
             child.value = score
             # child.reward = score
 
-    async def node_evaluation(self, node: LATSNode) -> None:
+    async def node_evaluation(self, node: LATSNode, websocket = None) -> None:
         """Evaluate the current node and assign its score."""
         if websocket:
             await websocket.send_json({
