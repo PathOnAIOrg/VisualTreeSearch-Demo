@@ -26,13 +26,15 @@ interface TreeVisualProps {
   visualType?: 'full' | 'mcts' | 'lats' | 'simple';
   className?: string;
   title?: string;
+  onStart?: () => void;
 }
 
 const TreeVisual: React.FC<TreeVisualProps> = ({ 
   messages, 
   visualType = 'full',
   className = "w-[30%]",
-  title = "Tree Visualization"
+  title = "Tree Visualization",
+  onStart
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +45,32 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([]);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [simulatedNodes, setSimulatedNodes] = useState<number[]>([]);
+
+  // Reset function to clear the tree view
+  const resetTreeView = () => {
+    setSelectedNodeId(null);
+    setSimulationStartNodeId(null);
+    setTreeNodes([]);
+    setSimulatedNodes([]);
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.selectAll("*").remove();
+    }
+  };
+
+  // Listen for start event
+  useEffect(() => {
+    if (onStart) {
+      resetTreeView();
+    }
+  }, [onStart]);
+
+  // Reset tree view when messages array is empty
+  useEffect(() => {
+    if (messages.length === 0) {
+      resetTreeView();
+    }
+  }, [messages]);
 
   // Determine if we should use simulation features based on visualType
   const useSimulationFeatures = visualType !== 'simple';
@@ -192,15 +220,66 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
         setSimulatedNodes(newSimulatedNodes);
       }
     }
-  }, [messages, useSimulationFeatures]);
+  }, [messages, useSimulationFeatures, treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes]);
 
   // Render the tree visualization
   useEffect(() => {
-    if (!svgRef.current || !treeNodes.length) return;
+    if (!svgRef.current) return;
 
     // Clear previous content
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
+
+    // If no tree nodes but we have messages, show loading state
+    if (!treeNodes.length && messages.length > 0) {
+      const width = 400;
+      const height = 700;
+      const margin = { top: 40, right: 30, bottom: 40, left: 140 };
+      
+      // Create container group
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Add loading text with a subtle animation
+      g.append("text")
+        .attr("x", width / 2 - margin.left - margin.right)
+        .attr("y", height / 2 - margin.top - margin.bottom)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "16px")
+        .attr("font-weight", "500")
+        .attr("fill", theme === 'dark' ? "#E5E7EB" : "#4B5563")
+        .text("Initializing search");
+
+      // Add three dots that animate
+      const dots = g.append("text")
+        .attr("x", width / 2 - margin.left - margin.right + 80)
+        .attr("y", height / 2 - margin.top - margin.bottom)
+        .attr("text-anchor", "start")
+        .attr("font-size", "16px")
+        .attr("font-weight", "500")
+        .attr("fill", theme === 'dark' ? "#60A5FA" : "#3B82F6")
+        .text("");
+
+      // Animate the dots
+      const animateDots = () => {
+        const states = ["", ".", "..", "..."];
+        let currentState = 0;
+        
+        const updateDots = () => {
+          dots.text(states[currentState]);
+          currentState = (currentState + 1) % states.length;
+        };
+
+        updateDots();
+        const intervalId = setInterval(updateDots, 500);
+        return () => clearInterval(intervalId);
+      };
+
+      animateDots();
+      return;
+    }
+
+    if (!treeNodes.length) return;
 
     // Create or update tooltip
     const createTooltip = () => {
@@ -420,7 +499,15 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
     // Add node labels with tooltips
     nodes.append("text")
       .attr("dy", ".35em")
-      .attr("x", d => d.children ? -18 : 18)
+      .attr("x", d => {
+        // Calculate the position based on node type and children
+        const baseOffset = d.children ? -18 : 18;
+        return baseOffset;
+      })
+      .attr("y", d => {
+        // Add vertical offset to prevent overlapping
+        return d.children ? -5 : 5;
+      })
       .attr("text-anchor", d => d.children ? "end" : "start")
       .text(d => {
         // For root node
@@ -545,7 +632,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
 
     svg.call(zoom);
 
-  }, [treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes, theme, containerWidth, useSimulationFeatures]);
+  }, [treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes, theme, containerWidth, useSimulationFeatures, messages.length]);
 
   return (
     <div className={`${className} bg-white dark:bg-slate-800 rounded-r-lg overflow-hidden`}>
@@ -557,24 +644,97 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
           {title}
         </h2>
         
-        {/* Legend */}
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-          <div className="flex items-center">
-            <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
-            <span className="text-gray-700 dark:text-gray-300">Selected</span>
+        {/* Integrated Legend and Workflow */}
+        <div className="mt-2 space-y-1">
+          {/* Color Legend */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex items-center">
+              <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
+              <span className="text-gray-700 dark:text-gray-300">Selected</span>
+            </div>
+            {useSimulationFeatures && showSimulationLegend && (
+              <>
+                <div className="flex items-center">
+                  <span className="w-3 h-3 rounded-full inline-block mr-1 bg-green-500 dark:bg-green-600"></span>
+                  <span className="text-gray-700 dark:text-gray-300">Sim Start</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-3 h-3 rounded-full inline-block mr-1 bg-orange-500 dark:bg-orange-600"></span>
+                  <span className="text-gray-700 dark:text-gray-300">Simulated</span>
+                </div>
+              </>
+            )}
           </div>
-          {useSimulationFeatures && showSimulationLegend && (
-            <>
-              <div className="flex items-center">
-                <span className="w-3 h-3 rounded-full inline-block mr-1 bg-green-500 dark:bg-green-600"></span>
-                <span className="text-gray-700 dark:text-gray-300">Sim Start</span>
+
+          {/* Workflow Steps */}
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {visualType === 'simple' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Expand</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Next</span>
               </div>
-              <div className="flex items-center">
-                <span className="w-3 h-3 rounded-full inline-block mr-1 bg-orange-500 dark:bg-orange-600"></span>
-                <span className="text-gray-700 dark:text-gray-300">Simulated</span>
+            )}
+            {visualType === 'mcts' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Expand</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Update</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
               </div>
-            </>
-          )}
+            )}
+            {visualType === 'lats' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-500 dark:text-green-400">●</span>
+                <span>Evaluate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Remove</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
+              </div>
+            )}
+            {visualType === 'full' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-500 dark:text-green-400">●</span>
+                <span>Evaluate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Remove</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div 

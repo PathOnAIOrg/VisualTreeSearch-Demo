@@ -233,12 +233,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Describe what you want the agent to do in natural language. Examples:
-                    <ul className="list-disc list-inside mt-1">
-                      <li>Search for running shoes and click the first result</li>
-                      <li>Find the price of the latest iPhone</li>
-                      <li>Look up the weather in New York</li>
-                    </ul>
                   </p>
+                  <ul className="list-disc list-inside mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    <li>Search for running shoes and click the first result</li>
+                    <li>Find the price of the latest iPhone</li>
+                    <li>Look up the weather in New York</li>
+                  </ul>
                 </div>
 
                 <div className="space-y-2">

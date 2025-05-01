@@ -84,6 +84,9 @@ const LATSAgent = () => {
 
   // Combined connect and start search in one function
   const handleStart = () => {
+    // Clear messages to reset tree view
+    setMessages([]);
+    
     if (!connected) {
       const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
       setIsSearching(true);
@@ -99,7 +102,6 @@ const LATSAgent = () => {
 
           wsRef.current?.send(JSON.stringify(connectionMessage));
           logMessage(connectionMessage, 'incoming');
-          // logMessage('Connected to LATS WebSocket server');
           setConnected(true);
         
           const searchRequest = {
