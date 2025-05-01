@@ -420,7 +420,15 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
     // Add node labels with tooltips
     nodes.append("text")
       .attr("dy", ".35em")
-      .attr("x", d => d.children ? -18 : 18)
+      .attr("x", d => {
+        // Calculate the position based on node type and children
+        const baseOffset = d.children ? -18 : 18;
+        return baseOffset;
+      })
+      .attr("y", d => {
+        // Add vertical offset to prevent overlapping
+        return d.children ? -5 : 5;
+      })
       .attr("text-anchor", d => d.children ? "end" : "start")
       .text(d => {
         // For root node

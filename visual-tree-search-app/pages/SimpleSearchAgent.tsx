@@ -86,10 +86,31 @@ const SimpleSearchAgent = () => {
       const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
       setIsSearching(true);
 
+      // Clean up any existing connection before creating a new one
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
       try {
         wsRef.current = new WebSocket(wsUrl);
 
+        // Set a connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (wsRef.current?.readyState !== WebSocket.OPEN) {
+            wsRef.current?.close();
+            const timeoutMessage = {
+              type: "server_connection",
+              info: 'Connection timeout - please try again'
+            };
+            logMessage(timeoutMessage, 'incoming');
+            setConnected(false);
+            setIsSearching(false);
+          }
+        }, 5000);
+
         wsRef.current.onopen = () => {
+          clearTimeout(connectionTimeout);
           const connectionMessage = {
             type: "server_connection",
             info: 'Connecting to Tree Search WebSocket server'
@@ -106,8 +127,11 @@ const SimpleSearchAgent = () => {
             max_depth: searchParams.maxDepth
           };
           
-          wsRef.current?.send(JSON.stringify(request));
-          logMessage(request, 'outgoing');
+          // Ensure the connection is open before sending
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify(request));
+            logMessage(request, 'outgoing');
+          }
         };
 
         wsRef.current.onmessage = (event) => {
@@ -123,10 +147,11 @@ const SimpleSearchAgent = () => {
           }
         };
 
-        wsRef.current.onclose = () => {
+        wsRef.current.onclose = (event) => {
+          clearTimeout(connectionTimeout);
           const closeMessage = {
             type: "server_connection",
-            info: 'Disconnected from WebSocket server'
+            info: `Disconnected from WebSocket server${event.code ? ` (Code: ${event.code})` : ''}`
           };
           logMessage(closeMessage, 'incoming');
           setConnected(false);
@@ -135,6 +160,7 @@ const SimpleSearchAgent = () => {
         };
 
         wsRef.current.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           const errorMessage = {
             type: "server_connection",
             info: `WebSocket error: ${error instanceof Error ? error.message : String(error)}`
@@ -142,6 +168,10 @@ const SimpleSearchAgent = () => {
           logMessage(errorMessage, 'incoming');
           setConnected(false);
           setIsSearching(false);
+          if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+          }
         };
       } catch (error) {
         const errorMessage = {
@@ -163,8 +193,19 @@ const SimpleSearchAgent = () => {
         max_depth: searchParams.maxDepth
       };
 
-      wsRef.current?.send(JSON.stringify(request));
-      logMessage(request, 'outgoing');
+      // Ensure the connection is open before sending
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(request));
+        logMessage(request, 'outgoing');
+      } else {
+        const errorMessage = {
+          type: "server_connection",
+          info: 'Connection is not open. Please try reconnecting.'
+        };
+        logMessage(errorMessage, 'incoming');
+        setConnected(false);
+        setIsSearching(false);
+      }
     }
   };
 
