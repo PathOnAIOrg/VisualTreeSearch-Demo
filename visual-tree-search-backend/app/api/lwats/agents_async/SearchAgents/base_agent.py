@@ -34,7 +34,7 @@ from ...webagent_utils_async.evaluation.feedback import capture_post_action_feed
 openai_client = OpenAI()
 
 
-class BaseAgent:    
+class BaseAgent:
     # no need to pass an initial playwright_manager to the agent class
     def __init__(
         self,
@@ -94,7 +94,7 @@ class BaseAgent:
     def _get_tree_data(self):
         nodes = collect_all_nodes(self.root_node)
         tree_data = []
-        
+
         for node in nodes:
             node_data = {
                 "id": id(node),
@@ -109,21 +109,21 @@ class BaseAgent:
                 # "reward": node.reward
             }
             tree_data.append(node_data)
-        
+
         return tree_data
-    
+
     ## TODO: newly added, debug needed
     async def remove_simulated_trajectory(self, starting_node, terminal_node: LATSNode, websocket=None):
         # to be implemented
         trajectory_data = []
         path = []
-        
+
         # Collect path from terminal to root
         current = terminal_node
         while current is not starting_node:
             path.append(current)
             current = current.parent
-            
+
         # Process nodes in order from root to terminal
         for level, node in enumerate(reversed(path)):
             node_data = {
@@ -140,20 +140,20 @@ class BaseAgent:
                 "is_terminal_node": node == terminal_node
             }
             trajectory_data.append(node_data)
-        
+
         await self.websocket_simulation_removed(trajectory_data, websocket=websocket)
         pass
-    
+
     def _get_trajectory_data(self, terminal_node: LATSNode):
         trajectory_data = []
         path = []
-        
+
         # Collect path from terminal to root
         current = terminal_node
         while current is not None:
             path.append(current)
             current = current.parent
-            
+
         # Process nodes in order from root to terminal
         for level, node in enumerate(reversed(path)):
             node_data = {
@@ -170,15 +170,15 @@ class BaseAgent:
                 "is_terminal_node": node == terminal_node
             }
             trajectory_data.append(node_data)
-            
-        return trajectory_data 
+
+        return trajectory_data
 
 
     async def _reset_browser(self, websocket=None) -> Optional[str]:
         await self.playwright_manager.close()
-        
+
         ## reset account using api-based account reset
-        if self.config.account_reset:            
+        if self.config.account_reset:
             try:
                 # Use aiohttp instead of curl
                 async with aiohttp.ClientSession() as session:
@@ -204,7 +204,7 @@ class BaseAgent:
                                     "reason": error_msg,
                                     "timestamp": datetime.utcnow().isoformat()
                                 })
-                            
+
             except Exception as e:
                 print(f"Error during account reset: {e}")
                 if websocket:
@@ -231,7 +231,7 @@ class BaseAgent:
                 session_id = None
                 live_browser_url = None
             await page.goto(self.starting_url, wait_until="networkidle")
-            
+
             # Send success message if websocket is provided
             if websocket:
                 if self.config.storage_state:
@@ -252,7 +252,7 @@ class BaseAgent:
                         "session_id": session_id,
                         "timestamp": datetime.utcnow().isoformat()
                     })
-            
+
             return live_browser_url, session_id
         except Exception as e:
             print(f"Error setting up browser: {e}")
@@ -264,7 +264,7 @@ class BaseAgent:
                     "timestamp": datetime.utcnow().isoformat()
                 })
             return None, None
-    
+
     # TODO: if no websocket, print the json data
     # TODO: do we need node expansion data?
     # TODO: four types of websocket messages, do we need more type of websocket messages?
@@ -311,7 +311,7 @@ class BaseAgent:
                     })
         else:
             print(f"{type} updated: {tree_data}")
-    
+
     async def websocket_node_created(self, child, node, websocket=None):
         if websocket:
             await websocket.send_json({
@@ -327,7 +327,7 @@ class BaseAgent:
             print(f"Node parent: {GREEN}{id(node)}{RESET}")
             print(f"Node action: {GREEN}{child.action}{RESET}")
             print(f"Node description: {GREEN}{child.natural_language_description}{RESET}")
-    
+
     ## node simulated
     ## message log and d3 visualization add different information
     async def websocket_node_simulated(self, child, node, websocket=None):
@@ -371,7 +371,7 @@ class BaseAgent:
         else:
             print(f"Simulation reward: {GREEN}{reward}{RESET}")
             print(f"Simulation terminal node: {GREEN}{terminal_node}{RESET}")
-            
+
     async def websocket_search_complete(self, status, score, path, websocket=None):
         if websocket:
             await websocket.send_json({
@@ -385,11 +385,11 @@ class BaseAgent:
             print(f"Search complete: {GREEN}{status}{RESET}")
             print(f"Search score: {GREEN}{score}{RESET}")
             print(f"Search path: {GREEN}{path}{RESET}")
-        
+
     # shared, not implemented, BFS, DFS and LATS has its own node selection logic
     async def node_selection(self, node, websocket = None):
         NotImplemented
-    
+
 
     async def node_expansion(self, node: LATSNode, websocket = None) -> None:
         if websocket:
@@ -440,7 +440,7 @@ class BaseAgent:
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-    
+
      # node evaluation
      # change the node evaluation to use the new prompt
     async def node_children_evaluation(self, node: LATSNode, websocket = None) -> None:
@@ -483,15 +483,24 @@ class BaseAgent:
     async def node_evaluation(self, node: LATSNode, websocket = None) -> None:
         """Evaluate the current node and assign its score."""
         if websocket:
+            node_info = {
+                "action": node.action if node.action else "ROOT",
+                "description": node.natural_language_description if node.natural_language_description else "Root Node",
+                "value": node.value if hasattr(node, 'value') else 0.0,
+                "visits": node.visits if hasattr(node, 'visits') else 0,
+                "depth": node.depth if hasattr(node, 'depth') else 0,
+                "is_terminal": node.is_terminal if hasattr(node, 'is_terminal') else False
+            }
             await websocket.send_json({
                 "type": "node_evaluation_start",
                 "node_id": id(node),
+                "node_info": node_info,
                 "timestamp": datetime.utcnow().isoformat()
             })
         try:
             # Get the path from root to this node
             path = self.get_path_to_root(node)
-            
+
             # Create trajectory for scoring (skip root node)
             trajectory = []
             for n in path[1:]:  # Skip root node
@@ -500,7 +509,7 @@ class BaseAgent:
                     "action": n.action,
                     "feedback": n.feedback
                 })
-            
+
             try:
                 # Score the trajectory
                 # if node.is_terminal:
@@ -511,25 +520,26 @@ class BaseAgent:
                 else:
                     prompt = create_llm_prompt(trajectory, self.goal)
                     result = score_trajectory_with_openai(
-                        prompt, 
-                        openai_client, 
+                        prompt,
+                        openai_client,
                         model=self.config.evaluation_model
                     )
                     score = result["overall_score"]
-            
+
             except Exception as e:
                 error_msg = f"Error scoring node {id(node)}: {str(e)}"
                 print(error_msg)
                 score = float('-inf')
-            
+
             # Assign the score to the node
             node.value = score
             # node.reward = score
-            
+
             if websocket:
                 await websocket.send_json({
                     "type": "node_evaluation_complete",
                     "node_id": id(node),
+                    "node_info": node_info,
                     "score": score,
                     "trajectory": trajectory,
                     "timestamp": datetime.utcnow().isoformat()
@@ -538,7 +548,7 @@ class BaseAgent:
         except Exception as e:
             error_msg = f"Error in node evaluation: {str(e)}"
             print(error_msg)
-    
+
     # shared
     ## TODO: check the logic of updating value/ reward, is the input value?
     def backpropagate(self, node: LATSNode, value: float) -> None:
@@ -559,26 +569,26 @@ class BaseAgent:
         print("print the entire tree")
         print_entire_tree(self.root_node)
         return await self.rollout(node, websocket=websocket)
-    
+
     # refactor simulation, rollout, send_completion_request methods
     # TODO: check, score as reward and then update value of the starting node?
     async def rollout(self, node: LATSNode, websocket=None)-> tuple[float, LATSNode]:
         # Reset browser state
         live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
-        
+
         print("execute path")
         # Execute path
 
         messages = []
         trajectory = []
-  
+
         for n in path[1:]:  # Skip root node
             success = await playwright_step_execution(
-                n, 
-                self.goal, 
-                self.playwright_manager, 
-                is_replay=False, 
+                n,
+                self.goal,
+                self.playwright_manager,
+                is_replay=False,
                 log_folder=self.config.log_folder
             )
             if not success:
@@ -607,18 +617,18 @@ class BaseAgent:
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
         goal_finished, confidence_score = goal_finished_evaluator(
-            messages, 
-            openai_client, 
-            self.goal, 
+            messages,
+            openai_client,
+            self.goal,
             page_info['screenshot']
         )
         print("evaluating")
-        
+
         score = confidence_score if goal_finished else 0
         await self.remove_simulated_trajectory(starting_node=node, terminal_node=terminal_node, websocket=websocket)
 
         return score, terminal_node
-    
+
 
     # TODO: decide whether to keep the tree update
     async def send_completion_request(self, plan, depth, node, trajectory=[], websocket=None):
@@ -651,7 +661,7 @@ class BaseAgent:
         )
         next_action = updated_actions[0]
         retry_count = self.config.retry_count if hasattr(self.config, 'retry_count') else 1  # Default retries if not set
-        
+
         for attempt in range(retry_count):
             try:
                 # Convert action to Python code
@@ -663,7 +673,7 @@ class BaseAgent:
                         extracted_number = parse_function_args(function_args)
                         element = await locate_element(page, extracted_number)
                         next_action["element"] = element
-                
+
                 # Execute action
                 await execute_action(next_action, self.action_set, page, context, self.goal, page_info['interactive_elements'],
                             self.config.log_folder)
@@ -720,9 +730,9 @@ class BaseAgent:
         # Reset browser and get live URL
         live_browser_url, session_id = await self._reset_browser(websocket)
         path = self.get_path_to_root(node)
-        
+
         # Execute path
-        for n in path[1:]:  # Skip root node       
+        for n in path[1:]:  # Skip root node
             success = await playwright_step_execution(
                 n,
                 self.goal,
@@ -733,7 +743,7 @@ class BaseAgent:
             if not success:
                 n.is_terminal = True
                 return []
-            
+
             if not n.feedback:
                 n.feedback = await generate_feedback(
                     self.goal,
@@ -747,11 +757,11 @@ class BaseAgent:
 
         messages = [{"role": "user", "content": f"Action is: {n.action}"} for n in path[1:]]
 
-        
+
         next_actions = await extract_top_actions(
             [{"natural_language_description": n.natural_language_description, "action": n.action, "feedback": n.feedback} for n in path[1:]],
             self.goal,
-            self.images, 
+            self.images,
             page_info,
             self.action_set,
             openai_client,
@@ -778,7 +788,7 @@ class BaseAgent:
                         })
                     return []
                 continue
-            
+
             page = await self.playwright_manager.get_page()
             code, function_calls = self.action_set.to_python_code(action["action"])
 
@@ -793,5 +803,5 @@ class BaseAgent:
                 children.append(action)
 
         if not children:
-            node.is_terminal = True        
+            node.is_terminal = True
         return children

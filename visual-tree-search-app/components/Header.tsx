@@ -8,15 +8,15 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-20 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <div className="flex flex-1 items-center justify-center">
+      <div className="container mx-auto px-4 h-14 relative">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-            <h1 className="text-lg font-semibold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <h1 className="text-lg font-semibold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent whitespace-nowrap">
               VisualTreeSearch
             </h1>
           </Link>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 pr-4">
           <Button
             variant="ghost"
             size="icon"
