@@ -326,7 +326,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
     }
 
     // Set up dimensions
-    const width = 400;
+    const width = 1200;  // Increased from 400
     const height = 700;
     const margin = { top: 40, right: 30, bottom: 40, left: 140 };
     const innerWidth = width - margin.left - margin.right;
@@ -334,10 +334,25 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
 
     // Create tree layout - horizontal tree
     const treeLayout = d3.tree<TreeNode>()
-      .size([innerHeight, innerWidth]);
+      .size([innerHeight, innerWidth])
+      .separation((a, b) => {
+        // Add extra separation for nodes at the same depth
+        if (a.parent === b.parent) {
+          return 7.5;
+        }
+        return 6.0;
+      });
     
     // Apply the tree layout
     treeLayout(root);
+
+    // Adjust vertical positions to create staggered effect
+    root.descendants().forEach((node, i) => {
+      if (node.depth > 0 && typeof node.x === 'number') {
+        // Add vertical offset based on depth and index
+        node.x += (node.depth * 30) + (i % 2 === 0 ? 20 : -20);
+      }
+    });
 
     // Create container group
     const g = svg.append("g")
@@ -350,11 +365,13 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
       .append("path")
       .attr("class", "link")
       .attr("d", d => {
-        const sourceY = d.source.y ?? 0; // Default to 0 if undefined
-        const sourceX = d.source.x ?? 0; // Default to 0 if undefined
-        const targetY = d.target.y ?? 0; // Default to 0 if undefined
-        const targetX = d.target.x ?? 0; // Default to 0 if undefined
-        return `M${sourceY},${sourceX}C${(sourceY + targetY) / 2},${sourceX} ${(sourceY + targetY) / 2},${targetX} ${targetY},${targetX}`;
+        const sourceY = d.source.y ?? 0;
+        const sourceX = d.source.x ?? 0;
+        const targetY = d.target.y ?? 0;
+        const targetX = d.target.x ?? 0;
+        // Add some vertical offset to the curve
+        const midY = (sourceY + targetY) / 2;
+        return `M${sourceY},${sourceX}C${midY},${sourceX} ${midY},${targetX} ${targetY},${targetX}`;
       })
       .attr("fill", "none")
       .attr("stroke", d => {
@@ -626,15 +643,15 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
 
     // Add zoom behavior
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 3])
-      .translateExtent([[-1000, -1000], [1000, 1000]]) // Allow more freedom in movement
+      .scaleExtent([0.1, 3])  // Allow more zoom out
+      .translateExtent([[-2000, -2000], [2000, 2000]])  // Allow more movement
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
 
-    // Initialize zoom with identity transform
+    // Initialize zoom with identity transform and some initial zoom out
     svg.call(zoom)
-      .call(zoom.transform, d3.zoomIdentity);
+      .call(zoom.transform, d3.zoomIdentity.scale(0.8).translate(100, 0));
 
     // Enable dragging
     svg.style("cursor", "grab")
@@ -759,7 +776,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
           ref={svgRef} 
           width="100%" 
           height="700" 
-          viewBox="0 0 400 700"
+          viewBox="0 0 1200 700"
           className="overflow-visible"
         ></svg>
       </div>
