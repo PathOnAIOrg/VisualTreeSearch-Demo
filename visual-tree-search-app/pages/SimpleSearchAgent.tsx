@@ -82,6 +82,9 @@ const SimpleSearchAgent = () => {
 
   // Combined connect and start search in one function
   const handleStart = () => {
+    // Clear messages to reset tree view
+    setMessages([]);
+    
     if (!connected) {
       const wsUrl = `${backendUrl.replace('http', 'ws')}/tree-search-ws`;
       setIsSearching(true);

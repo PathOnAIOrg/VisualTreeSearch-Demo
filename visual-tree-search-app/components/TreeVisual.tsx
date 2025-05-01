@@ -26,13 +26,15 @@ interface TreeVisualProps {
   visualType?: 'full' | 'mcts' | 'lats' | 'simple';
   className?: string;
   title?: string;
+  onStart?: () => void;
 }
 
 const TreeVisual: React.FC<TreeVisualProps> = ({ 
   messages, 
   visualType = 'full',
   className = "w-[30%]",
-  title = "Tree Visualization"
+  title = "Tree Visualization",
+  onStart
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,6 +45,32 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([]);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [simulatedNodes, setSimulatedNodes] = useState<number[]>([]);
+
+  // Reset function to clear the tree view
+  const resetTreeView = () => {
+    setSelectedNodeId(null);
+    setSimulationStartNodeId(null);
+    setTreeNodes([]);
+    setSimulatedNodes([]);
+    if (svgRef.current) {
+      const svg = d3.select(svgRef.current);
+      svg.selectAll("*").remove();
+    }
+  };
+
+  // Listen for start event
+  useEffect(() => {
+    if (onStart) {
+      resetTreeView();
+    }
+  }, [onStart]);
+
+  // Reset tree view when messages array is empty
+  useEffect(() => {
+    if (messages.length === 0) {
+      resetTreeView();
+    }
+  }, [messages]);
 
   // Determine if we should use simulation features based on visualType
   const useSimulationFeatures = visualType !== 'simple';
