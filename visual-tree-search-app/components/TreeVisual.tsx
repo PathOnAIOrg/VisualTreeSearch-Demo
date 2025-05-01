@@ -220,15 +220,66 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
         setSimulatedNodes(newSimulatedNodes);
       }
     }
-  }, [messages, useSimulationFeatures]);
+  }, [messages, useSimulationFeatures, treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes]);
 
   // Render the tree visualization
   useEffect(() => {
-    if (!svgRef.current || !treeNodes.length) return;
+    if (!svgRef.current) return;
 
     // Clear previous content
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
+
+    // If no tree nodes but we have messages, show loading state
+    if (!treeNodes.length && messages.length > 0) {
+      const width = 400;
+      const height = 700;
+      const margin = { top: 40, right: 30, bottom: 40, left: 140 };
+      
+      // Create container group
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Add loading text with a subtle animation
+      g.append("text")
+        .attr("x", width / 2 - margin.left - margin.right)
+        .attr("y", height / 2 - margin.top - margin.bottom)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "16px")
+        .attr("font-weight", "500")
+        .attr("fill", theme === 'dark' ? "#E5E7EB" : "#4B5563")
+        .text("Initializing search");
+
+      // Add three dots that animate
+      const dots = g.append("text")
+        .attr("x", width / 2 - margin.left - margin.right + 80)
+        .attr("y", height / 2 - margin.top - margin.bottom)
+        .attr("text-anchor", "start")
+        .attr("font-size", "16px")
+        .attr("font-weight", "500")
+        .attr("fill", theme === 'dark' ? "#60A5FA" : "#3B82F6")
+        .text("");
+
+      // Animate the dots
+      const animateDots = () => {
+        const states = ["", ".", "..", "..."];
+        let currentState = 0;
+        
+        const updateDots = () => {
+          dots.text(states[currentState]);
+          currentState = (currentState + 1) % states.length;
+        };
+
+        updateDots();
+        const intervalId = setInterval(updateDots, 500);
+        return () => clearInterval(intervalId);
+      };
+
+      animateDots();
+      return;
+    }
+
+    if (!treeNodes.length) return;
 
     // Create or update tooltip
     const createTooltip = () => {
@@ -581,7 +632,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
 
     svg.call(zoom);
 
-  }, [treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes, theme, containerWidth, useSimulationFeatures]);
+  }, [treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes, theme, containerWidth, useSimulationFeatures, messages.length]);
 
   return (
     <div className={`${className} bg-white dark:bg-slate-800 rounded-r-lg overflow-hidden`}>
