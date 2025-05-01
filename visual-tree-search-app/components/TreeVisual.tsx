@@ -220,7 +220,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
         setSimulatedNodes(newSimulatedNodes);
       }
     }
-  }, [messages, useSimulationFeatures, treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes]);
+  }, [messages, useSimulationFeatures]);
 
   // Render the tree visualization
   useEffect(() => {
@@ -626,11 +626,26 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
     // Add zoom behavior
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.3, 3])
+      .translateExtent([[-1000, -1000], [1000, 1000]]) // Allow more freedom in movement
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
 
-    svg.call(zoom);
+    // Initialize zoom with identity transform
+    svg.call(zoom)
+      .call(zoom.transform, d3.zoomIdentity);
+
+    // Enable dragging
+    svg.style("cursor", "grab")
+      .on("mousedown", function() {
+        svg.style("cursor", "grabbing");
+      })
+      .on("mouseup", function() {
+        svg.style("cursor", "grab");
+      })
+      .on("mouseleave", function() {
+        svg.style("cursor", "grab");
+      });
 
   }, [treeNodes, selectedNodeId, simulationStartNodeId, simulatedNodes, theme, containerWidth, useSimulationFeatures, messages.length]);
 
@@ -739,12 +754,13 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
       </div>
       <div 
         ref={containerRef} 
-        className="h-[calc(100%-48px)] w-full overflow-auto bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800"
+        className="h-[calc(100%-48px)] w-full overflow-hidden bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800"
       >
         <svg 
           ref={svgRef} 
           width="100%" 
           height="700" 
+          viewBox="0 0 400 700"
           className="overflow-visible"
         ></svg>
       </div>
