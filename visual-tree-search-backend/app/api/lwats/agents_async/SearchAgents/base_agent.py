@@ -68,13 +68,17 @@ class BaseAgent:
             subsets=self.agent_type, strict=False, multiaction=False, demo_mode="default"
         )
         self.root_node = LATSNode(
-            natural_language_description=None,
-            action=None,
-            prob=None,
+            natural_language_description="Root Node",
+            action="ROOT",
+            prob=1.0,
             element=None,
             goal=self.goal,
             parent=None
         )
+        self.root_node.value = 0.0
+        self.root_node.visits = 0
+        self.root_node.depth = 0
+        self.root_node.is_terminal = False
         self.goal_finished = False
         self.result_node = None
         self.reset_url = os.environ["ACCOUNT_RESET_URL"]
@@ -388,7 +392,23 @@ class BaseAgent:
     
 
     async def node_expansion(self, node: LATSNode, websocket = None) -> None:
+        if websocket:
+            node_info = {
+                "action": node.action if node.action else "ROOT",
+                "description": node.natural_language_description if node.natural_language_description else "Root Node",
+                "value": node.value if hasattr(node, 'value') else 0.0,
+                "visits": node.visits if hasattr(node, 'visits') else 0,
+                "depth": node.depth if hasattr(node, 'depth') else 0,
+                "is_terminal": node.is_terminal if hasattr(node, 'is_terminal') else False
+            }
+            await websocket.send_json({
+                "type": "node_expansion_start",
+                "node_id": id(node),
+                "node_info": node_info,
+                "timestamp": datetime.utcnow().isoformat()
+            })
         children_state = await self.generate_children(node, websocket)
+        children_data = []
         for child_state in children_state:
             child = LATSNode(
                 natural_language_description=child_state["natural_language_description"],
@@ -401,12 +421,36 @@ class BaseAgent:
             if child.depth == self.config.max_depth:
                 child.is_terminal = True
             node.children.append(child)
+            children_data.append({
+                "id": id(child),
+                "parent_id": id(node),
+                "action": child.action,
+                "description": child.natural_language_description,
+                "is_terminal": child.is_terminal,
+                "prob": child.prob,
+                "depth": child.depth
+            })
             await self.websocket_node_created(child, node, websocket=websocket)
+        if websocket:
+            await websocket.send_json({
+                "type": "node_expansion_complete",
+                "node_id": id(node),
+                "node_info": node_info,
+                "children": children_data,
+                "timestamp": datetime.utcnow().isoformat()
+            })
 
     
      # node evaluation
      # change the node evaluation to use the new prompt
     async def node_children_evaluation(self, node: LATSNode) -> None:
+        if websocket:
+            await websocket.send_json({
+                "type": "evaluation_start",
+                "node_id": id(node),
+                "children_count": len(node.children),
+                "timestamp": datetime.utcnow().isoformat()
+            })
         scores = []
         print(f"{GREEN}-- total {len(node.children)} children to evaluate:{RESET}")
         for i, child in enumerate(node.children):
@@ -423,6 +467,14 @@ class BaseAgent:
                 result = score_trajectory_with_openai(prompt, openai_client, self.config.evaluation_model)
                 score = result["overall_score"]
             scores.append(score)
+            if websocket:
+                await websocket.send_json({
+                    "type": "child_evaluated",
+                    "node_id": id(child),
+                    "parent_id": id(node),
+                    "score": score,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
 
         for child, score in zip(node.children, scores):
             child.value = score
@@ -430,6 +482,12 @@ class BaseAgent:
 
     async def node_evaluation(self, node: LATSNode) -> None:
         """Evaluate the current node and assign its score."""
+        if websocket:
+            await websocket.send_json({
+                "type": "node_evaluation_start",
+                "node_id": id(node),
+                "timestamp": datetime.utcnow().isoformat()
+            })
         try:
             # Get the path from root to this node
             path = self.get_path_to_root(node)
@@ -468,6 +526,14 @@ class BaseAgent:
             node.value = score
             # node.reward = score
             
+            if websocket:
+                await websocket.send_json({
+                    "type": "node_evaluation_complete",
+                    "node_id": id(node),
+                    "score": score,
+                    "trajectory": trajectory,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
 
         except Exception as e:
             error_msg = f"Error in node evaluation: {str(e)}"

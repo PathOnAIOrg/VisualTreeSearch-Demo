@@ -80,11 +80,30 @@ interface ParsedMessage {
   iteration?: number;
   session_id?: string;
   node_action?: string;
+  children?: ChildNodeData[];
+  children_count?: number;
+  node_info?: {
+    action?: string;
+    description?: string;
+    depth?: number;
+    value?: number;
+    visits?: number;
+  };
 }
 
 interface PathStep {
   natural_language_description: string;
   action: string;
+}
+
+interface ChildNodeData {
+  id: number;
+  parent_id: number;
+  action: string;
+  description: string;
+  is_terminal: boolean;
+  prob: number;
+  depth: number;
 }
 
 const MessageLogPanel: React.FC<MessageLogPanelProps> = ({ 
@@ -194,6 +213,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'tree_update_simulation':
       case 'trajectory_update':
       case 'removed_simulation':
+      case 'tree_update_node_expansion':
+      case 'tree_update_node_evaluation':
         return "bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 border-cyan-200 dark:border-cyan-800";
       
       case 'iteration_start':
@@ -205,6 +226,12 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'node_created':
       case 'node_simulated':
       case 'node_terminal':
+      case 'node_expansion_start':
+      case 'node_expansion_complete':
+      case 'evaluation_start':
+      case 'child_evaluated':
+      case 'node_evaluation_start':
+      case 'node_evaluation_complete':
         return "bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-800";
 
       case 'simulation_result':
@@ -326,6 +353,18 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
         return <Flag className="h-4 w-4 text-green-500" />;
       case 'simulation_result':
         return <Info className="h-4 w-4 text-amber-500" />;
+      case 'node_expansion_start':
+        return <Expand className="h-4 w-4 text-purple-500" />;
+      case 'node_expansion_complete':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'evaluation_start':
+        return <Brain className="h-4 w-4 text-blue-500" />;
+      case 'child_evaluated':
+        return <Star className="h-4 w-4 text-amber-500" />;
+      case 'node_evaluation_start':
+        return <Brain className="h-4 w-4 text-blue-500" />;
+      case 'node_evaluation_complete':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -412,6 +451,8 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'tree_update_simulation':
       case 'trajectory_update':
       case 'removed_simulation':
+      case 'tree_update_node_expansion':
+      case 'tree_update_node_evaluation':
         return "bg-cyan-100 dark:bg-cyan-800/30 text-cyan-600 dark:text-cyan-400";
       
       case 'iteration_start':
@@ -423,6 +464,12 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'node_created':
       case 'node_simulated':
       case 'node_terminal':
+      case 'node_expansion_start':
+      case 'node_expansion_complete':
+      case 'evaluation_start':
+      case 'child_evaluated':
+      case 'node_evaluation_start':
+      case 'node_evaluation_complete':
         return "bg-green-100 dark:bg-green-800/30 text-green-600 dark:text-green-400";
 
       case 'simulation_result':
@@ -451,6 +498,11 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
   };
 
   const formatMessageContent = (message: ParsedMessage) => {
+    // Ignore tree update messages
+    if (message.type === 'tree_update_node_expansion' || message.type === 'tree_update_node_evaluation') {
+      return null;
+    }
+
     switch (message.type) {
       case 'reflection_backtracking':
         return (
@@ -483,7 +535,9 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
           <div className="flex items-center gap-2 animate-fadeIn">
             {getIcon(message)}
             <div className="animate-slideIn">
-              <div className="text-green-600 dark:text-green-400">{message.info}</div>
+              <div className="text-green-600 dark:text-green-400">
+                {message.info?.replace(/Session [a-f0-9-]+ terminated successfully/, 'Session terminated successfully')}
+              </div>
             </div>
           </div>
         );
@@ -707,6 +761,69 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
             </div>
           </div>
         );
+
+      case 'node_expansion_start':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-purple-600 dark:text-purple-400">
+                {message.node_info?.description || 'Starting node expansion'}
+              </div>
+              {message.node_info?.action && message.node_info.action !== 'ROOT' && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Action: {message.node_info.action}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      case 'node_expansion_complete':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            {getIcon(message)}
+            <div className="animate-slideIn">
+              <div className="text-green-600 dark:text-green-400">
+                {message.node_info?.description || 'Node expansion complete'}
+              </div>
+              {message.node_info?.action && message.node_info.action !== 'ROOT' && (
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  Action: {message.node_info.action}
+                </div>
+              )}
+              {message.children && message.children.length > 0 && (
+                <div className="mt-1">
+                  {message.children.map((child: ChildNodeData, index: number) => (
+                    <div 
+                      key={index}
+                      className="text-xs text-slate-500 dark:text-slate-400 pl-2 border-l-2 border-slate-200 dark:border-slate-700"
+                    >
+                      <div className="text-indigo-600 dark:text-indigo-400">
+                        {child.description || 'No description'}
+                      </div>
+                      <div className="text-slate-500 dark:text-slate-400">
+                        Action: {child.action || 'None'}
+                      </div>
+                      {child.prob && (
+                        <div className="text-slate-500 dark:text-slate-400">
+                          Probability: {child.prob.toFixed(3)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      case 'evaluation_start':
+        return `Starting evaluation of ${message.children_count} children for node ${message.node_id}`;
+      case 'child_evaluated':
+        return `Child node ${message.node_id} evaluated with score ${message.score}`;
+      case 'node_evaluation_start':
+        return `Starting evaluation of node ${message.node_id}`;
+      case 'node_evaluation_complete':
+        return `Node ${message.node_id} evaluated with score ${message.score}`;
 
       default:
         return (
