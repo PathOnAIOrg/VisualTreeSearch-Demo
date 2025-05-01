@@ -89,6 +89,11 @@ interface ParsedMessage {
     value?: number;
     visits?: number;
   };
+  trajectory?: Array<{
+    natural_language_description: string;
+    action: string;
+    feedback?: string;
+  }>;
 }
 
 interface PathStep {
@@ -133,6 +138,13 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
   }, [messages, onSessionIdChange]);
 
   const getCardStyle = (type: string) => {
+    // Ignore tree update messages
+    if (type === 'tree_update_node_expansion' || 
+        type === 'tree_update_node_evaluation' ||
+        type === 'tree_update_node_children_evaluation') {
+      return "hidden";
+    }
+
     switch (type) {
       // System Status Messages
       case 'reflection_backtracking':
@@ -243,6 +255,13 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
   };
 
   const getIcon = (message: ParsedMessage) => {
+    // Ignore tree update messages
+    if (message.type === 'tree_update_node_expansion' || 
+        message.type === 'tree_update_node_evaluation' ||
+        message.type === 'tree_update_node_children_evaluation') {
+      return null;
+    }
+
     switch (message.type) {
       case 'reflection_backtracking':
         return <Brain className="h-4 w-4 text-blue-500" />;
@@ -358,13 +377,40 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'node_expansion_complete':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'evaluation_start':
-        return <Brain className="h-4 w-4 text-blue-500" />;
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400">
+                Starting node evaluation
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {message.node_info?.description}
+                {message.node_info?.action && message.node_info.action !== 'ROOT' && (
+                  <span> | Action: {message.node_info.action}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      case 'child_evaluated':
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400">
+                Child node evaluated
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Node ID: {message.node_id} | Score: {message.score?.toFixed(3)}
+              </div>
+            </div>
+          </div>
+        );
+      case 'node_evaluation_start':
+        return <Brain className="h-4 w-4 text-amber-500" />;
+      case 'node_evaluation_complete':
+        return <CheckCircle className="h-4 w-4 text-amber-500" />;
       case 'child_evaluated':
         return <Star className="h-4 w-4 text-amber-500" />;
-      case 'node_evaluation_start':
-        return <Brain className="h-4 w-4 text-blue-500" />;
-      case 'node_evaluation_complete':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
       default:
         return <Info className="h-4 w-4 text-slate-500" />;
     }
@@ -499,7 +545,9 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
 
   const formatMessageContent = (message: ParsedMessage) => {
     // Ignore tree update messages
-    if (message.type === 'tree_update_node_expansion' || message.type === 'tree_update_node_evaluation') {
+    if (message.type === 'tree_update_node_expansion' || 
+        message.type === 'tree_update_node_evaluation' ||
+        message.type === 'tree_update_node_children_evaluation') {
       return null;
     }
 
@@ -652,7 +700,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
             {getIcon(message)}
             <div className="animate-slideIn">
               <div className="text-emerald-600 dark:text-emerald-400">
-                Search Complete | Score: {message.score}
+                Search Complete | Score: {message.score?.toFixed(3)}
               </div>
               {message.path && message.path.length > 0 && (
                 <div className="mt-1">
@@ -727,7 +775,7 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
             {getIcon(message)}
             <div className="animate-slideIn">
               <div className="text-amber-600 dark:text-amber-400">
-                Simulation Result | Reward: {message.reward}
+                Simulation Result | Reward: {message.reward?.toFixed(3)}
               </div>
               {message.terminal_node_description && (
                 <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -819,11 +867,66 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       case 'evaluation_start':
         return `Starting evaluation of ${message.children_count} children for node ${message.node_id}`;
       case 'child_evaluated':
-        return `Child node ${message.node_id} evaluated with score ${message.score}`;
+        return `Child node ${message.node_id} evaluated with score ${message.score?.toFixed(3)}`;
       case 'node_evaluation_start':
-        return `Starting evaluation of node ${message.node_id}`;
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400">
+                Starting node evaluation
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {message.node_info?.description}
+                {message.node_info?.action && message.node_info.action !== 'ROOT' && (
+                  <span> | Action: {message.node_info.action}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
       case 'node_evaluation_complete':
-        return `Node ${message.node_id} evaluated with score ${message.score}`;
+        return (
+          <div className="flex items-center gap-2 animate-fadeIn">
+            <div className="animate-slideIn">
+              <div className="text-amber-600 dark:text-amber-400 font-medium">
+                Node evaluation complete
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {message.node_info?.description}
+                {message.node_info?.action && message.node_info.action !== 'ROOT' && (
+                  <span> | Action: {message.node_info.action}</span>
+                )}
+              </div>
+              <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-2">
+                Score: {message.score?.toFixed(3)}
+              </div>
+              {message.trajectory && message.trajectory.length > 0 && (
+                <div className="mt-2 pl-2 border-l-2 border-amber-200 dark:border-amber-800">
+                  <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">
+                    Trajectory:
+                  </div>
+                  {message.trajectory.map((step, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-start gap-1 text-xs text-slate-500 dark:text-slate-400 animate-fadeIn mb-1.5"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <ArrowRight className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="font-medium">{step.natural_language_description}</div>
+                        {step.feedback && (
+                          <div className="text-slate-400 italic mt-0.5">
+                            Feedback: {step.feedback}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
 
       default:
         return (
@@ -848,6 +951,13 @@ const MessageLogPanel: React.FC<MessageLogPanelProps> = ({
       <div className="h-[150px] overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md p-1.5 bg-gradient-to-r from-sky-50 to-white dark:from-slate-900 dark:to-slate-800">
         {messages.map((msg, index) => {
           const parsedMessage = parseMessage(msg.content);
+          
+          // Skip tree update messages
+          if (parsedMessage.type === 'tree_update_node_expansion' || 
+              parsedMessage.type === 'tree_update_node_evaluation' ||
+              parsedMessage.type === 'tree_update_node_children_evaluation') {
+            return null;
+          }
           
           return (
             <div 

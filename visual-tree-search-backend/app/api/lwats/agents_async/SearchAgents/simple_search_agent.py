@@ -76,7 +76,7 @@ class SimpleSearchAgent(BaseAgent):
             # stage 2: node evaluation
             for current_node in level_nodes:
                 # await self.websocket_step_start(step=2, step_name="node_evaluation", websocket=websocket)
-                await self.node_evaluation(current_node)
+                await self.node_evaluation(current_node, websocket=websocket)
                 tree_data = self._get_tree_data()
                 if websocket:
                     await self.websocket_tree_update(type="tree_update_node_evaluation", websocket=websocket, tree_data=tree_data)
@@ -153,7 +153,7 @@ class SimpleSearchAgent(BaseAgent):
                     print_entire_tree(self.root_node)
             
             # Node evaluation
-            await self.node_evaluation(current_node)
+            await self.node_evaluation(current_node, websocket=websocket)
             tree_data = self._get_tree_data()
             if websocket:
                 await self.websocket_tree_update(type="tree_update_node_evaluation", websocket=websocket, tree_data=tree_data)
