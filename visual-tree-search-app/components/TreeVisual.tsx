@@ -669,7 +669,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
           {/* Workflow Steps */}
           <div className="text-xs text-gray-600 dark:text-gray-400">
             {visualType === 'simple' && (
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-blue-500 dark:text-blue-400">●</span>
                 <span>Select</span>
                 <span className="text-gray-400">→</span>
@@ -681,7 +681,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
               </div>
             )}
             {visualType === 'mcts' && (
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-blue-500 dark:text-blue-400">●</span>
                 <span>Select</span>
                 <span className="text-gray-400">→</span>
@@ -699,7 +699,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
               </div>
             )}
             {visualType === 'lats' && (
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-blue-500 dark:text-blue-400">●</span>
                 <span>Select</span>
                 <span className="text-gray-400">→</span>
@@ -717,7 +717,7 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
               </div>
             )}
             {visualType === 'full' && (
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-blue-500 dark:text-blue-400">●</span>
                 <span>Select</span>
                 <span className="text-gray-400">→</span>

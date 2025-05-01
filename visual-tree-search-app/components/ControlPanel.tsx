@@ -78,7 +78,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               id="algorithm"
               value={(searchParams as BFSSearchParams).algorithm}
               onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-              className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary"
             >
               <option value="bfs">Breadth-First Search (BFS)</option>
               <option value="dfs">Depth-First Search (DFS)</option>
@@ -97,7 +97,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 max={100}
                 value={(searchParams as LATSSearchParams).num_simulations}
                 onChange={(e) => handleParamChange('num_simulations', parseInt(e.target.value))}
-                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900"
               />
             </div>
             <div className="space-y-2">
@@ -109,7 +109,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 max={10}
                 value={(searchParams as LATSSearchParams).iterations}
                 onChange={(e) => handleParamChange('iterations', parseInt(e.target.value))}
-                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900"
               />
             </div>
           </>
@@ -126,7 +126,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 max={10}
                 value={(searchParams as MCTSSearchParams).iterations}
                 onChange={(e) => handleParamChange('iterations', parseInt(e.target.value))}
-                className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900"
               />
             </div>
             <div className="mt-4">
@@ -153,16 +153,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 shadow-sm border-b sticky top-0 z-10">
-      <div className="py-3 px-4 max-w-full">
+    <div className="bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 shadow-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+      <div className="py-3 px-5 max-w-full">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-sky-950 dark:text-sky-100">{getTitle()}</h1>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{getTitle()}</h1>
           
           <div className="flex gap-2">
             <Button 
               onClick={handleStart} 
               disabled={isSearching}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white disabled:bg-cyan-300 dark:disabled:bg-cyan-900"
+              className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/50 dark:disabled:bg-primary/30 transition-colors duration-200 text-sm"
             >
               Start
             </Button>
@@ -170,51 +170,56 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               onClick={disconnect} 
               disabled={!connected} 
               variant="destructive"
-              className="bg-rose-600 hover:bg-rose-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200 text-sm dark:bg-red-500 dark:hover:bg-red-600"
             >
               End
             </Button>
           </div>
         </div>
         
-        <div className="mt-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg overflow-hidden">
+        <div className="mt-3 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
           <div 
-            className="p-3 flex justify-between items-center cursor-pointer hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
+            className="p-3 flex justify-between items-center cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors duration-200"
             onClick={() => setShowParameters(!showParameters)}
           >
             <div className="flex items-start gap-2">
-              <Info className="h-5 w-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0 mt-0.5" />
+              <Info className="h-4 w-4 text-primary dark:text-primary/80 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-medium text-sky-800 dark:text-sky-300">How to use this playground</h3>
-                <p className="text-sm text-sky-700 dark:text-sky-400">
+                <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">How to use this playground</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   Configure your search parameters and visualize web browsing automation with tree search algorithms.
                 </p>
               </div>
             </div>
-            {showParameters ? <ChevronUp className="text-cyan-600" /> : <ChevronDown className="text-cyan-600" />}
+            {showParameters ? <ChevronUp className="h-4 w-4 text-primary" /> : <ChevronDown className="h-4 w-4 text-primary" />}
           </div>
           
           {showParameters && (
-            <div className="p-4 border-t border-sky-200 dark:border-sky-800 bg-white/90 dark:bg-slate-800/90">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95">
               {/* Instructions */}
-              <div className="mb-4 ml-1 text-sm text-slate-700 dark:text-slate-300">
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Click the &quot;Start&quot; button above to connect and begin the search.</li>
-                  <li>Configure your search parameters below.</li>
-                  <li>The tree of possible actions will appear on the right, while the resulting web page will display on the left.</li>
-                  <li>You can drag the divider to resize the panels as needed.</li>
+              <div className="mb-4 ml-1 p-3 bg-slate-100 dark:bg-slate-700 rounded border-l-4 border-primary text-sm text-slate-700 dark:text-slate-300">
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>
+                    Click the <span className="font-semibold text-primary dark:text-primary/80">Start</span> button above to connect and begin the search.
+                  </li>
+                  <li>
+                    Configure your <span className="font-semibold text-primary dark:text-primary/80">search parameters</span> below.
+                  </li>
+                  <li>
+                    The <span className="font-semibold text-primary dark:text-primary/80">tree of possible actions</span> will appear on the right, while the <span className="font-semibold text-primary dark:text-primary/80">resulting web page</span> will display on the left.
+                  </li>
                 </ol>
               </div>
               
               {/* Parameters Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startingUrl" className="text-slate-700 dark:text-slate-300 font-medium">Starting URL</Label>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="startingUrl" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Starting URL</Label>
                   <Input
                     id="startingUrl"
                     value={searchParams.startingUrl}
                     onChange={(e) => handleParamChange('startingUrl', e.target.value)}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
                     placeholder="e.g., http://xwebarena.pathonai.org:7770/"
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -222,27 +227,27 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="goal" className="text-slate-700 dark:text-slate-300 font-medium">Goal</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="goal" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Goal</Label>
                   <Input
                     id="goal"
                     value={searchParams.goal}
                     onChange={(e) => handleParamChange('goal', e.target.value)}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
                     placeholder="e.g., search for running shoes and click the first result"
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Describe what you want the agent to do in natural language. Examples:
                   </p>
-                  <ul className="list-disc list-inside mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <ul className="list-disc list-inside mt-1 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
                     <li>Search for running shoes and click the first result</li>
                     <li>Find the price of the latest iPhone</li>
                     <li>Look up the weather in New York</li>
                   </ul>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="maxDepth" className="text-slate-700 dark:text-slate-300 font-medium">Max Depth</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="maxDepth" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Max Depth</Label>
                   <Input
                     id="maxDepth"
                     type="number"
@@ -250,7 +255,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     max={10}
                     value={searchParams.maxDepth}
                     onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-cyan-500 focus:border-cyan-500"
+                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
                   />
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Maximum number of steps the agent can take to reach the goal. Higher values allow for more complex tasks but may take longer.
