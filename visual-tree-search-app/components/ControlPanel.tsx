@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Info, ChevronDown, ChevronUp, Globe, Target, Layers, Network, Settings, RefreshCw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type AlgorithmType = 'bfs' | 'dfs' | 'lats' | 'mcts';
@@ -73,16 +73,37 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       case 'dfs':
         return (
           <div className="space-y-2">
-            <Label htmlFor="algorithm" className="text-slate-700 dark:text-slate-300 font-medium">Algorithm</Label>
-            <select
-              id="algorithm"
-              value={(searchParams as BFSSearchParams).algorithm}
-              onChange={(e) => handleParamChange('algorithm', e.target.value as 'bfs' | 'dfs')}
-              className="w-full p-2 border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary"
-            >
-              <option value="bfs">Breadth-First Search (BFS)</option>
-              <option value="dfs">Depth-First Search (DFS)</option>
-            </select>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="algorithm" className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Network className="h-3.5 w-3.5 text-primary" />
+                  Algorithm
+                </Label>
+                <div className="flex h-6 rounded-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <Button
+                    variant={(searchParams as BFSSearchParams).algorithm === 'bfs' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-[10px] rounded-none border-0"
+                    onClick={() => handleParamChange('algorithm', 'bfs')}
+                  >
+                    BFS
+                  </Button>
+                  <Button
+                    variant={(searchParams as BFSSearchParams).algorithm === 'dfs' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-6 px-2 text-[10px] rounded-none border-0"
+                    onClick={() => handleParamChange('algorithm', 'dfs')}
+                  >
+                    DFS
+                  </Button>
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                {(searchParams as BFSSearchParams).algorithm === 'bfs' 
+                  ? 'Explores all nodes at current depth before moving deeper'
+                  : 'Explores as far as possible along each branch before backtracking'}
+              </span>
+            </div>
           </div>
         );
       case 'lats':
@@ -154,115 +175,198 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
   return (
     <div className="bg-gradient-to-b from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 shadow-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
-      <div className="py-3 px-5 max-w-full">
+      <div className="py-2 px-4 max-w-full">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{getTitle()}</h1>
+          <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{getTitle()}</h1>
           
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleStart} 
-              disabled={isSearching}
-              className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/50 dark:disabled:bg-primary/30 transition-colors duration-200 text-sm"
-            >
-              Start
-            </Button>
-            <Button 
-              onClick={disconnect} 
-              disabled={!connected} 
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200 text-sm dark:bg-red-500 dark:hover:bg-red-600"
-            >
-              End
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleStart} 
+                disabled={isSearching}
+                className="bg-primary hover:bg-primary/90 text-white disabled:bg-primary/50 dark:disabled:bg-primary/30 transition-colors duration-200 text-sm h-8"
+              >
+                Start
+              </Button>
+              <Button 
+                onClick={disconnect} 
+                disabled={!connected} 
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white transition-colors duration-200 text-sm h-8 dark:bg-red-500 dark:hover:bg-red-600"
+              >
+                End
+              </Button>
+            </div>
           </div>
         </div>
         
-        <div className="mt-3 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
+        <div className="mt-2 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
           <div 
-            className="p-3 flex justify-between items-center cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors duration-200"
+            className="p-2 flex justify-between items-center cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors duration-200"
             onClick={() => setShowParameters(!showParameters)}
           >
             <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-primary dark:text-primary/80 flex-shrink-0 mt-0.5" />
+              <Info className="h-3.5 w-3.5 text-primary dark:text-primary/80 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-medium text-slate-800 dark:text-slate-200">How to use this playground</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
+                <h3 className="text-xs font-medium text-slate-800 dark:text-slate-200">How to use this playground</h3>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   Configure your search parameters and visualize web browsing automation with tree search algorithms.
                 </p>
               </div>
             </div>
-            {showParameters ? <ChevronUp className="h-4 w-4 text-primary" /> : <ChevronDown className="h-4 w-4 text-primary" />}
+            {showParameters ? <ChevronUp className="h-3.5 w-3.5 text-primary" /> : <ChevronDown className="h-3.5 w-3.5 text-primary" />}
           </div>
           
           {showParameters && (
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95">
-              {/* Instructions */}
-              <div className="mb-4 ml-1 p-3 bg-slate-100 dark:bg-slate-700 rounded border-l-4 border-primary text-sm text-slate-700 dark:text-slate-300">
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>
-                    Click the <span className="font-semibold text-primary dark:text-primary/80">Start</span> button above to connect and begin the search.
+            <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900">
+              {/* Quick Start Guide */}
+              <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5 text-primary" />
+                    Quick Start Guide
+                  </h3>
+                </div>
+                <ol className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">1</span>
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
+                      Review and adjust the <span className="font-semibold text-primary dark:text-primary/80 bg-primary/5 dark:bg-primary/10 px-1.5 py-0.5 rounded">search parameters</span> below if needed.
+                    </span>
                   </li>
-                  <li>
-                    Configure your <span className="font-semibold text-primary dark:text-primary/80">search parameters</span> below.
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">2</span>
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
+                      Click the <span className="font-semibold text-primary dark:text-primary/80 bg-primary/5 dark:bg-primary/10 px-1.5 py-0.5 rounded">Start</span> button to begin the search.
+                    </span>
                   </li>
-                  <li>
-                    The <span className="font-semibold text-primary dark:text-primary/80">tree of possible actions</span> will appear on the right, while the <span className="font-semibold text-primary dark:text-primary/80">resulting web page</span> will display on the left.
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">3</span>
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
+                      Watch the <span className="font-semibold text-primary dark:text-primary/80 bg-primary/5 dark:bg-primary/10 px-1.5 py-0.5 rounded">tree</span> and <span className="font-semibold text-primary dark:text-primary/80 bg-primary/5 dark:bg-primary/10 px-1.5 py-0.5 rounded">web page</span> update in real-time.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">4</span>
+                    <span className="text-xs text-slate-700 dark:text-slate-300">
+                      Check the <span className="font-semibold text-primary dark:text-primary/80 bg-primary/5 dark:bg-primary/10 px-1.5 py-0.5 rounded">message log</span> for detailed progress.
+                    </span>
                   </li>
                 </ol>
               </div>
-              
-              {/* Parameters Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="startingUrl" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Starting URL</Label>
-                  <Input
-                    id="startingUrl"
-                    value={searchParams.startingUrl}
-                    onChange={(e) => handleParamChange('startingUrl', e.target.value)}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
-                    placeholder="e.g., http://xwebarena.pathonai.org:7770/"
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    The starting URL for the web browser. This is where the search will begin.
-                  </p>
+
+              {/* Main Parameters */}
+              <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Settings className="h-3.5 w-3.5 text-primary" />
+                    Configuration Parameters
+                  </h3>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="h-5 px-2 text-[10px] border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-primary hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+                    onClick={() => {
+                      handleParamChange('startingUrl', 'http://xwebarena.pathonai.org:7770/');
+                      handleParamChange('goal', 'Search for running shoes and click the first result');
+                      handleParamChange('maxDepth', 3);
+                    }}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Reset to Default
+                  </Button>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="goal" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Goal</Label>
-                  <Input
-                    id="goal"
-                    value={searchParams.goal}
-                    onChange={(e) => handleParamChange('goal', e.target.value)}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
-                    placeholder="e.g., search for running shoes and click the first result"
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Describe what you want the agent to do in natural language. Examples:
-                  </p>
-                  <ul className="list-disc list-inside mt-1 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                    <li>Search for running shoes and click the first result</li>
-                    <li>Find the price of the latest iPhone</li>
-                    <li>Look up the weather in New York</li>
-                  </ul>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Left Column: Essential Parameters */}
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <Label htmlFor="startingUrl" className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Globe className="h-3.5 w-3.5 text-primary" />
+                          Starting URL
+                        </Label>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">The starting point for web browsing</span>
+                      </div>
+                      <Input
+                        id="startingUrl"
+                        value={searchParams.startingUrl}
+                        onChange={(e) => handleParamChange('startingUrl', e.target.value)}
+                        className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-xs h-8"
+                        placeholder="e.g., http://xwebarena.pathonai.org:7770/"
+                      />
+                    </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="maxDepth" className="text-xs text-slate-700 dark:text-slate-300 font-medium">Max Depth</Label>
-                  <Input
-                    id="maxDepth"
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={searchParams.maxDepth}
-                    onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
-                    className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-sm"
-                  />
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Maximum number of steps the agent can take to reach the goal. Higher values allow for more complex tasks but may take longer.
-                  </p>
-                </div>
+                    <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <Label htmlFor="goal" className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Target className="h-3.5 w-3.5 text-primary" />
+                          Goal
+                        </Label>
+                        <div className="flex gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-5 px-2 text-[10px] border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+                            onClick={() => handleParamChange('goal', 'Search for running shoes and click the first result')}
+                          >
+                            Example 1
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-5 px-2 text-[10px] border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+                            onClick={() => handleParamChange('goal', 'Find the price of the latest iPhone')}
+                          >
+                            Example 2
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-5 px-2 text-[10px] border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10"
+                            onClick={() => handleParamChange('goal', 'Look up the weather in New York')}
+                          >
+                            Example 3
+                          </Button>
+                        </div>
+                      </div>
+                      <Input
+                        id="goal"
+                        value={searchParams.goal}
+                        onChange={(e) => handleParamChange('goal', e.target.value)}
+                        className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-xs h-8"
+                        placeholder="Describe what you want the agent to do"
+                      />
+                    </div>
+                  </div>
 
-                {renderAlgorithmSpecificParams()}
+                  {/* Right Column: Advanced Settings */}
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <Label htmlFor="maxDepth" className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <Layers className="h-3.5 w-3.5 text-primary" />
+                          Max Depth
+                        </Label>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">Maximum steps to reach goal</span>
+                      </div>
+                      <Input
+                        id="maxDepth"
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={searchParams.maxDepth}
+                        onChange={(e) => handleParamChange('maxDepth', parseInt(e.target.value))}
+                        className="border-slate-300 dark:border-slate-600 focus:ring-primary focus:border-primary bg-white dark:bg-slate-900 text-xs h-8"
+                      />
+                    </div>
+
+                    <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-600 hover:shadow-md transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/20">
+                      {renderAlgorithmSpecificParams()}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

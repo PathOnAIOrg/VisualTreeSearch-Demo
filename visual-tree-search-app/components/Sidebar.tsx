@@ -17,17 +17,22 @@ const Sidebar = () => {
       // Only collapse when switching from large to small screen
       if (mobile && !isMobile) {
         setCollapsed(true);
+        document.documentElement.style.setProperty('--sidebar-width', '3.5rem');
       }
       // Auto expand when switching from small to large screen
       if (!mobile && isMobile) {
         setCollapsed(false);
+        document.documentElement.style.setProperty('--sidebar-width', '14rem');
       }
     };
+
+    // Set initial sidebar width
+    document.documentElement.style.setProperty('--sidebar-width', collapsed ? '3.5rem' : '14rem');
 
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
-  }, [isMobile]);
+  }, [isMobile, collapsed]);
 
   const menuItems = [
     {
@@ -61,6 +66,7 @@ const Sidebar = () => {
 
   const toggleSidebar = () => {
     setCollapsed(!collapsed);
+    document.documentElement.style.setProperty('--sidebar-width', collapsed ? '3.5rem' : '14rem');
   };
   
   return (
