@@ -644,24 +644,97 @@ const TreeVisual: React.FC<TreeVisualProps> = ({
           {title}
         </h2>
         
-        {/* Legend */}
-        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-          <div className="flex items-center">
-            <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
-            <span className="text-gray-700 dark:text-gray-300">Selected</span>
+        {/* Integrated Legend and Workflow */}
+        <div className="mt-2 space-y-1">
+          {/* Color Legend */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex items-center">
+              <span className="w-3 h-3 rounded-full inline-block mr-1 bg-blue-500 dark:bg-blue-600"></span>
+              <span className="text-gray-700 dark:text-gray-300">Selected</span>
+            </div>
+            {useSimulationFeatures && showSimulationLegend && (
+              <>
+                <div className="flex items-center">
+                  <span className="w-3 h-3 rounded-full inline-block mr-1 bg-green-500 dark:bg-green-600"></span>
+                  <span className="text-gray-700 dark:text-gray-300">Sim Start</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-3 h-3 rounded-full inline-block mr-1 bg-orange-500 dark:bg-orange-600"></span>
+                  <span className="text-gray-700 dark:text-gray-300">Simulated</span>
+                </div>
+              </>
+            )}
           </div>
-          {useSimulationFeatures && showSimulationLegend && (
-            <>
-              <div className="flex items-center">
-                <span className="w-3 h-3 rounded-full inline-block mr-1 bg-green-500 dark:bg-green-600"></span>
-                <span className="text-gray-700 dark:text-gray-300">Sim Start</span>
+
+          {/* Workflow Steps */}
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {visualType === 'simple' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Expand</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Next</span>
               </div>
-              <div className="flex items-center">
-                <span className="w-3 h-3 rounded-full inline-block mr-1 bg-orange-500 dark:bg-orange-600"></span>
-                <span className="text-gray-700 dark:text-gray-300">Simulated</span>
+            )}
+            {visualType === 'mcts' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Expand</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-gray-500 dark:text-gray-400">●</span>
+                <span>Update</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
               </div>
-            </>
-          )}
+            )}
+            {visualType === 'lats' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-500 dark:text-green-400">●</span>
+                <span>Evaluate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Remove</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
+              </div>
+            )}
+            {visualType === 'full' && (
+              <div className="flex items-center gap-1">
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Select</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Simulate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-green-500 dark:text-green-400">●</span>
+                <span>Evaluate</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-orange-500 dark:text-orange-400">●</span>
+                <span>Remove</span>
+                <span className="text-gray-400">→</span>
+                <span className="text-blue-500 dark:text-blue-400">●</span>
+                <span>Repeat</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div 
