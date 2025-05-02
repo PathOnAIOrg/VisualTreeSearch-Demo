@@ -214,6 +214,37 @@ def get_order_history(customer_id, limit=5):
     finally:
         connection.close()
 
+
+def verifyAccountStatus():
+    orderlimit=5
+    # Default values for direct execution
+    default_email = 'emma.lopez@gmail.com'
+    default_customer_id = 27
+
+    # Run queries with provided args or defaults
+    customer_id = None
+
+    # Use defaults without prompting
+    print(f"Using default email: {default_email}")
+    customer = find_customer_by_email(default_email)
+    if not customer:
+        # If email not found, use default customer ID
+        print(f"Using default customer ID: {default_customer_id}")
+        customer_id = default_customer_id
+    else:
+        # Use the found customer ID
+        customer_id = customer[0]['entity_id']
+
+    if customer_id:
+        # Get quotes
+        get_active_quotes(customer_id)
+        get_quote_items(customer_id)
+        # Get orders
+        get_order_history(customer_id, orderlimit)
+
+    return("verifyAccountStatus Done")
+
+
 if __name__ == "__main__":
     import argparse
     
