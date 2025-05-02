@@ -2,6 +2,7 @@ import sys
 import os
 
 from ...sql.ops import delete_data, restore_data, fetch_data
+from ...sql.verify import verifyAccountStatus
 
 
 import logging
@@ -51,7 +52,7 @@ async def sql_extract():
 # curl -N http://localhost:8000/api/sql/verify
 @router.get("/verify")
 async def sql_verify():
-    res=runcmd("python sql/verify.py")
+    res=verifyAccountStatus()
     return {
         "status":res
     }
