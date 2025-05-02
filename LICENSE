@@ -1,0 +1,55 @@
+# VisualTreeSearch-Demo
+
+VisualTreeSearch-Demo is a project that builds upon the LiteWebAgent and BrowserGym projects, incorporating modifications and new contributions to enhance web automation and interaction.
+
+## License
+
+Copyright 2024 PathOnAI.org
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at:
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+## Third-Party Licenses
+
+This project includes code inherited from the LiteWebAgent project, which also incorporates code from BrowserGym. Both projects are licensed under the Apache License, Version 2.0.
+
+### BrowserGym
+
+Copyright 2024 ServiceNow
+
+You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+
+The original BrowserGym code is available at: https://github.com/ServiceNow/BrowserGym
+
+### LiteWebAgent
+
+Modifications to the original BrowserGym code within LiteWebAgent include:
+* Reuse of action and observation modules
+* Extensive modifications to `action/highlevel.py` for improved frontend visualization
+* Introduction of `observation/extract_elements.py` to enable extraction of interactive elements
+
+## Additional Modifications in VisualTreeSearch-Demo
+
+Further modifications and new contributions following the LiteWebAgent project are attributed to **Danqing Zhang** (danqing.zhang.personal@gmail.com). Permission must be obtained from Danqing Zhang for use of these specific contributions.
+
+For inquiries regarding the use of Danqing Zhang's contributions, please contact:
+**Danqing Zhang**
+Email: danqing.zhang.personal@gmail.com
+
+## Contributing
+
+Please read the license information carefully before contributing to or using this project. Ensure you have the necessary permissions, especially when working with components attributed to specific individuals or organizations.
+
+## Contact
+
+For general inquiries about the project, please refer to the PathOnAI.org copyright notice.
+For specific questions about additional modifications, contact Danqing Zhang at the email provided above.
