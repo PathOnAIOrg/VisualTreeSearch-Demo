@@ -20,18 +20,18 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 - Test
 
-`curl -N http://xwebarena.pathonai.org:8000/api/hello`
+`curl -N http://localhost:8000/api/hello`
 
 - Test DB status
 
-`curl -N http://xwebarena.pathonai.org:8000/api/db/status`
+`curl -N http://localhost:8000/api/db/status`
 
 - Reset account information with DB SQL operations
 
-`curl -N http://xwebarena.pathonai.org:8000/api/sql/restore `
+`curl -N http://localhost:8000/api/sql/restore `
 
 - Reset the whole container 
 
-`curl -N http://xwebarena.pathonai.org:8000/api/container/reset/xwebarena.pathonai.org`
+`curl -N http://localhost:8000/api/container/reset/****PUBLICIP****`
 
 

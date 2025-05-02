@@ -1,10 +1,7 @@
 import sys
 import os
 
-a_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.insert(0, a_dir)
-
-from sql.python_scripts.ops import *
+from ...sql.ops import delete_data, restore_data, fetch_data
 
 
 import logging
@@ -54,7 +51,7 @@ async def sql_extract():
 # curl -N http://localhost:8000/api/sql/verify
 @router.get("/verify")
 async def sql_verify():
-    res=runcmd("python sql/python_scripts/verify.py")
+    res=runcmd("python sql/verify.py")
     return {
         "status":res
     }
