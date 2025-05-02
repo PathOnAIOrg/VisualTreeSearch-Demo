@@ -72,7 +72,7 @@ const Home = () => {
                   </h3>
                 </div>
                 <p className="text-muted-foreground mb-6 leading-relaxed flex-grow">
-                  A heuristic search algorithm for decision processes, particularly in games and optimization problems.
+                    A heuristic search algorithm that intelligently builds decision trees by balancing exploration of untested paths with exploitation of promising strategies
                 </p>
                 <div className="flex items-center text-sm text-primary group-hover:text-primary-hover transition-colors">
                   Try MCTS
@@ -100,11 +100,11 @@ const Home = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
                   </svg>
                   <h3 className="text-2xl font-semibold text-accent group-hover:text-accent-hover transition-colors">
-                    Look-Ahead Tree Search
+                    Language Agent Tree Search
                   </h3>
                 </div>
                 <p className="text-muted-foreground mb-6 leading-relaxed flex-grow">
-                  An advanced tree search algorithm that combines look-ahead strategies with efficient pruning techniques.
+                A search algorithm that enhances language models by integrating tree search techniques, enabling systematic exploration of decision paths with environmental feedback to unify reasoning, acting, and planning capabilities.
                 </p>
                 <div className="flex items-center text-sm text-accent group-hover:text-accent-hover transition-colors">
                   Try LATS
@@ -263,7 +263,7 @@ const Home = () => {
                 <ul className="space-y-4 text-muted-foreground">
                   <li className="flex items-center justify-between">
                     <span>DNS Management</span>
-                    <span className="font-medium text-foreground">GoDaddy</span>
+                    <span className="font-medium text-foreground">AWS Route 53</span>
                   </li>
                   <li className="flex items-center justify-between">
                     <span>SSL Certificates</span>
