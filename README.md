@@ -4,6 +4,8 @@ A powerful web agent visualization tool that helps you understand and analyze we
 
 ## 🌐 Live Demo
 
+[![Watch the video](https://img.youtube.com/vi/stRNDePQGV0/hqdefault.jpg)](https://youtu.be/stRNDePQGV0)
+
 Visit our live demo at: [visual-tree-search.pathonai.org](https://visual-tree-search.pathonai.org)
 
 ## 🌟 Features
