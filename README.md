@@ -2,6 +2,10 @@
 
 A powerful web agent visualization tool that helps you understand and analyze web automation processes through visual tree search.
 
+## 🌐 Live Demo
+
+Visit our live demo at: [visual-tree-search.pathonai.org](https://visual-tree-search.pathonai.org)
+
 ## 🌟 Features
 
 - Interactive visualization of web agent actions
@@ -114,14 +118,4 @@ VisualTreeSearch-Demo/
 └── visual-tree-search-state-reset/     # State management service
 ```
 
-## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🌐 Live Demo
-
-Visit our live demo at: [visual-tree-search.pathonai.org](https://visual-tree-search.pathonai.org)
