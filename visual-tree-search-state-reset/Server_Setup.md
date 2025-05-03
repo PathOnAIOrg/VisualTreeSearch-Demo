@@ -58,7 +58,7 @@ sudo docker run hello-world
 
 # docker without sudo
 getent group docker    # Check if the docker group exists. If it doesn't exist, create it:  sudo groupadd docker
-sudo usermod -aG docker pentium3
+sudo usermod -aG docker ubuntu
 sudo systemctl restart docker
 newgrp docker
 docker run hello-world
