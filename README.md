@@ -27,6 +27,16 @@ Visit our live demo at: [visual-tree-search.pathonai.org](https://visual-tree-se
 - **Framework**: FastAPI
 - **Deployment**: AWS ECS
 
+### Browser Service
+- **Framework**: FastAPI
+- **Deployment**: AWS ECS
+- **Browser Engine**: Chromium (via Playwright)
+
+### State Reset
+- **Framework**: FastAPI
+- **Deployment**: AWS EC2
+- **Database Access**: SQLAlchemy ORM connecting to MariaDB (using MySQL-compatible interface)
+
 ## 🚀 Getting Started
 
 ### Prerequisites
