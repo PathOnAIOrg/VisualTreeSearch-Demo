@@ -14,13 +14,13 @@ logging.basicConfig(
 
 router = APIRouter()
 
-# Database connection parameters
+# Database connection parameters of webarena container
 DB_CONFIG = {
     "username": "root",
     "password": "1234567890",
     "database": "magentodb",
-    "host": "127.0.0.1",
-    "port": 33061
+    "host": "172.17.0.2",
+    "port": 3306
 }
 
 def get_db_connection():
