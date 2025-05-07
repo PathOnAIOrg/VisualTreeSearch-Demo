@@ -2,8 +2,8 @@ import pymysql
 
 # Database connection details
 DB_CONFIG = {
-    "host": "127.0.0.1",
-    "port": 33061,
+    "host": "172.17.0.2",
+    "port": 3306,
     "user": "root",
     "password": "1234567890", 
     "database": "magentodb"
