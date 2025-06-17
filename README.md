@@ -4,7 +4,7 @@ A powerful web agent visualization tool that helps you understand and analyze we
 
 ## News
 * 06/16/2025 - "VisualTreeSearch: Understanding Web Agent Test-time Scaling" was accepted by ECML-PKDD 2025.
-* 04/28/2025 - Released Open Source Repo: [visual tree search](https://github.com/PathOnAIOrg/VisualTreeSearch-Demo).
+* 04/28/2025 - Released this Open Source Repo: [visual tree search](https://github.com/PathOnAIOrg/VisualTreeSearch-Demo).
 
 
 ## 🌐 Live Demo
