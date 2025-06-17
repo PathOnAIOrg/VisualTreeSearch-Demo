@@ -2,6 +2,11 @@
 
 A powerful web agent visualization tool that helps you understand and analyze web automation processes through visual tree search.
 
+## News
+* 06/16/2025 - "VisualTreeSearch: Understanding Web Agent Test-time Scaling" was accepted by ECML-PKDD 2025.
+* 04/28/2025 - Released Open Source Repo: [visual tree search](https://github.com/PathOnAIOrg/VisualTreeSearch-Demo).
+
+
 ## 🌐 Live Demo
 
 [![Watch the video](https://img.youtube.com/vi/stRNDePQGV0/hqdefault.jpg)](https://www.youtube.com/embed/stRNDePQGV0)
