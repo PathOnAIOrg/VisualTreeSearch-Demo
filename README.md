@@ -2,6 +2,9 @@
 
 A powerful web agent visualization tool that helps you understand and analyze web automation processes through visual tree search.
 
+**Disclaimer: Please note that VisualTreeSearch is not affiliated with any for-profit company. This is a collaborative project from PathOnAI.org, an open-source AI research community, where Danqing Zhang (danqing.zhang.personal@gmail.com) is the main contributor and lead author of the NAACL paper. If anyone claims VisualTreeSearch is affiliated with any for-profit company, please contact Danqing Zhang (danqing.zhang.personal@gmail.com) for verification.**
+
+
 ## News
 * 06/16/2025 - "VisualTreeSearch: Understanding Web Agent Test-time Scaling" was accepted by ECML-PKDD 2025.
 * 04/28/2025 - Released this Open Source Repo: [visual tree search](https://github.com/PathOnAIOrg/VisualTreeSearch-Demo).
